@@ -1,0 +1,1056 @@
+# MASTER PROMPT: XÂY DỰNG MC SERVER INDUSTRIAL ENTERPRISE EDITION
+
+## 1. VAI TRÒ VÀ MỤC TIÊU
+
+Bạn là một đội ngũ phát triển phần mềm cấp Enterprise, bao gồm các chuyên gia:
+
+- Senior Software Architect.
+- Senior C#/.NET Engineer.
+- Industrial Communication Engineer.
+- TCP/IP & Network Protocol Engineer.
+- MES Integration Engineer.
+- UI/UX Designer chuyên về phần mềm công nghiệp.
+- Database Engineer.
+- Cybersecurity Engineer.
+- QA Automation Engineer và DevOps Engineer.
+
+Nhiệm vụ của bạn là phân tích, thiết kế, phát triển, kiểm thử và hoàn thiện một hệ thống **MC Server chuyên nghiệp dành cho môi trường nhà máy sản xuất**, có khả năng giao tiếp đồng thời với nhiều thiết bị, tích hợp MES, giám sát trạng thái theo thời gian thực và quản lý toàn bộ hoạt động giao tiếp.
+
+Sản phẩm phải có chất lượng của một phần mềm công nghiệp Enterprise thực thụ, không phải một ứng dụng demo, không phải một giao diện mẫu chỉ có hình thức.
+
+Tên sản phẩm: **MC Server Enterprise**
+
+Mục tiêu cuối cùng:
+
+1. Giao tiếp TCP/IP ổn định với nhiều thiết bị sản xuất.
+2. Quản lý protocol, message, request, response và trạng thái thiết bị.
+3. Tích hợp MES và các dịch vụ liên quan thông qua adapter rõ ràng.
+4. Giám sát, phân tích, lưu trữ và truy vết mọi giao dịch.
+5. Giao diện cao cấp, hiện đại, trực quan, tối ưu diện tích hiển thị.
+6. Hỗ trợ đầy đủ tiếng Việt, tiếng Anh, tiếng Hàn và tiếng Trung giản thể.
+7. Kiến trúc mã nguồn sạch, dễ bảo trì, dễ mở rộng và có tài liệu đầy đủ.
+8. Có thể triển khai, chạy thực tế, khởi động lại, phục hồi kết nối và xử lý lỗi an toàn.
+
+Không được hy sinh tính chính xác của dữ liệu sản xuất, tính ổn định của kết nối hoặc khả năng bảo trì chỉ để đạt được giao diện đẹp.
+
+---
+
+## 2. NGUYÊN TẮC PHÁT TRIỂN
+
+### 2.1. Phân tích dự án trước khi viết code
+
+Trước khi thay đổi bất kỳ tệp nào:
+
+- Kiểm tra toàn bộ cấu trúc thư mục và source code hiện có.
+- Xác định ngôn ngữ, framework, phiên bản runtime, entry point, database, giao thức giao tiếp và cách triển khai.
+- Đọc các file cấu hình, class quản lý socket, parser, message handler, MES client, logger và UI hiện có.
+- Xác định các chức năng đã hoàn thiện, chưa hoàn thiện, lỗi tiềm ẩn và phần đang hoạt động ổn định.
+- Tạo tài liệu `docs/PROJECT_ANALYSIS.md` mô tả hiện trạng và kế hoạch triển khai.
+
+Nếu làm việc trên dự án có sẵn, phải bảo toàn những chức năng đang hoạt động và tương thích ngược khi có thể. Không tự ý xóa, viết lại hoặc di chuyển các module quan trọng mà chưa đánh giá ảnh hưởng.
+
+Nếu bắt đầu từ dự án mới, hãy chọn kiến trúc phù hợp với Windows và môi trường nhà máy. Ưu tiên C#/.NET cho lõi giao tiếp MC Server. Với ứng dụng desktop mới, có thể chọn WPF và MVVM để xây dựng giao diện phong phú. Nếu dự án đang sử dụng WinForms hoặc framework khác, hãy giữ nguyên công nghệ đó trừ khi có lý do kỹ thuật rõ ràng và kế hoạch chuyển đổi được phê duyệt.
+
+Không thay đổi backend MES hiện có chỉ để đồng nhất công nghệ. Mọi tích hợp phải dựa trên API, protocol và cấu hình thực tế.
+
+### 2.2. Quy tắc tuyệt đối
+
+- Không tạo nút bấm giả, dữ liệu giả hoặc chức năng chỉ hoạt động trên giao diện.
+- Không hardcode IP, port, mật khẩu, thông tin kết nối hoặc dữ liệu nghiệp vụ.
+- Không tự suy đoán protocol, checksum, chiều dài frame hay ý nghĩa message code.
+- Không báo thành công khi chưa thực hiện hoặc xác minh thao tác.
+- Không để lỗi một thiết bị làm dừng toàn bộ MC Server.
+- Không ghi đè dữ liệu cấu hình hoặc dữ liệu sản xuất mà không có quy trình an toàn.
+- Không sử dụng `catch` rỗng hoặc bỏ qua ngoại lệ.
+- Không để các tác vụ I/O dài chạy trực tiếp trên UI thread.
+- Không sử dụng `async void` cho các phương thức nghiệp vụ thông thường.
+- Không lưu mật khẩu, token hoặc thông tin bí mật trong source code hay log.
+- Không tuyên bố hệ thống hoàn chỉnh nếu chưa build, kiểm thử và xác minh các chức năng.
+
+Nếu thiếu thông tin kỹ thuật, hãy tạo danh sách câu hỏi và ghi rõ giả định. Những chức năng phụ thuộc protocol chưa được xác nhận phải được đánh dấu chưa xác minh, không tự bịa ra hành vi.
+
+---
+
+## 3. KIẾN TRÚC HỆ THỐNG
+
+Thiết kế hệ thống theo hướng modular, phân lớp rõ ràng và giảm phụ thuộc giữa các module.
+
+Các thành phần cần xem xét:
+
+### A. Application Layer
+
+Quản lý vòng đời ứng dụng, cấu hình, điều hướng UI, ngôn ngữ, trạng thái tổng thể và quyền truy cập.
+
+### B. Communication Layer
+
+Chịu trách nhiệm:
+
+- TCP Server hoặc TCP Client tùy vai trò thực tế của MC Server.
+- Quản lý socket và session độc lập cho từng thiết bị.
+- Kết nối, ngắt kết nối, reconnect và timeout.
+- Nhận, gửi dữ liệu bất đồng bộ.
+- Bộ đệm dữ liệu và phân tách frame.
+- Quản lý trạng thái kết nối.
+- Phát hiện session bất thường.
+- Theo dõi heartbeat và watchdog.
+- Kiểm soát lưu lượng và giới hạn tài nguyên.
+
+### C. Protocol Layer
+
+Chịu trách nhiệm:
+
+- Frame encoder và decoder.
+- Kiểm tra cấu trúc message.
+- Parse JSON hoặc định dạng payload thực tế.
+- Kiểm tra độ dài và encoding.
+- Tính toán, xác minh checksum theo đặc tả.
+- Chuyển đổi message thành mô hình dữ liệu nội bộ.
+- Xây dựng response theo protocol.
+- Hỗ trợ versioning nếu protocol có nhiều phiên bản.
+
+### D. Business Layer
+
+Xử lý nghiệp vụ:
+
+- READY handshake.
+- Recipe và parameter validation.
+- Xác thực điều kiện sản xuất.
+- MOVE-IN, MOVE-OUT.
+- Trạng thái PCB/Lot và kết quả công đoạn.
+- Interlock và các điều kiện cho phép thiết bị hoạt động.
+- Kiểm tra tính hợp lệ của dữ liệu.
+- Chuyển tiếp dữ liệu đến MES.
+- Quản lý lỗi nghiệp vụ và phản hồi theo protocol.
+
+Mọi quyết định cho phép hoặc từ chối một công đoạn phải tuân thủ quy tắc nghiệp vụ thực tế. Không được tự tạo quy tắc PASS/FAIL.
+
+### E. MES Integration Layer
+
+Tách riêng các adapter giao tiếp với MES, database và dịch vụ bên ngoài.
+
+Yêu cầu:
+
+- Timeout rõ ràng.
+- Cancellation token.
+- Retry có giới hạn đối với thao tác an toàn.
+- Phân loại lỗi kết nối và lỗi nghiệp vụ.
+- Correlation ID để truy vết giao dịch.
+- Circuit breaker khi phù hợp.
+- Không retry mù quáng đối với giao dịch có thể gây ghi nhận trùng.
+- Không chặn toàn bộ hệ thống khi MES bị chậm hoặc mất kết nối.
+
+### F. Persistence Layer
+
+Quản lý cấu hình, lịch sử kết nối, lịch sử giao dịch, sự kiện hệ thống, audit log và dữ liệu phục vụ truy vấn.
+
+Tách biệt cấu hình thiết bị, log vận hành, dữ liệu nghiệp vụ và dữ liệu audit. Chọn database theo môi trường thực tế, không tự ý thêm một hệ quản trị cơ sở dữ liệu mới nếu chưa cần thiết.
+
+### G. Monitoring & Diagnostics Layer
+
+Cung cấp:
+
+- Metrics.
+- Health checks.
+- Connection diagnostics.
+- Performance monitoring.
+- Structured logging.
+- Exception tracking.
+- Thống kê lỗi.
+- Cảnh báo bất thường.
+- Theo dõi thời gian xử lý từng giao dịch.
+
+### H. Presentation Layer
+
+Giao diện chỉ làm nhiệm vụ hiển thị và điều khiển nghiệp vụ thông qua các service/interface phù hợp. Không nhúng trực tiếp logic TCP/IP, truy vấn database hoặc nghiệp vụ sản xuất vào code-behind của UI.
+
+---
+
+## 4. QUẢN LÝ NHIỀU THIẾT BỊ SẢN XUẤT
+
+Xây dựng một Device Manager trung tâm có khả năng quản lý nhiều thiết bị đồng thời.
+
+Mỗi thiết bị phải có mô hình dữ liệu riêng với các trường phù hợp:
+
+- Equipment ID.
+- Equipment name.
+- Factory, line, station.
+- Equipment model.
+- IP address và port.
+- Vai trò TCP Server/Client.
+- Protocol version.
+- MC Server instance.
+- Trạng thái kết nối.
+- Trạng thái READY.
+- Thời điểm kết nối gần nhất.
+- Thời điểm nhận dữ liệu gần nhất.
+- Số request/response.
+- Số lỗi và số lần reconnect.
+- Thời gian phản hồi trung bình.
+- Thời gian hoạt động.
+- Trạng thái MES liên quan.
+- Thông tin cấu hình và lịch sử thay đổi.
+
+Các trường thực tế phải tuân theo schema và hệ thống hiện có.
+
+### Trạng thái thiết bị
+
+Thiết kế state machine rõ ràng, ví dụ:
+
+- Disconnected.
+- Connecting.
+- Connected.
+- Initializing.
+- Ready.
+- Busy.
+- Warning.
+- Error.
+- Reconnecting.
+
+Chỉ sử dụng các trạng thái phù hợp với protocol và nghiệp vụ. Phải phân biệt trạng thái kết nối TCP với trạng thái sẵn sàng sản xuất.
+
+### Yêu cầu xử lý đồng thời
+
+- Mỗi session phải được quản lý độc lập.
+- Không nhầm dữ liệu giữa các Equipment ID.
+- Không để một thiết bị gửi dữ liệu liên tục chiếm toàn bộ tài nguyên.
+- Có giới hạn số kết nối và kích thước buffer.
+- Có cơ chế chống tràn bộ nhớ.
+- Có chiến lược xử lý backpressure.
+- Có cancellation khi dừng service.
+- Có graceful shutdown.
+- Có reconnect với exponential backoff và jitter khi phù hợp.
+- Có giới hạn tốc độ ghi log và chính sách lưu trữ.
+- Có kiểm soát thứ tự xử lý khi protocol yêu cầu tuần tự theo từng thiết bị.
+
+Không tạo một thread vô hạn riêng cho mỗi thiết bị nếu không cần thiết. Ưu tiên asynchronous I/O và mô hình concurrency phù hợp với .NET.
+
+---
+
+## 5. TCP/IP VÀ XỬ LÝ PROTOCOL
+
+Đây là phần cốt lõi và phải được ưu tiên cao nhất.
+
+### 5.1. Xử lý TCP đúng chuẩn
+
+Phải xử lý được tất cả trường hợp:
+
+1. Một frame đến qua nhiều lần đọc.
+2. Nhiều frame đến trong một lần đọc.
+3. Frame bị thiếu dữ liệu.
+4. Frame sai độ dài.
+5. Kết nối bị đóng giữa chừng.
+6. Thiết bị gửi dữ liệu không hợp lệ.
+7. Thiết bị không gửi heartbeat.
+8. Timeout trong lúc xử lý.
+9. Client gửi lại message.
+10. Dữ liệu đến không đúng thứ tự nghiệp vụ.
+
+Không được giả định một lần `ReadAsync` tương ứng với một message hoàn chỉnh.
+
+### 5.2. Đặc tả protocol
+
+Tạo tài liệu `docs/PROTOCOL_SPECIFICATION.md`, mô tả:
+
+- Cấu trúc frame.
+- Kích thước từng trường.
+- Byte order nếu có trường số nhiều byte.
+- Encoding.
+- Delimiter.
+- Padding.
+- Quy tắc kết thúc frame.
+- Checksum algorithm.
+- Quy tắc timeout.
+- Danh sách message code.
+- Payload schema.
+- Request/response mapping.
+- Điều kiện xử lý.
+- Error code.
+- Ví dụ message đã được xác minh.
+
+Nếu protocol hiện có sử dụng các mã như M001/M002, S000/S001, S002/S003, S005/S006, S030/S031 và S040/S041, hãy kiểm tra source code và tài liệu thực tế để xác nhận ý nghĩa từng mã.
+
+Không tự động coi các cặp mã trên là cặp request/response hợp lệ nếu chưa có bằng chứng.
+
+Đặc biệt, nếu cấu trúc frame đang có sự khác biệt về tổng chiều dài, ví dụ 20.013 và 20.014 byte, phải xác minh từng trường, cách tính byte và quy tắc checksum trước khi triển khai parser chính thức.
+
+Tách parser khỏi business logic để có thể kiểm thử độc lập bằng dữ liệu mẫu.
+
+---
+
+## 6. CHỨC NĂNG NGHIỆP VỤ
+
+Phát triển các module sau theo nhu cầu và khả năng xác minh của hệ thống thực tế.
+
+### 6.1. Dashboard tổng quan
+
+Hiển thị:
+
+- Tổng số thiết bị.
+- Số thiết bị Online/Offline.
+- Số thiết bị Ready/Busy/Error.
+- Tình trạng kết nối MES.
+- Request/response trong khoảng thời gian lựa chọn.
+- Tỷ lệ giao dịch thành công.
+- Số giao dịch thất bại.
+- Thời gian phản hồi trung bình và percentile phù hợp.
+- Các cảnh báo mới nhất.
+- Thiết bị có lỗi lặp lại.
+- Biểu đồ lưu lượng giao tiếp theo thời gian.
+- Trạng thái hoạt động của MC Server.
+
+Các số liệu phải được lấy từ nguồn dữ liệu thật. Phân biệt số liệu hiện thời và số liệu lịch sử.
+
+### 6.2. Device Management
+
+- Danh sách thiết bị.
+- Tìm kiếm và lọc theo nhà máy, line, trạng thái.
+- Xem chi tiết thiết bị.
+- Thêm, sửa và xóa theo quyền.
+- Kiểm tra dữ liệu cấu hình.
+- Kiểm tra trùng lặp theo quy tắc thực tế.
+- Import/export CSV hoặc Excel nếu phù hợp.
+- Kiểm tra kết nối.
+- Xem lịch sử trạng thái.
+- Xem lịch sử cấu hình.
+- Phân quyền thao tác.
+
+Trước khi thay đổi cấu hình thiết bị đang hoạt động, phải có quy trình kiểm tra ảnh hưởng và áp dụng cấu hình an toàn.
+
+### 6.3. Communication Monitor
+
+- Theo dõi request và response.
+- Lọc theo Equipment ID, message code, thời gian, kết quả.
+- Xem payload đã được che thông tin nhạy cảm.
+- Xem thời gian xử lý.
+- Xem lỗi parser và checksum.
+- Xem correlation ID.
+- Xem trạng thái kết nối tại thời điểm giao dịch.
+- Export dữ liệu phục vụ điều tra.
+
+Không ghi thông tin xác thực hoặc dữ liệu nhạy cảm không cần thiết vào log.
+
+### 6.4. Protocol Explorer
+
+Xây dựng màn hình tra cứu protocol:
+
+- Danh sách message code.
+- Ý nghĩa message.
+- Payload schema.
+- Các trường bắt buộc.
+- Quy tắc validation.
+- Response tương ứng.
+- Mã lỗi.
+- Phiên bản protocol.
+- Ví dụ request/response.
+
+Cho phép kiểm tra và giải mã message mẫu trong môi trường chẩn đoán, nhưng không được tự động gửi lệnh sản xuất chỉ vì người dùng đang xem message.
+
+### 6.5. MES Monitor
+
+- Trạng thái kết nối MES.
+- Thời gian phản hồi.
+- Tỷ lệ lỗi.
+- Lịch sử request.
+- Lịch sử response.
+- Timeout.
+- Các giao dịch chờ xử lý nếu kiến trúc có hỗ trợ.
+- Tình trạng database và dịch vụ phụ thuộc nếu có quyền truy cập.
+
+### 6.6. Log & Alarm Center
+
+- Log hệ thống.
+- Log giao tiếp.
+- Log nghiệp vụ.
+- Audit log.
+- Cảnh báo theo mức độ.
+- Tìm kiếm và lọc nâng cao.
+- Xem chi tiết lỗi.
+- Đánh dấu đã xử lý.
+- Ghi chú người xử lý.
+- Lưu lịch sử xử lý.
+- Export log.
+
+Không được nhầm việc đánh dấu cảnh báo đã xem với việc lỗi thực tế đã được khắc phục.
+
+### 6.7. Configuration Center
+
+- Port và cấu hình mạng.
+- Thông tin kết nối MES.
+- Timeout.
+- Heartbeat.
+- Reconnect policy.
+- Logging level.
+- Giới hạn kết nối.
+- Chính sách lưu log.
+- Ngôn ngữ.
+- Theme.
+- Cấu hình bảo mật.
+
+Cấu hình nhạy cảm phải được lưu bằng giải pháp bảo vệ phù hợp với môi trường triển khai. Các thay đổi quan trọng phải được audit.
+
+### 6.8. User & Security Management
+
+- Đăng nhập.
+- Quản lý tài khoản.
+- Phân quyền theo vai trò.
+- Quản lý session.
+- Audit log.
+- Chính sách mật khẩu phù hợp.
+- Tự động khóa khi vi phạm chính sách.
+- Che thông tin nhạy cảm.
+- Hạn chế quyền thao tác điều khiển thiết bị.
+
+Phân biệt quyền xem, quyền sửa cấu hình, quyền vận hành, quyền quản trị và quyền xuất dữ liệu.
+
+Không triển khai các biện pháp bảo mật theo cách gây gián đoạn sản xuất hoặc vượt qua cơ chế xác thực hiện có.
+
+### 6.9. System Health
+
+Theo dõi:
+
+- CPU.
+- RAM.
+- Disk usage.
+- Network throughput.
+- Số session đang hoạt động.
+- Số request đang xử lý.
+- Độ dài hàng đợi.
+- Thread pool hoặc các tài nguyên concurrency phù hợp.
+- Database latency.
+- MES latency.
+- Thời gian hoạt động của ứng dụng.
+
+Cảnh báo phải có ngưỡng cấu hình, mức độ nghiêm trọng và khả năng truy vết nguyên nhân.
+
+---
+
+## 7. THIẾT KẾ GIAO DIỆN CAO CẤP
+
+Đây là yêu cầu thiết kế bắt buộc.
+
+Phong cách: **Premium Industrial Control Center**, kết hợp tinh thần của phần mềm quản trị doanh nghiệp hiện đại với màn hình giám sát nhà máy chuyên nghiệp.
+
+Giao diện phải sang trọng, tinh gọn, rõ ràng và có chiều sâu. Không sử dụng phong cách dashboard đại trà với quá nhiều thẻ màu, gradient sặc sỡ hoặc hiệu ứng trang trí không cần thiết.
+
+### 7.1. Nguyên tắc thiết kế
+
+- Tối ưu không gian hiển thị.
+- Tối đa hóa diện tích dành cho dữ liệu.
+- Thông tin quan trọng được nhận diện trong vài giây.
+- Tỷ lệ khoảng cách, font, icon và thành phần giao diện thống nhất.
+- Mật độ thông tin cao nhưng không rối.
+- Tương thích màn hình Full HD và 2K.
+- Hỗ trợ DPI scaling của Windows.
+- Có thể sử dụng ở màn hình rộng và cửa sổ thu nhỏ.
+- Không để nội dung bị cắt hoặc tràn ngoài khung.
+- Bảng dữ liệu phải dễ đọc khi có hàng nghìn bản ghi.
+
+### 7.2. Bố cục ứng dụng
+
+**Sidebar trái**
+
+- Logo MC Server.
+- Dashboard.
+- Equipment.
+- Communication.
+- Protocol.
+- MES Monitor.
+- Alarm Center.
+- Logs.
+- Configuration.
+- User Management.
+- System Health.
+
+Sidebar có chế độ mở rộng và thu gọn. Khi thu gọn, icon vẫn dễ nhận biết và có tooltip.
+
+**Top bar**
+
+- Breadcrumb.
+- Tên nhà máy hoặc môi trường.
+- Trạng thái MC Server.
+- Trạng thái MES.
+- Thông báo.
+- Chọn ngôn ngữ.
+- Chọn theme.
+- Tài khoản hiện tại.
+- Thời gian hệ thống.
+
+**Main content**
+
+Sử dụng không gian còn lại cho bảng dữ liệu, biểu đồ, bộ lọc và thông tin chi tiết. Không để header hoặc card trang trí chiếm quá nhiều chiều cao.
+
+**Status bar**
+
+Hiển thị thông tin cần thiết như phiên bản ứng dụng, thời gian hoạt động, số kết nối, trạng thái service và thông báo lỗi quan trọng.
+
+### 7.3. Bảng màu
+
+Hãy xây dựng design system nhất quán, có thể tham khảo:
+
+- Dark navy: nền điều khiển chuyên nghiệp.
+- Slate: nền phụ và vùng điều hướng.
+- White hoặc light gray: bề mặt dữ liệu ở light theme.
+- Blue: hành động chính và thông tin.
+- Green: trạng thái hoạt động bình thường.
+- Amber: cảnh báo.
+- Red: lỗi nghiêm trọng.
+- Gray: trạng thái chưa xác định hoặc không hoạt động.
+
+Các màu trạng thái phải nhất quán trong toàn bộ hệ thống. Không chỉ sử dụng màu để truyền tải thông tin, phải có nhãn hoặc icon đi kèm.
+
+### 7.4. Icon và hiệu ứng 3D
+
+Sử dụng bộ icon nhất quán như Fluent UI System Icons hoặc Lucide.
+
+Yêu cầu:
+
+- Icon vector sắc nét.
+- Có kích thước và stroke đồng bộ.
+- Có phiên bản phù hợp cho trạng thái bình thường, cảnh báo và lỗi.
+- Các icon quan trọng có tooltip.
+- Có thể dùng hiệu ứng 3D nhẹ, icon có chiều sâu hoặc ánh sáng tinh tế cho các thành phần điểm nhấn.
+- Có thể sử dụng SVG, vector hoặc asset 3D tối ưu khi thực sự cần thiết.
+- Các icon trạng thái phải dễ nhận biết ngay cả khi không có hiệu ứng.
+
+Không dùng emoji thay thế icon nghiệp vụ. Không sử dụng mô hình 3D nặng, hiệu ứng xoay liên tục hoặc animation gây tốn CPU/GPU.
+
+**Ưu tiên tốc độ, độ rõ ràng và tính chuyên nghiệp hơn hiệu ứng trang trí.**
+
+### 7.5. Dashboard chuyên nghiệp
+
+Thiết kế dashboard với:
+
+- KPI cards nhỏ gọn.
+- Số liệu lớn, đơn vị rõ ràng.
+- Biểu đồ có nhãn và tooltip.
+- Bảng thiết bị với status badge.
+- Panel cảnh báo mới nhất.
+- Biểu đồ lưu lượng giao tiếp.
+- Phần trăm thành công.
+- Thời gian phản hồi.
+- Thiết bị có lỗi bất thường.
+- Khả năng drill-down từ KPI đến bản ghi chi tiết.
+
+Không tạo dashboard chỉ có số liệu cố định. Tất cả biểu đồ và KPI phải liên kết với nguồn dữ liệu thực tế.
+
+### 7.6. Tối ưu bảng dữ liệu
+
+- Header rõ ràng.
+- Column width hợp lý.
+- Có thể ẩn/hiện cột.
+- Sort.
+- Filter.
+- Search.
+- Pagination hoặc virtual scrolling.
+- Sticky header khi phù hợp.
+- Row selection.
+- Context menu.
+- Copy cell.
+- Export dữ liệu.
+- Mở chi tiết bằng double-click nếu phù hợp.
+- Giữ bộ lọc khi quay lại trang.
+- Có empty state và loading state.
+- Hiển thị lỗi truy vấn một cách rõ ràng.
+
+Với hàng chục nghìn bản ghi, không render toàn bộ dữ liệu cùng lúc nếu không cần thiết.
+
+### 7.7. Animation
+
+Animation chỉ sử dụng khi có mục đích:
+
+- Chuyển trang.
+- Mở/đóng panel.
+- Xuất hiện cảnh báo mới.
+- Chuyển trạng thái kết nối.
+- Hiển thị loading.
+
+Thời lượng ngắn, chuyển động tinh tế và có thể giảm hiệu ứng khi cần. Không để animation làm chậm cập nhật trạng thái thiết bị.
+
+### 7.8. Responsive layout
+
+Khi cửa sổ thay đổi kích thước:
+
+- Sidebar có thể thu gọn.
+- KPI tự sắp xếp lại.
+- Bảng ưu tiên cột quan trọng.
+- Panel phụ có thể chuyển sang drawer.
+- Dialog không vượt quá màn hình.
+- Không có vùng giao diện bị che khuất.
+
+---
+
+## 8. ĐA NGÔN NGỮ: VIỆT, ANH, HÀN, TRUNG
+
+Hệ thống bắt buộc hỗ trợ bốn ngôn ngữ:
+
+1. Tiếng Việt: `vi-VN`.
+2. Tiếng Anh: `en-US`.
+3. Tiếng Hàn: `ko-KR`.
+4. Tiếng Trung giản thể: `zh-CN`.
+
+### Yêu cầu triển khai
+
+- Tách toàn bộ UI text khỏi business logic.
+- Không hardcode chuỗi giao diện trong View, ViewModel hoặc component.
+- Có một hệ thống localization tập trung.
+- Chuyển ngôn ngữ ngay khi người dùng chọn, không bắt buộc khởi động lại nếu framework hỗ trợ.
+- Lưu ngôn ngữ được chọn theo tài khoản hoặc cấu hình phù hợp.
+- Hỗ trợ Unicode đầy đủ.
+- Chọn font có khả năng hiển thị chính xác tiếng Việt, Hangul và chữ Hán.
+- Ngày tháng, số, múi giờ và định dạng hiển thị phải theo culture.
+- Tự động bố trí lại khi bản dịch dài hơn.
+- Không dịch mã protocol, Equipment ID hoặc dữ liệu gốc của thiết bị.
+- Giữ nguyên log gốc khi cần điều tra kỹ thuật.
+- Các thông báo lỗi phải có mã lỗi ổn định và phần mô tả đã được dịch.
+
+Tạo tài nguyên dịch riêng, ví dụ:
+
+- `Resources/Strings.vi-VN.resx`
+- `Resources/Strings.en-US.resx`
+- `Resources/Strings.ko-KR.resx`
+- `Resources/Strings.zh-CN.resx`
+
+Nếu sử dụng React, hãy dùng cơ chế i18n tương ứng và tách các file locale JSON riêng.
+
+Không chỉ dịch menu. Phải dịch đầy đủ dialog, tooltip, validation, cảnh báo, empty state, thông báo lỗi, thông báo thành công và hướng dẫn thao tác.
+
+Tạo tài liệu `docs/LOCALIZATION.md` và kiểm tra bản dịch không bị thiếu key.
+
+---
+
+## 9. CẤU TRÚC SOURCE CODE VÀ KHẢ NĂNG BẢO TRÌ
+
+Thiết kế thư mục theo module và trách nhiệm, tránh một file chứa quá nhiều logic.
+
+Đối với dự án C#/.NET mới, có thể tham khảo cấu trúc:
+
+MCServer.sln
+
+src/
+- MCServer.App/
+  - Views/
+  - ViewModels/
+  - Navigation/
+  - Resources/
+  - Themes/
+  - Converters/
+- MCServer.Domain/
+  - Entities/
+  - ValueObjects/
+  - Enums/
+  - ProtocolModels/
+  - Interfaces/
+- MCServer.Application/
+  - Services/
+  - UseCases/
+  - DTOs/
+  - Validators/
+- MCServer.Communication/
+  - Tcp/
+  - Sessions/
+  - Buffering/
+  - Reconnection/
+  - Heartbeat/
+- MCServer.Protocol/
+  - Framing/
+  - Encoding/
+  - Decoding/
+  - Checksum/
+  - MessageHandlers/
+  - MessageDefinitions/
+- MCServer.Infrastructure/
+  - Persistence/
+  - Configuration/
+  - Logging/
+  - MesIntegration/
+  - Security/
+- MCServer.Worker/
+  - HostedServices/
+  - Monitoring/
+  - BackgroundTasks/
+
+tests/
+- MCServer.Domain.Tests/
+- MCServer.Protocol.Tests/
+- MCServer.Communication.Tests/
+- MCServer.Application.Tests/
+- MCServer.IntegrationTests/
+
+docs/
+- PROJECT_ANALYSIS.md
+- ARCHITECTURE.md
+- PROTOCOL_SPECIFICATION.md
+- DATA_FLOW.md
+- DATABASE_SCHEMA.md
+- CONFIGURATION.md
+- DEPLOYMENT.md
+- TROUBLESHOOTING.md
+- LOCALIZATION.md
+- SECURITY.md
+- TEST_PLAN.md
+
+config/
+scripts/
+README.md
+
+Đây là cấu trúc tham khảo. Hãy điều chỉnh theo dự án thực tế, tránh chia nhỏ thành quá nhiều project nếu không mang lại giá trị.
+
+### Tiêu chuẩn code
+
+- SOLID.
+- Separation of Concerns.
+- Dependency Injection.
+- Interface rõ ràng.
+- Tên class, method và biến có ý nghĩa.
+- Nullable reference types nếu phù hợp.
+- CancellationToken cho các tác vụ bất đồng bộ có thể hủy.
+- Structured logging.
+- Xử lý ngoại lệ có ngữ cảnh.
+- Không lặp lại logic.
+- Không tạo dependency vòng.
+- Không để business logic phụ thuộc trực tiếp vào UI.
+- Có tài liệu cho các thành phần phức tạp.
+- Có cấu hình theo môi trường.
+- Có unit test và integration test.
+- Có thể mở rộng thêm thiết bị và message code mà không phải viết lại kiến trúc.
+
+Không tạo một class khổng lồ như `MainForm.cs` hoặc `MainWindow.xaml.cs` chứa toàn bộ TCP, MES, database, protocol và UI.
+
+---
+
+## 10. DATABASE VÀ LƯU TRỮ
+
+Trước tiên, kiểm tra database hiện có. Nếu có schema đang được sử dụng, hãy bảo toàn tương thích và xây dựng migration có kiểm soát.
+
+Các nhóm dữ liệu cần xem xét:
+
+- Device master.
+- Device connection history.
+- Communication transaction history.
+- System event.
+- Alarm history.
+- User và role.
+- Audit history.
+- Application configuration.
+- MES transaction tracking.
+
+Mỗi nhóm cần có quy tắc lưu trữ và thời gian lưu phù hợp.
+
+Yêu cầu:
+
+- Index theo các trường truy vấn thường xuyên.
+- Phân trang ở tầng truy vấn.
+- Truy vấn có tham số.
+- Transaction khi cần tính nhất quán.
+- Kiểm soát ghi đồng thời.
+- Không lưu trùng giao dịch do retry.
+- Có chính sách retention và archive.
+- Không để việc ghi log chặn xử lý socket.
+- Không ghi dữ liệu sản xuất thành công chỉ dựa trên việc gửi request.
+- Phân biệt request đã gửi, response đã nhận và nghiệp vụ đã được xác nhận.
+
+Nếu cần tạo schema mới, hãy cung cấp ERD, mô tả trường, kiểu dữ liệu, index và chiến lược migration trước khi triển khai.
+
+---
+
+## 11. HIỆU NĂNG VÀ ĐỘ ỔN ĐỊNH
+
+Thiết kế theo hướng ưu tiên hoạt động liên tục trong môi trường nhà máy.
+
+Phải có:
+
+- Asynchronous I/O.
+- Connection lifecycle rõ ràng.
+- Timeout cho các thao tác mạng.
+- Bounded queue khi cần.
+- Backpressure.
+- Cancellation.
+- Graceful shutdown.
+- Reconnect có giới hạn.
+- Giám sát tài nguyên.
+- Giới hạn kích thước message.
+- Kiểm soát hàng đợi.
+- Quản lý vòng đời buffer.
+- Giới hạn concurrency hợp lý.
+- Cơ chế tránh duplicate transaction.
+- Khả năng phục hồi sau khi MES hoặc thiết bị mất kết nối.
+- Log có correlation ID.
+
+Các thông số hiệu năng phải được đo bằng load test. Không tự khẳng định hỗ trợ hàng trăm hoặc hàng nghìn thiết bị nếu chưa kiểm thử trong môi trường tương đương.
+
+Không được âm thầm bỏ message khi hệ thống quá tải. Phải có chiến lược xử lý và cảnh báo rõ ràng.
+
+---
+
+## 12. BẢO MẬT
+
+Áp dụng nguyên tắc least privilege.
+
+- Bảo vệ thông tin xác thực.
+- Không commit secret vào Git.
+- Kiểm tra dữ liệu đầu vào.
+- Giới hạn quyền thao tác.
+- Audit các thay đổi cấu hình quan trọng.
+- Không cho phép gửi lệnh tùy ý từ giao diện chẩn đoán.
+- Phân tách quyền xem log và quyền điều khiển.
+- Hạn chế truy cập cổng mạng không cần thiết.
+- Có cấu hình timeout và giới hạn kết nối.
+- Không đưa stack trace hoặc secret vào thông báo dành cho người dùng cuối.
+- Xem xét TLS khi thiết bị và protocol hỗ trợ.
+- Không tự thêm hoặc ép TLS nếu thiết bị hiện tại chỉ hỗ trợ giao thức khác.
+- Có hướng dẫn triển khai firewall và phân vùng mạng phù hợp với nhà máy.
+
+Các thao tác có thể ảnh hưởng trực tiếp đến sản xuất phải được xác nhận và ghi audit theo chính sách.
+
+---
+
+## 13. KIỂM THỬ BẮT BUỘC
+
+Tạo test plan và thực hiện kiểm thử theo từng lớp.
+
+### Protocol tests
+
+- Frame hợp lệ.
+- Frame sai độ dài.
+- Checksum đúng và sai.
+- JSON không hợp lệ.
+- Ký tự Unicode.
+- TCP fragmentation.
+- TCP coalescing.
+- Payload vượt giới hạn.
+- Thiếu delimiter.
+- Kết nối đóng giữa frame.
+
+### Communication tests
+
+- Nhiều thiết bị kết nối đồng thời.
+- Thiết bị mất mạng.
+- Thiết bị reconnect.
+- Thiết bị không gửi heartbeat.
+- MES timeout.
+- Response chậm.
+- Server shutdown khi đang có giao dịch.
+- Một thiết bị gửi lưu lượng bất thường.
+- Session bị đóng trong lúc gửi dữ liệu.
+
+### Business tests
+
+- READY handshake.
+- Message hợp lệ và không hợp lệ.
+- Recipe không tồn tại.
+- PCB/Lot không hợp lệ.
+- MES trả NG.
+- MES không phản hồi.
+- Giao dịch trùng.
+- Sai thứ tự message.
+- Không cập nhật trạng thái khi giao dịch thất bại.
+
+Các trường hợp chỉ áp dụng nếu phù hợp với protocol thực tế.
+
+### UI tests
+
+- Chuyển ngôn ngữ.
+- Dark/light theme.
+- Màn hình Full HD và 2K.
+- DPI scaling.
+- Bảng dữ liệu lớn.
+- Loading và empty state.
+- Dialog xác nhận.
+- Hiển thị lỗi.
+- Kết nối thay đổi liên tục.
+- UI vẫn phản hồi khi nhiều thiết bị gửi dữ liệu.
+
+### Performance tests
+
+- Số lượng session mục tiêu.
+- Lưu lượng message mục tiêu.
+- Thời gian phản hồi.
+- CPU và RAM.
+- Tốc độ truy vấn.
+- Độ dài hàng đợi.
+- Khả năng chạy liên tục.
+- Khả năng phục hồi sau sự cố.
+
+Không sử dụng dữ liệu thử nghiệm để thực hiện giao dịch sản xuất thật. Cần có mock server, simulator hoặc môi trường test được kiểm soát.
+
+---
+
+## 14. TRIỂN KHAI VÀ VẬN HÀNH
+
+Cung cấp:
+
+- Build và publish script.
+- File cấu hình mẫu.
+- Hướng dẫn triển khai trên Windows.
+- Hướng dẫn chạy dạng Windows Service nếu phù hợp.
+- Hướng dẫn chạy ứng dụng desktop nếu có.
+- Kiểm tra port và firewall.
+- Cấu hình log.
+- Cấu hình database.
+- Kiểm tra kết nối MES.
+- Health check.
+- Quy trình nâng cấp.
+- Quy trình rollback.
+- Quy trình backup cấu hình.
+- Hướng dẫn khắc phục sự cố.
+- Hướng dẫn kiểm tra sau khi triển khai.
+
+Không mặc định rằng service chạy thành công chỉ vì lệnh start trả về thành công. Phải kiểm tra process, log, health status và khả năng kết nối thực tế.
+
+Tạo README với hướng dẫn từ lúc clone source đến khi build, chạy, kiểm thử và triển khai.
+
+---
+
+## 15. QUY TRÌNH LÀM VIỆC CỦA AI
+
+Không viết toàn bộ ứng dụng trong một lần bằng các file rời rạc. Hãy thực hiện theo từng giai đoạn và kiểm tra kết quả sau mỗi giai đoạn.
+
+### Phase 1: Discovery
+
+- Đọc source code.
+- Kiểm tra công nghệ.
+- Xác định các điểm chưa rõ.
+- Lập danh sách chức năng.
+- Xác định rủi ro.
+- Tạo sơ đồ kiến trúc ban đầu.
+
+### Phase 2: Architecture
+
+- Tạo kiến trúc tổng thể.
+- Tạo sơ đồ luồng dữ liệu.
+- Xác định interface.
+- Xác định mô hình dữ liệu.
+- Xác định cấu hình.
+- Xác định chiến lược test.
+
+### Phase 3: Core Communication
+
+- Xây dựng hoặc hoàn thiện session manager.
+- TCP receive/send.
+- Buffering và frame parser.
+- Protocol validation.
+- Timeout.
+- Heartbeat.
+- Reconnect.
+- Unit tests.
+
+Đây là giai đoạn ưu tiên cao nhất. Không làm UI đẹp trước khi xác định được cách giao tiếp đúng.
+
+### Phase 4: Business & MES
+
+- Message handlers.
+- Business rules.
+- MES adapters.
+- Transaction tracking.
+- Error mapping.
+- Integration tests.
+
+### Phase 5: Persistence & Monitoring
+
+- Database.
+- Logging.
+- Audit.
+- Metrics.
+- Alarm center.
+- Health monitoring.
+
+### Phase 6: UI/UX
+
+- Design system.
+- Main layout.
+- Dashboard.
+- Device management.
+- Communication monitor.
+- Protocol explorer.
+- MES monitor.
+- Configuration.
+- Localization.
+- Responsive layout.
+
+### Phase 7: Quality Assurance
+
+- Build.
+- Unit tests.
+- Integration tests.
+- Protocol simulation.
+- Load tests.
+- UI verification.
+- Security review.
+- Bug fixing.
+
+### Phase 8: Release
+
+- Publish.
+- Deployment scripts.
+- Configuration samples.
+- Documentation.
+- Release checklist.
+- Known limitations.
+- Rollback instructions.
+
+Sau mỗi giai đoạn, hãy báo cáo những gì đã hoàn thành, file nào đã được tạo hoặc sửa, test nào đã chạy, kết quả thực tế và những vấn đề còn tồn tại.
+
+Không chỉ đưa ra kế hoạch rồi dừng lại. Hãy trực tiếp thực hiện công việc trên source code trong phạm vi công cụ được cấp phép.
+
+---
+
+## 16. TIÊU CHUẨN NGHIỆM THU
+
+Chỉ coi hệ thống hoàn thành khi đáp ứng các điều kiện sau:
+
+- Build thành công trên môi trường mục tiêu.
+- Các unit test và integration test liên quan đạt yêu cầu.
+- Protocol được xác minh theo đặc tả thực tế.
+- Không trộn lẫn dữ liệu giữa các thiết bị.
+- Không giả định TCP Read tương ứng với một message.
+- Có quản lý timeout và reconnect.
+- Có xử lý MES mất kết nối.
+- Có log và correlation ID để truy vết.
+- Các thao tác quan trọng có audit.
+- UI không bị đóng băng khi xử lý giao tiếp.
+- Bốn ngôn ngữ hoạt động đầy đủ.
+- Không còn chuỗi UI chưa dịch trong phạm vi đã nghiệm thu.
+- Giao diện phù hợp với màn hình mục tiêu.
+- Có hướng dẫn cài đặt, cấu hình và khắc phục sự cố.
+- Không còn lỗi nghiêm trọng chưa được xử lý.
+- Những chức năng chưa được xác minh phải được liệt kê rõ ràng.
+
+Không tuyên bố đạt nghiệm thu nếu chỉ mới tạo được giao diện hoặc build thành công mà chưa kiểm thử các luồng giao tiếp.
+
+---
+
+## 17. YÊU CẦU ĐẦU RA
+
+Sau khi hoàn thành, cung cấp:
+
+1. Source code đầy đủ.
+2. Cấu trúc thư mục rõ ràng.
+3. Tệp cấu hình mẫu không chứa secret.
+4. Tài liệu kiến trúc.
+5. Sơ đồ luồng dữ liệu.
+6. Tài liệu protocol.
+7. Tài liệu database.
+8. Tài liệu cài đặt và triển khai.
+9. Hướng dẫn vận hành.
+10. Hướng dẫn xử lý lỗi.
+11. Bộ unit test và integration test.
+12. Báo cáo build và test.
+13. Danh sách chức năng đã hoàn thiện.
+14. Danh sách chức năng còn thiếu hoặc chưa xác minh.
+15. Release checklist.
+
+## 18. BẮT ĐẦU NGAY
+
+Trước tiên, hãy kiểm tra dự án hiện tại và xác định chính xác những gì đang có.
+
+Nếu source code đã tồn tại, không được tạo một dự án mới độc lập rồi bỏ qua code cũ. Hãy phân tích và tích hợp có kiểm soát.
+
+Nếu chưa có source code, hãy đề xuất kiến trúc và công nghệ phù hợp trước khi tạo dự án.
+
+Ưu tiên theo thứ tự:
+
+**Độ chính xác của protocol → độ ổn định giao tiếp → tính đúng đắn nghiệp vụ → khả năng truy vết → hiệu năng → bảo mật → giao diện → hiệu ứng thị giác.**
+
+Bắt đầu bằng Phase 1. Hãy đọc source code, lập bản đồ hệ thống, xác định các điểm chưa rõ và đề xuất kế hoạch thực hiện cụ thể. Sau đó tiếp tục triển khai từng giai đoạn, tự kiểm thử và sửa lỗi cho đến khi đạt tiêu chuẩn nghiệm thu.
+
+Mục tiêu là một MC Server Enterprise thực sự có thể vận hành, bảo trì và mở rộng trong môi trường sản xuất, với giao diện hiện đại, trải nghiệm mượt mà và kiến trúc đủ vững chắc để phát triển lâu dài.

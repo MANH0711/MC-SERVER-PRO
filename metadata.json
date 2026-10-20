@@ -1,0 +1,6 @@
+{
+  "name": "MC Server Enterprise",
+  "description": "Industrial Enterprise Manufacturing Communication Server with multi-device TCP/IP management, MES integration, protocol frame analysis, real-time diagnostics, and 4-language support (VI, EN, KO, ZH).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
