@@ -14,12 +14,14 @@ import {
   UserSession,
   UserRole,
   MesStatus,
+  SystemUser,
 } from '../types';
 import {
   INITIAL_DEVICES,
   INITIAL_DEVICE_GROUPS,
   INITIAL_CONFIG,
   INITIAL_USER_SESSION,
+  INITIAL_USERS,
   INITIAL_ALARMS,
   INITIAL_LOGS,
 } from '../storage/database';
@@ -48,6 +50,7 @@ interface AppContextType {
   logs: LogEntry[];
   config: ServerConfig;
   userSession: UserSession;
+  users: SystemUser[];
   mesStatus: MesStatus;
   theme: 'dark' | 'light';
   setTheme: (theme: 'dark' | 'light') => void;
@@ -68,6 +71,11 @@ interface AppContextType {
   clearLogs: () => void;
   updateConfig: (newConfig: ServerConfig) => void;
   switchUserRole: (role: UserRole) => void;
+  addUser: (user: SystemUser) => void;
+  updateUser: (id: string, updates: Partial<SystemUser>) => void;
+  deleteUser: (id: string) => void;
+  toggleUserStatus: (id: string) => void;
+  switchActiveUser: (user: SystemUser) => void;
   injectRawFrame: (equipmentId: string, rawData: string | Uint8Array) => void;
   pingMes: () => Promise<{ success: boolean; latencyMs: number; message: string }>;
   resetCircuitBreaker: () => void;
@@ -85,6 +93,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [devices, setDevices] = useState<DeviceModel[]>(INITIAL_DEVICES);
   const [deviceGroups, setDeviceGroups] = useState<DeviceGroup[]>(INITIAL_DEVICE_GROUPS);
+  const [users, setUsers] = useState<SystemUser[]>(INITIAL_USERS);
   const [transactions, setTransactions] = useState<CommunicationTransaction[]>([]);
   const [alarms, setAlarms] = useState<AlarmItem[]>(INITIAL_ALARMS);
   const [logs, setLogs] = useState<LogEntry[]>(INITIAL_LOGS);
@@ -272,6 +281,105 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }));
   };
 
+  const addUser = (newUser: SystemUser) => {
+    setUsers((prev) => [newUser, ...prev]);
+    const log: LogEntry = {
+      id: `LOG_USR_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      level: 'INFO',
+      category: 'AUDIT',
+      message: `Tạo tài khoản người dùng mới: [${newUser.username}] (${newUser.displayName}), Vai trò: ${newUser.role}, Phòng ban: ${newUser.department}`,
+      operator: userSession.username,
+      details: {
+        userId: newUser.id,
+        username: newUser.username,
+        role: newUser.role,
+        department: newUser.department,
+        shift: newUser.shift,
+      },
+    };
+    setLogs((prev) => [log, ...prev]);
+  };
+
+  const updateUser = (id: string, updates: Partial<SystemUser>) => {
+    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updates } : u)));
+    const log: LogEntry = {
+      id: `LOG_USR_UPD_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      level: 'INFO',
+      category: 'AUDIT',
+      message: `Cập nhật thông tin người dùng: ID [${id}] bởi ${userSession.username}`,
+      operator: userSession.username,
+      details: updates,
+    };
+    setLogs((prev) => [log, ...prev]);
+  };
+
+  const deleteUser = (id: string) => {
+    const target = users.find((u) => u.id === id);
+    setUsers((prev) => prev.filter((u) => u.id !== id));
+    const log: LogEntry = {
+      id: `LOG_USR_DEL_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      level: 'WARN',
+      category: 'AUDIT',
+      message: `Xóa tài khoản người dùng: [${target?.username || id}] (${target?.displayName || ''}) bởi ${userSession.username}`,
+      operator: userSession.username,
+      details: { targetId: id, username: target?.username },
+    };
+    setLogs((prev) => [log, ...prev]);
+  };
+
+  const toggleUserStatus = (id: string) => {
+    let nextStatus: 'ACTIVE' | 'LOCKED' = 'ACTIVE';
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (u.id === id) {
+          nextStatus = u.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE';
+          return { ...u, status: nextStatus };
+        }
+        return u;
+      })
+    );
+    const target = users.find((u) => u.id === id);
+    const log: LogEntry = {
+      id: `LOG_USR_ST_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      level: 'WARN',
+      category: 'AUDIT',
+      message: `Thay đổi trạng thái tài khoản [${target?.username || id}] thành: ${nextStatus} bởi ${userSession.username}`,
+      operator: userSession.username,
+      details: { targetId: id, newStatus: nextStatus },
+    };
+    setLogs((prev) => [log, ...prev]);
+  };
+
+  const switchActiveUser = (user: SystemUser) => {
+    setUserSession({
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      role: user.role,
+      factory: user.factory,
+      department: user.department,
+      loginTime: new Date().toISOString(),
+    });
+    const log: LogEntry = {
+      id: `LOG_AUTH_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      level: 'INFO',
+      category: 'AUDIT',
+      message: `Chuyển phiên làm việc sang tài khoản: [${user.username}] (${user.displayName}), Vai trò: ${user.role}`,
+      operator: user.username,
+      details: {
+        userId: user.id,
+        role: user.role,
+        department: user.department,
+      },
+    };
+    setLogs((prev) => [log, ...prev]);
+  };
+
   const injectRawFrame = (equipmentId: string, rawData: string | Uint8Array) => {
     sessionManager.injectRawFrame(equipmentId, rawData);
   };
@@ -304,6 +412,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         logs,
         config,
         userSession,
+        users,
         mesStatus,
         theme,
         setTheme,
@@ -323,6 +432,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         clearLogs,
         updateConfig,
         switchUserRole,
+        addUser,
+        updateUser,
+        deleteUser,
+        toggleUserStatus,
+        switchActiveUser,
         injectRawFrame,
         pingMes,
         resetCircuitBreaker,

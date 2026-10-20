@@ -60,7 +60,7 @@ export const ko = {
       latencyDistribution: '응답 지연 시간 (ms)',
     },
     equipmentMatrix: {
-      title: '공정 설비 실시간 감시 매트릭스',
+      title: '설비 정보',
       registerGroup: '그룹 등록',
       manageGroups: '설비 그룹 관리',
       expandAll: '모두 펼치기',

@@ -60,7 +60,7 @@ export const zh = {
       latencyDistribution: '报文响应时间分布 (ms)',
     },
     equipmentMatrix: {
-      title: '生产工位实时监控矩阵',
+      title: '设备信息',
       registerGroup: '注册设备组',
       manageGroups: '设备组管理',
       expandAll: '全部展开',

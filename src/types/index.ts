@@ -16,6 +16,21 @@ export interface UserSession {
   loginTime: string;
 }
 
+export interface SystemUser {
+  id: string;
+  username: string;
+  displayName: string;
+  role: UserRole;
+  factory: string;
+  department: string;
+  shift: string;
+  rfidBadge?: string;
+  status: 'ACTIVE' | 'LOCKED';
+  lastLogin: string;
+  createdAt: string;
+  email?: string;
+}
+
 export type DeviceStatus =
   | 'Disconnected'
   | 'Connecting'

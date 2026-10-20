@@ -112,6 +112,46 @@ export const DashboardView: React.FC = () => {
   // Action notification toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // User adjustable width for "Thông Tin Thiết Bị" panel (saved in localStorage)
+  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(() => {
+    const saved = localStorage.getItem('mcserver_dashboard_left_width');
+    const parsed = saved ? parseInt(saved, 10) : 320;
+    return isNaN(parsed) || parsed < 220 || parsed > 650 ? 320 : parsed;
+  });
+  const [isResizing, setIsResizing] = useState<boolean>(false);
+  const splitPaneRef = useRef<HTMLDivElement | null>(null);
+
+  // Dragging logic for left panel resize
+  const handleMouseDownResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!splitPaneRef.current) return;
+      const rect = splitPaneRef.current.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const maxWidth = Math.min(650, rect.width * 0.55);
+      const clamped = Math.max(220, Math.min(maxWidth, currentX));
+      setLeftPanelWidth(Math.round(clamped));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      localStorage.setItem('mcserver_dashboard_left_width', leftPanelWidth.toString());
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, leftPanelWidth]);
+
   // Auto-scroll anchor ref
   const streamEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -490,15 +530,21 @@ export const DashboardView: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Main Work Area: Side-by-Side Split */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2 min-h-0 overflow-hidden">
+      {/* 2. Main Work Area: Side-by-Side Split with Interactive User Resizer */}
+      <div
+        ref={splitPaneRef}
+        className={`flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden relative gap-2 lg:gap-0 ${
+          isResizing ? 'cursor-col-resize select-none' : ''
+        }`}
+      >
         {/* ========================================================================= */}
-        {/* LEFT COLUMN: MA TRẬN GIÁM SÁT TRỰC QUAN DẠNG CÂY THEO GROUP THIẾT BỊ      */}
-        {/* Yêu cầu mới: Bỏ ô tìm kiếm, bỏ dòng ghi chú chuột phải,                    */}
-        {/* hiển thị cả TÊN MÁY và ID MÁY, thêm đăng ký group thiết bị & cây group   */}
+        {/* LEFT COLUMN: THÔNG TIN THIẾT BỊ (ĐIỀU CHỈNH ĐƯỢC ĐỘ RỘNG BẰNG KÉO THẢ)    */}
         {/* ========================================================================= */}
-        <div className="lg:col-span-5 flex flex-col rounded-lg bg-[#0C1220]/95 border border-slate-800/90 min-h-0 overflow-hidden shadow-md">
-          {/* Matrix Header - Clean, NO search bar, has Group Register & Expand buttons */}
+        <div
+          style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${leftPanelWidth}px` : undefined }}
+          className="flex flex-col rounded-lg bg-[#0C1220]/95 border border-slate-800/90 min-h-0 overflow-hidden shadow-md shrink-0 w-full lg:shrink-0 max-lg:!w-full"
+        >
+          {/* Card Header: Title changed to 'Thông Tin Thiết Bị' with width indicator */}
           <div className="px-3 py-2 bg-slate-950/80 border-b border-slate-800/80 flex items-center justify-between gap-2 shrink-0">
             <div className="flex items-center gap-2 min-w-0">
               <Layers className="w-3.5 h-3.5 text-blue-400 shrink-0" />
@@ -510,8 +556,17 @@ export const DashboardView: React.FC = () => {
               </span>
             </div>
 
-            {/* Quick Action buttons on header: Expand/Collapse All */}
-            <div className="flex items-center gap-1.5 shrink-0">
+            {/* Quick Action buttons on header: Width Reset + Expand/Collapse All */}
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Width Indicator & Quick Reset */}
+              <button
+                onClick={() => setLeftPanelWidth(320)}
+                className="hidden lg:flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-blue-500 hover:text-blue-300 text-[10px] font-mono text-slate-400 transition-colors"
+                title="Bấm để đặt lại độ rộng card về mặc định (320px)"
+              >
+                <span>{leftPanelWidth}px</span>
+              </button>
+
               {/* Expand / Collapse All */}
               <button
                 onClick={() => {
@@ -740,29 +795,30 @@ export const DashboardView: React.FC = () => {
           {/* ========================================================================= */}
           {/* Ô THÔNG TIN CHI TIẾT Ở CUỐI (HIỂN THỊ TÊN MÁY CHI TIẾT VÀ THÔNG SỐ ĐẦY ĐỦ) */}
           {/* ========================================================================= */}
-          <div className="border-t border-slate-800/90 bg-[#090E1B] p-2.5 shrink-0 space-y-2">
+          {/* ========================================================================= */}
+          {/* Ô THÔNG TIN CHI TIẾT Ở CUỐI (TỐI ƯU SIÊU NHỎ GỌN, TIẾT KIỆM DIỆN TÍCH)    */}
+          {/* ========================================================================= */}
+          <div className="border-t border-slate-800/90 bg-[#090E1B] p-2 shrink-0 space-y-1.5">
             {activeDevice ? (
               <div className="space-y-1.5">
-                {/* Header of Station Detail Box */}
-                <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/70">
-                  <div className="flex items-center gap-2 min-w-0">
+                {/* Header: LED + Tên máy + ID + Status */}
+                <div className="flex items-center justify-between pb-1 border-b border-slate-800/70">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <span
-                      className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                      className={`w-2 h-2 rounded-full shrink-0 ${
                         getStatusBadge(activeDevice.status).dot
                       }`}
                     />
-                    {/* TÊN MÁY CHI TIẾT */}
-                    <span className="font-bold text-xs text-slate-100 font-sans truncate">
+                    <span className="font-bold text-xs text-slate-100 font-sans truncate" title={activeDevice.name}>
                       {activeDevice.name}
                     </span>
-                    {/* ID MÁY */}
-                    <span className="font-mono text-[10px] text-blue-400 shrink-0 font-semibold bg-blue-950/60 px-1.5 py-0.2 rounded border border-blue-900/60">
+                    <span className="font-mono text-[9px] text-cyan-400 shrink-0 font-semibold bg-cyan-950/60 px-1 py-0.2 rounded border border-cyan-900/60">
                       {activeDevice.id}
                     </span>
                   </div>
 
                   <span
-                    className={`text-[9px] font-mono px-2 py-0.5 rounded border uppercase font-bold shrink-0 ${
+                    className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold shrink-0 ${
                       getStatusBadge(activeDevice.status).className
                     }`}
                   >
@@ -770,122 +826,61 @@ export const DashboardView: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Telemetry Grid (Compact 4-column metrics) */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 font-mono text-[10px] text-slate-300">
-                  <div className="p-1 rounded bg-slate-950/90 border border-slate-800/70">
-                    <span className="text-slate-500 block text-[9px]">
-                      {t('dashboard.stationDetails.ipPort')}
-                    </span>
-                    <span className="text-slate-200 font-mono truncate block" title={`${activeDevice.ipAddress}:${activeDevice.port}`}>
-                      {activeDevice.ipAddress}:{activeDevice.port}
-                    </span>
+                {/* Telemetry Grid: Chỉ giữ IP, RCP, Ping, Group (Đã bỏ LOT, KHUNG, GÓI, LỖI) */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 font-mono text-[10px]">
+                  {/* IP & Port */}
+                  <div className="px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden" title={`${activeDevice.ipAddress}:${activeDevice.port}`}>
+                    <span className="text-slate-500 text-[9px] shrink-0">IP</span>
+                    <span className="text-slate-200 truncate text-[10px]">{activeDevice.ipAddress}:{activeDevice.port}</span>
                   </div>
 
-                  <div className="p-1 rounded bg-slate-950/90 border border-slate-800/70">
-                    <span className="text-slate-500 block text-[9px]">
-                      {t('dashboard.stationDetails.recipe')}
-                    </span>
-                    <span
-                      className="text-blue-400 font-sans truncate block font-semibold"
-                      title={activeDevice.currentRecipe}
-                    >
-                      {activeDevice.currentRecipe || 'DEFAULT_RCP'}
-                    </span>
+                  {/* Recipe */}
+                  <div className="px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden" title={activeDevice.currentRecipe}>
+                    <span className="text-slate-500 text-[9px] shrink-0">RCP</span>
+                    <span className="text-blue-400 font-semibold truncate text-[10px]">{activeDevice.currentRecipe?.replace('RCP_', '') || 'DEFAULT'}</span>
                   </div>
 
-                  <div className="p-1 rounded bg-slate-950/90 border border-slate-800/70">
-                    <span className="text-slate-500 block text-[9px]">
-                      {t('dashboard.stationDetails.lot')}
-                    </span>
-                    <span className="text-slate-200 font-mono truncate block">
-                      {activeDevice.currentCarrierId || 'LOT_WAITING'}
-                    </span>
+                  {/* Latency */}
+                  <div className="px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden">
+                    <span className="text-slate-500 text-[9px] shrink-0">Ping</span>
+                    <span className="text-amber-400 font-semibold tabular-nums text-[10px]">{activeDevice.avgResponseTimeMs}ms</span>
                   </div>
 
-                  <div className="p-1 rounded bg-slate-950/90 border border-slate-800/70">
-                    <span className="text-slate-500 block text-[9px]">
-                      {t('dashboard.stationDetails.boundary')}
-                    </span>
-                    <span className="text-purple-400 font-mono truncate block">
-                      {activeDevice.frameBoundary === '20014_EXTENDED'
-                        ? '20.014 (+LF)'
-                        : '20.013 (ETX)'}
-                    </span>
-                  </div>
-
-                  <div className="p-1 rounded bg-slate-950/90 border border-slate-800/70">
-                    <span className="text-slate-500 block text-[9px]">
-                      {t('dashboard.stationDetails.requests')}
-                    </span>
-                    <span className="text-slate-200 font-mono font-bold block tabular-nums">
-                      {formatNumber(activeDevice.totalRequests)}
-                    </span>
-                  </div>
-
-                  <div className="p-1 rounded bg-slate-950/90 border border-slate-800/70">
-                    <span className="text-slate-500 block text-[9px]">
-                      {t('dashboard.stationDetails.errors')}
-                    </span>
-                    <span
-                      className={`font-mono font-bold block tabular-nums ${
-                        activeDevice.errorCount > 0 ? 'text-red-400' : 'text-slate-400'
-                      }`}
-                    >
-                      {activeDevice.errorCount}
-                    </span>
-                  </div>
-
-                  <div className="p-1 rounded bg-slate-950/90 border border-slate-800/70">
-                    <span className="text-slate-500 block text-[9px]">
-                      {t('dashboard.stationDetails.latency')}
-                    </span>
-                    <span className="text-amber-400 font-mono block tabular-nums">
-                      {activeDevice.avgResponseTimeMs} ms
-                    </span>
-                  </div>
-
-                  <div className="p-1 rounded bg-slate-950/90 border border-slate-800/70">
-                    <span className="text-slate-500 block text-[9px]">
-                      Group
-                    </span>
-                    <span className="text-emerald-400 font-mono truncate block">
-                      {activeDevice.groupId || 'UNASSIGNED'}
-                    </span>
+                  {/* Group */}
+                  <div className="px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden">
+                    <span className="text-slate-500 text-[9px] shrink-0">Group</span>
+                    <span className="text-emerald-400 truncate text-[10px] font-semibold">{activeDevice.groupId?.replace('GRP_', '') || 'NONE'}</span>
                   </div>
                 </div>
 
-                {/* Quick Action Buttons inside Drawer */}
+                {/* Quick Action Buttons Toolbar */}
                 <div className="flex items-center justify-between pt-1 border-t border-slate-800/60 text-[10px]">
-                  <span className="text-slate-500 font-mono">
-                    Uptime: {Math.floor(activeDevice.uptimeSeconds / 3600)}h{' '}
-                    {Math.floor((activeDevice.uptimeSeconds % 3600) / 60)}m
+                  <span className="text-slate-500 font-mono text-[9px]">
+                    Up: {Math.floor(activeDevice.uptimeSeconds / 3600)}h {Math.floor((activeDevice.uptimeSeconds % 3600) / 60)}m
                   </span>
 
-                  <div className="flex items-center gap-1">
-                    {/* Ping Button */}
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => handlePing(activeDevice)}
-                      className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-cyan-500 hover:text-cyan-400 text-slate-300 transition-colors font-mono flex items-center gap-1"
+                      className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-cyan-500 hover:text-cyan-400 text-slate-300 transition-colors font-mono flex items-center gap-1 text-[10px]"
                       title="Gửi gói ICMP/TCP ping probe"
                     >
                       <Wifi className="w-2.5 h-2.5 text-cyan-400" />
                       <span>Ping</span>
                     </button>
 
-                    {/* Reset Button */}
                     <button
                       onClick={() => handleReset(activeDevice)}
-                      className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-blue-500 hover:text-blue-400 text-slate-300 transition-colors font-mono flex items-center gap-1"
-                      title="Đặt lại TCP socket và làm sạch bộ đệm"
+                      className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-blue-500 hover:text-blue-400 text-slate-300 transition-colors font-mono flex items-center gap-1 text-[10px]"
+                      title="Đặt lại TCP socket"
                     >
                       <RotateCcw className="w-2.5 h-2.5 text-blue-400" />
                       <span>Reset</span>
                     </button>
 
-                    {/* Start / Stop Toggle */}
                     <button
                       onClick={() => handleToggleStartStop(activeDevice)}
-                      className={`px-2 py-0.5 rounded border transition-colors font-mono flex items-center gap-1 ${
+                      className={`px-1.5 py-0.5 rounded border transition-colors font-mono flex items-center gap-1 text-[10px] ${
                         activeDevice.status === 'Disconnected'
                           ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-600 hover:text-white'
                           : 'bg-red-600/20 text-red-300 border-red-500/40 hover:bg-red-600 hover:text-white'
@@ -896,11 +891,10 @@ export const DashboardView: React.FC = () => {
                       <span>{activeDevice.status === 'Disconnected' ? 'Start' : 'Stop'}</span>
                     </button>
 
-                    {/* Auto-reconnect */}
                     <button
                       onClick={() => handleAutoReconnect(activeDevice)}
-                      className="px-2 py-0.5 rounded bg-purple-600/20 text-purple-300 border border-purple-500/40 hover:bg-purple-600 hover:text-white transition-colors font-mono flex items-center gap-1"
-                      title="Kích hoạt chu trình tự động kết nối lại"
+                      className="px-1.5 py-0.5 rounded bg-purple-600/20 text-purple-300 border border-purple-500/40 hover:bg-purple-600 hover:text-white transition-colors font-mono flex items-center gap-1 text-[10px]"
+                      title="Tự động kết nối lại"
                     >
                       <RefreshCw className="w-2.5 h-2.5 text-purple-400" />
                       <span>Auto-Rec</span>
@@ -909,7 +903,7 @@ export const DashboardView: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="text-center py-3 text-xs text-slate-500 italic">
+              <div className="text-center py-2 text-[11px] text-slate-500 italic">
                 {t('dashboard.stationDetails.selectPrompt')}
               </div>
             )}
@@ -917,10 +911,29 @@ export const DashboardView: React.FC = () => {
         </div>
 
         {/* ========================================================================= */}
-        {/* RIGHT COLUMN: LUỒNG GIAO DỊCH THỜI GIAN THỰC (LIVE STREAM - TRỌNG TÂM)    */}
-        {/* Yêu cầu: Ngắn gọn hơn, BỎ LỌC ĐI, ô time hiển thị cả NGÀY THÁNG NĂM       */}
+        {/* INTERACTIVE DRAG DIVIDER: KÉO ĐỂ ĐIỀU CHỈNH ĐỘ RỘNG CARD THÔNG TIN THIẾT BỊ */}
         {/* ========================================================================= */}
-        <div className="lg:col-span-7 flex flex-col rounded-lg bg-[#0C1220]/95 border border-slate-800/90 min-h-0 overflow-hidden shadow-md">
+        <div
+          onMouseDown={handleMouseDownResize}
+          onDoubleClick={() => setLeftPanelWidth(320)}
+          className="hidden lg:flex items-center justify-center w-2.5 hover:w-3 mx-0.5 cursor-col-resize group shrink-0 transition-all select-none hover:bg-blue-600/10 rounded"
+          title="Kéo chuột sang trái / phải để điều chỉnh độ rộng card Thông Tin Thiết Bị (Nhấp đúp để về 320px)"
+        >
+          <div
+            className={`w-1 h-12 rounded-full transition-colors flex flex-col items-center justify-center gap-1 ${
+              isResizing ? 'bg-blue-400 shadow-sm shadow-blue-400/50' : 'bg-slate-700/80 group-hover:bg-blue-500'
+            }`}
+          >
+            <span className="w-0.5 h-0.5 rounded-full bg-slate-400 group-hover:bg-white" />
+            <span className="w-0.5 h-0.5 rounded-full bg-slate-400 group-hover:bg-white" />
+            <span className="w-0.5 h-0.5 rounded-full bg-slate-400 group-hover:bg-white" />
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* RIGHT COLUMN: LUỒNG GIAO DỊCH THỜI GIAN THỰC (TỰ ĐỘNG MỞ RỘNG TOÀN BỘ)     */}
+        {/* ========================================================================= */}
+        <div className="flex-1 min-w-0 flex flex-col rounded-lg bg-[#0C1220]/95 border border-slate-800/90 min-h-0 overflow-hidden shadow-md">
           {/* Live Stream Main Header - Tối giản, không bộ lọc, có nút Pause & Clear */}
           <div className="px-3 py-2 bg-slate-950/80 border-b border-slate-800/80 flex items-center justify-between gap-2 shrink-0">
             {/* Title & Live Pulse Indicator */}
@@ -978,7 +991,7 @@ export const DashboardView: React.FC = () => {
 
           {/* Table Column Headers - Ngắn gọn, chuẩn xác */}
           <div className="px-3 py-1.5 bg-slate-950/90 border-b border-slate-800/80 grid grid-cols-12 text-[10px] font-mono uppercase tracking-wider text-slate-400 shrink-0 gap-1 items-center">
-            <span className="col-span-3">Thời gian (YYYY-MM-DD HH:mm:ss)</span>
+            <span className="col-span-3">Thời Gian</span>
             <span className="col-span-1 text-center">Chiều</span>
             <span className="col-span-2">Mã Máy</span>
             <span className="col-span-1">Lệnh</span>

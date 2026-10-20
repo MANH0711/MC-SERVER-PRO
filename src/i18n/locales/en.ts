@@ -60,7 +60,7 @@ export const en = {
       latencyDistribution: 'Response Latency Breakdown (ms)',
     },
     equipmentMatrix: {
-      title: 'Equipment Stations Real-time Matrix',
+      title: 'Device Information',
       registerGroup: 'Register Group',
       manageGroups: 'Manage Device Groups',
       expandAll: 'Expand',

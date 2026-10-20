@@ -60,7 +60,7 @@ export const vi = {
       latencyDistribution: 'Thời gian Phản hồi (ms)',
     },
     equipmentMatrix: {
-      title: 'Ma trận Giám sát Trực quan Trạm Máy',
+      title: 'Thông Tin Thiết Bị',
       registerGroup: 'Đăng ký Group',
       manageGroups: 'Quản lý Group Thiết bị',
       expandAll: 'Mở rộng',
