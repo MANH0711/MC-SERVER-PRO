@@ -619,6 +619,36 @@ export const CommunicationMonitorView: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Danh Sách Rule BIZ_ILRULE_INFO Khớp Ưu Tiên */}
+                    {daResult.appliedRules && daResult.appliedRules.length > 0 && (
+                      <div className="p-2 rounded bg-slate-950 border border-slate-800/90 space-y-1.5">
+                        <div className="text-[10px] text-cyan-400 uppercase font-semibold flex items-center justify-between">
+                          <span>Quy Tắc Interlock Khớp (Ưu Tiên Cụ Thể &gt; ALL):</span>
+                          <span className="text-slate-400 text-[9px]">
+                            {daResult.appliedRules.length} Rules
+                          </span>
+                        </div>
+                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                          {daResult.appliedRules.map((r: any, idx: number) => {
+                            const isSpecific = r.ruleKeyGroup1 !== 'ALL' || r.ruleKeyGroup2 !== 'ALL' || r.ruleKeyGroup3 !== 'ALL' || r.ruleKeyGroup4 !== 'ALL';
+                            return (
+                              <div key={idx} className="p-1.5 rounded bg-slate-900/80 border border-slate-800/80 text-[10px] space-y-0.5 font-mono">
+                                <div className="flex items-center justify-between text-slate-200">
+                                  <span className="font-bold text-cyan-300">{r.ruleId} ({r.ruleKey})</span>
+                                  <span className={`px-1 rounded text-[9px] font-bold ${isSpecific ? 'bg-cyan-900/60 text-cyan-200 border border-cyan-500/50' : 'bg-slate-800 text-slate-400'}`}>
+                                    {isSpecific ? 'Ưu Tiên Cụ Thể' : 'Cấu Hình ALL'}
+                                  </span>
+                                </div>
+                                <div className="text-[9px] text-slate-400">
+                                  Khóa: [{r.ruleKeyGroup1}, {r.ruleKeyGroup2}, {r.ruleKeyGroup3}, {r.ruleKeyGroup4}] | Kiểu: {r.checkType} ({r.bindItem})
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Response Message Frame */}
                     <div className="space-y-1 flex-1 flex flex-col">
                       <div className="text-[10px] text-slate-400 uppercase font-semibold">
