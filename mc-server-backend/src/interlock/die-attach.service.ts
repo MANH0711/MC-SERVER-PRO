@@ -230,7 +230,7 @@ export class DieAttachService {
 
     const binds = {
       ArgPlant: plant,
-      ArgTrans: 'EPBC', // Transaction Code cho Barcode Check Interlock
+      ArgTrans: 'EPBV', // Transaction Code chuẩn cho Barcode Verification / Work-In (EPBV)
       ArgLot: item.LOT_NUMBER || '',
       ArgEIFDevice: item.CONFIG || '',
       ArgEquip: dbEquipmentName,
