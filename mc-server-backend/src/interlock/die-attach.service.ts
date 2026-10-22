@@ -141,48 +141,47 @@ export class DieAttachService {
   }
 
   /**
-   * Ánh xạ tên thiết bị sang tên máy thực tế trong Database (ví dụ CLEAN001 -> DA018VN)
+   * Ánh xạ tên thiết bị sang tên máy thực tế trong Database (ví dụ CLEAN001 -> DA018VN/DA013VN)
    */
   async resolveDbEquipmentName(parsedEquipment: string, socketEquipmentId?: string): Promise<string> {
-    if (socketEquipmentId && socketEquipmentId.trim()) {
-      return socketEquipmentId.trim();
-    }
-
     const cleanInput = (parsedEquipment || '').trim();
-    if (!cleanInput) return 'UNKNOWN';
 
-    // 1. Tra cứu trong Cache thiết bị thật (MIGHTY.GATEWAY_DEVICES)
-    try {
-      const allDevices = await this.equipmentRepo.findAll();
-      const exact = allDevices.find(
-        (d) => d.EQUIPMENT_ID.toUpperCase() === cleanInput.toUpperCase()
-      );
-      if (exact) {
-        return exact.EQUIPMENT_ID;
-      }
+    // 1. Kiểm tra nếu parsedEquipment hoặc socketEquipmentId là máy Die Attach đã có trong ADM_GROUP_CATEGORY_DATA
+    const candidates = [cleanInput, socketEquipmentId?.trim()].filter(Boolean) as string[];
 
-      const normInput = cleanInput.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-      const partial = allDevices.find((d) => {
-        const dClean = d.EQUIPMENT_ID.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-        const descClean = (d.DESCRIPTION || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-        return dClean.includes(normInput) || normInput.includes(dClean) || descClean.includes(normInput);
-      });
-      if (partial) {
-        return partial.EQUIPMENT_ID;
+    for (const cand of candidates) {
+      try {
+        const checkSql = `
+          SELECT group_object AS EQUIPMENT_ID
+            FROM adm_group_category_data
+           WHERE plant = 'ITMVIET'
+             AND group_target = 'EQUIPMENT'
+             AND group_index = 13
+             AND UPPER(group_object) = UPPER(:cand)
+        `;
+        const res = await this.oracleService.executeQuery<{ EQUIPMENT_ID: string }>(
+          checkSql,
+          { cand },
+          'ITMVMES'
+        );
+        if (res && res.length > 0 && res[0].EQUIPMENT_ID) {
+          return res[0].EQUIPMENT_ID;
+        }
+      } catch (e: any) {
+        this.logger.debug(`Lỗi kiểm tra candidate equipment ${cand}: ${e.message}`);
       }
-    } catch (e: any) {
-      this.logger.debug(`Lỗi kiểm tra cache thiết bị: ${e.message}`);
     }
 
-    // 2. Tra cứu mapping chuyên biệt cho Die Attach trong Oracle Database
+    // 2. Tra cứu mapping chuyên biệt cho Die Attach (CLEAN* -> D/A equipment như DA018VN / DA013VN)
     try {
       const sql = `
         SELECT EQUIPMENT_ID FROM (
-          SELECT GROUP_OBJECT as EQUIPMENT_ID, 1 as PRIORITY
-          FROM MIGHTY.ADM_GROUP_CATEGORY_DATA
+          SELECT GROUP_OBJECT as EQUIPMENT_ID
+          FROM adm_group_category_data
           WHERE PLANT = 'ITMVIET' AND GROUP_TARGET = 'EQUIPMENT' AND GROUP_INDEX = 13
-            AND GROUP_VALUE = 'D/A' AND ROWNUM = 1
-        )
+            AND GROUP_VALUE = 'D/A'
+          ORDER BY CASE WHEN GROUP_OBJECT = 'DA018VN' THEN 1 WHEN GROUP_OBJECT = 'DA013VN' THEN 2 ELSE 3 END
+        ) WHERE ROWNUM = 1
       `;
       const rows = await this.oracleService.executeQuery<{ EQUIPMENT_ID: string }>(sql, {}, 'ITMVMES');
       if (rows && rows.length > 0 && rows[0].EQUIPMENT_ID) {
@@ -192,7 +191,8 @@ export class DieAttachService {
       this.logger.debug(`Lỗi tra cứu D/A equipment: ${e.message}`);
     }
 
-    return cleanInput;
+    // 3. Fallback: Dùng tên socket nếu có hoặc cleanInput
+    return cleanInput || socketEquipmentId?.trim() || 'UNKNOWN';
   }
 
   /**
