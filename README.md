@@ -22,11 +22,16 @@
   - Three-state Circuit Breaker (`CLOSED`, `OPEN`, `HALF-OPEN`) preventing cascading socket failures during upstream network sluggishness.
   - Outbox Retry Queue buffer for zero-loss offline store-and-forward.
   - Percentile latency monitoring (Median p50, 95th, 99th percentile).
+- **18-Column Master Data & TSV/CSV Synchronization**:
+  - Full adherence to industrial plant master table schema (`PLANT`, `HOST_ADDRESS`, `HOST_PORT`, `DEVICE_ID`, `SERVER_NO`, `EQUIPMENT_ID`, `GROUP_NAME`, `EQUIPMENT_ORDER`, `EQUIPMENT_MAIN`, `DESCRIPTION`, `ENABLE`, `FIELD_01`, `FIELD_02`, `FIELD_03`, `INTERLOCK_RECIPE`, `EQUIPMENT_MODEL`, `INTERLOCK_PARAM`, `INTERLOCK_TRACE`).
+  - One-click TSV clipboard copy (paste directly into Excel) and standard CSV export.
+  - Interactive batch TSV/CSV import parser with live preview and automatic Device Group registration.
 - **Industrial Control Center UI**:
   - Built with React 19, TypeScript, Tailwind CSS v4, Lucide icons, and IBM Plex Sans + JetBrains Mono typography.
+  - Tabless Add / Edit Device modals structured in an aligned 6-column grid with concise non-wrapping labels and live in-modal language switching (`[🇻🇳 VI] [🇺🇸 EN] [🇰🇷 KO] [🇨🇳 ZH]`).
   - Real-time packet sniffer with Hex Dump offset inspector (`0000 02 30 30...`), ASCII decode, and structured JSON tree view.
   - Protocol Diagnostic Workbench with frame construction, decoding, and direct socket injection.
-  - 4-language instantaneous dynamic translation without page reload.
+  - 4-language instantaneous dynamic translation with 100% key parity (642 keys / language).
   - Full Role-Based Access Control (RBAC): `OPERATOR`, `SUPERVISOR`, `ENGINEER`, `ADMIN`.
 
 ---

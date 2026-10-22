@@ -1,18 +1,38 @@
 # MC SERVER ENTERPRISE - DATABASE SCHEMA SPECIFICATION
 
-Hệ thống lưu trữ phân định rõ ràng giữa Cấu hình thiết bị, Lịch sử kết nối, Giao dịch thông điệp và Cảnh báo sự cố để tối ưu hóa hiệu năng đọc/ghi.
+Hệ thống lưu trữ phân định rõ ràng giữa Cấu hình thiết bị (chuẩn 18 cột ITM Industrial MES), Nhóm thiết bị, Lịch sử kết nối, Giao dịch thông điệp và Cảnh báo sự cố để tối ưu hóa hiệu năng đọc/ghi.
 
-## 1. Bảng `devices` (Thiết bị sản xuất)
-- `id` (PK, string, vd: `EQP_SMT_01`): Mã thiết bị
-- `name` (string): Tên trạm / máy
-- `factory` (string): Phân xưởng (Factory 1, Factory 2)
-- `line` (string): Tên dây chuyền (Line SMT-A, Line Final-01)
-- `station` (string): Tên trạm công đoạn (Stencil Printer, Mounter, Reflow Oven, AOI 3D)
-- `model` (string): Model máy của nhà sản xuất (Panasonic NPM-D3, Koh Young 3D)
-- `ipAddress` (string): Địa chỉ IPv4 tĩnh
-- `port` (number): Cổng kết nối TCP
+---
+
+## 1. Bảng `devices` (Thiết Bị Sản Xuất - Chuẩn Master Table 18 Cột)
+
+Dữ liệu thiết bị được lưu trữ và đồng bộ tương thích 100% với định dạng bảng dữ liệu nhà máy công nghiệp (ITM / MES Standard Schema):
+
+| STT | Tên Cột (Master Field) | Kiểu Dữ Liệu | Khóa / Chỉ Mục | Giá Trị Mẫu | Mô Tả Kỹ Thuật |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | `PLANT` | `string` | Indexed | `ITMVPSG` | Mã định danh nhà máy / phân xưởng |
+| 2 | `HOST_ADDRESS` | `string` | Indexed | `127.0.0.1` | Địa chỉ IPv4 tĩnh của máy trạm |
+| 3 | `HOST_PORT` | `number` | Indexed | `5010` | Cổng TCP socket kết nối hai chiều |
+| 4 | `DEVICE_ID` | `string / number` | -- | `0` | Mã trạm con / slot thiết bị |
+| 5 | `SERVER_NO` | `string / number` | -- | `15` | Số máy chủ MC Server phụ trách |
+| 6 | `EQUIPMENT_ID` | `string` | **PK (Chính)** | `BAKE01`, `BENDINGJ1` | Mã thiết bị duy nhất trên toàn hệ thống |
+| 7 | `GROUP_NAME` | `string` | Indexed | `NET` | Nhóm công đoạn sản xuất (FK liên kết `device_groups`) |
+| 8 | `EQUIPMENT_ORDER` | `number` | -- | `20110` | Thứ tự quy trình công đoạn máy trong dây chuyền |
+| 9 | `EQUIPMENT_MAIN` | `string` | -- | `MAIN_UNIT_01` | Mã cụm máy chính điều phối |
+| 10 | `DESCRIPTION` | `string` | -- | `Bake Oven Furnace 01` | Mô tả chi tiết chức năng / Tên trạm hiển thị |
+| 11 | `ENABLE` | `enum ('YES','NO')`| Indexed | `YES` | Trạng thái kích hoạt vận hành máy |
+| 12 | `FIELD_01` | `string` | -- | `--` | Trường tùy biến mở rộng 01 |
+| 13 | `FIELD_02` | `string` | -- | `--` | Trường tùy biến mở rộng 02 |
+| 14 | `FIELD_03` | `string` | -- | `ITMVIET` | Trường tùy biến mở rộng 03 (mặc định ITMVIET) |
+| 15 | `INTERLOCK_RECIPE` | `enum ('YES','NO')`| -- | `YES` | Khóa công thức sản xuất (Recipe Safety Interlock) |
+| 16 | `EQUIPMENT_MODEL` | `string` | -- | `IBS_BAKE`, `IBS_BENDINGJS` | Mã Model thiết bị của nhà chế tạo |
+| 17 | `INTERLOCK_PARAM` | `string` | -- | `CHK_PARAM_ON` | Khóa tham số thông số máy sản xuất |
+| 18 | `INTERLOCK_TRACE` | `string` | -- | `LOT_TRACE_EN` | Khóa kiểm tra truy vết lịch sử Lot/Carrier |
+
+### Thuộc tính giao thức & trạng thái mở rộng (`DeviceModel`):
+- `frameBoundary` (enum): `20013_STANDARD` (ETX `0x03`), `20014_EXTENDED` (+LF `0x0A`), `VARIABLE_LENGTH`
+- `checksumAlgorithm` (enum): `LRC_MOD256`, `XOR_HEX`, `CRC16_CCITT`
 - `role` (enum): `SERVER` hoặc `CLIENT`
-- `protocolVersion` (string): `v1.2-Standard` hoặc `v2.0-Extended20014`
 - `status` (enum): `Disconnected`, `Connecting`, `Connected`, `Ready`, `Busy`, `Warning`, `Error`, `Reconnecting`
 - `lastConnectedAt` (timestamp): Thời điểm kết nối gần nhất
 - `lastDataReceivedAt` (timestamp): Thời điểm nhận frame gần nhất
@@ -23,7 +43,37 @@ Hệ thống lưu trữ phân định rõ ràng giữa Cấu hình thiết bị,
 - `avgResponseTimeMs` (number): Thời gian phản hồi trung bình (ms)
 - `uptimeSeconds` (number): Thời gian hoạt động liên tục (giây)
 
-## 2. Bảng `communication_transactions` (Lịch sử Giao dịch)
+---
+
+## 2. Bảng `device_groups` (Nhóm Thiết Bị)
+
+Hỗ trợ phân nhóm máy trực quan theo công đoạn sản xuất để hiển thị trên cây Ma trận thiết bị:
+- `id` (PK, string, vd: `GRP_NET`, `NET`): Mã nhóm duy nhất
+- `name` (string, vd: `NET`): Tên nhóm hiển thị ngắn gọn
+- `color` (string): Màu nhận diện badge (blue, cyan, emerald, amber, purple, rose)
+- `description` (string): Mô tả chi tiết nhóm công đoạn
+- `createdAt` (timestamp): Thời điểm đăng ký nhóm
+
+---
+
+## 3. Định Dạng Nhập / Xuất Bảng Dữ Liệu (TSV & CSV Format)
+
+Hệ thống hỗ trợ sao chép, dán trực tiếp dữ liệu dạng bảng phân cách bằng Tab (TSV từ Excel) hoặc file CSV gồm đúng 18 cột tiêu chuẩn:
+```tsv
+PLANT	HOST_ADDRESS	HOST_PORT	DEVICE_ID	SERVER_NO	EQUIPMENT_ID	GROUP_NAME	EQUIPMENT_ORDER	EQUIPMENT_MAIN	DESCRIPTION	ENABLE	FIELD_01	FIELD_02	FIELD_03	INTERLOCK_RECIPE	EQUIPMENT_MODEL	INTERLOCK_PARAM	INTERLOCK_TRACE
+ITMVPSG	127.0.0.1	5010	0	15	BAKE01	NET	20110			YES			ITMVIET	YES	IBS_BAKE		
+ITMVPSG	127.0.0.1	5010	0	15	BENDINGJ1	NET	20110			YES			ITMVIET	YES	IBS_BENDINGJS		
+```
+
+Các hàm xử lý cốt lõi tại `src/utils/deviceFormat.ts`:
+- `parseDevicesFromTsvOrCsv(rawText)`: Tự động phát hiện TSV/CSV, chuẩn hóa khoảng trắng và trích xuất danh sách thiết bị hợp lệ.
+- `exportDevicesToTsv(devices)`: Xuất định dạng chuỗi TSV 18 cột để dán trực tiếp vào bảng tính Excel.
+- `exportDevicesToCsv(devices)`: Xuất file `.csv` chuẩn 18 cột kèm escaping ký tự đặc biệt.
+- `deviceToRecord(device)` / `recordToDevice(record)`: Chuyển đổi hai chiều giữa mô hình hoạt động runtime và bản ghi Master Table.
+
+---
+
+## 4. Bảng `communication_transactions` (Lịch Sử Giao Dịch Socket)
 - `id` (PK, string / UUID)
 - `correlationId` (string, indexed): Mã theo dõi xuyên suốt
 - `equipmentId` (string, indexed): Mã thiết bị
@@ -37,7 +87,9 @@ Hệ thống lưu trữ phân định rõ ràng giữa Cấu hình thiết bị,
 - `status` (enum): `SUCCESS`, `ERROR`, `TIMEOUT`, `INTERLOCK_DENIED`
 - `timestamp` (timestamp, indexed): Thời điểm xảy ra giao dịch
 
-## 3. Bảng `alarms` (Cảnh báo & Sự cố)
+---
+
+## 5. Bảng `alarms` (Cảnh Báo & Sự Cố)
 - `id` (PK, string)
 - `equipmentId` (string): Mã thiết bị gặp lỗi
 - `alarmCode` (string): Mã lỗi (vd: `ALM_E034_FEEDER_JAM`)
@@ -47,3 +99,4 @@ Hệ thống lưu trữ phân định rõ ràng giữa Cấu hình thiết bị,
 - `acknowledgedBy` (string): Tài khoản nhân viên xử lý
 - `acknowledgedAt` (timestamp): Thời điểm xác nhận
 - `createdAt` (timestamp): Thời điểm phát sinh
+

@@ -1,0 +1,213 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { Subject, Observable } from 'rxjs';
+import { TransactionRepository, TransactionRecord } from '../database/transaction.repository';
+import { EquipmentRepository } from '../database/equipment.repository';
+import { FrameCodec } from '../protocol/frame.codec';
+import { CommandDispatcher } from '../commands/router/command.dispatcher';
+import { ChecksumUtils } from '../protocol/checksum.utils';
+import { AuthorityService } from '../authority/authority.service';
+
+export interface ManualCommandDto {
+  equipmentId: string;
+  commandCode: string;
+  subCode?: number;
+  payloadHex?: string;
+}
+
+@Injectable()
+export class CommunicationService {
+  private readonly logger = new Logger(CommunicationService.name);
+  private readonly transactionStream$ = new Subject<TransactionRecord>();
+  private txCounter = 0;
+
+  private generateTxId(prefix: 'TX' | 'RX'): string {
+    this.txCounter = (this.txCounter + 1) % 1000000;
+    return `${prefix}-${Date.now()}-${this.txCounter.toString().padStart(6, '0')}`;
+  }
+
+  constructor(
+    private readonly transactionRepo: TransactionRepository,
+    private readonly equipmentRepo: EquipmentRepository,
+    private readonly frameCodec: FrameCodec,
+    private readonly commandDispatcher: CommandDispatcher,
+    private readonly authorityService: AuthorityService
+  ) {}
+
+  getTransactionStream(): Observable<TransactionRecord> {
+    return this.transactionStream$.asObservable();
+  }
+
+  async getRecentTransactions(
+    equipmentId?: string,
+    commandCode?: string,
+    limit = 100
+  ): Promise<TransactionRecord[]> {
+    return await this.transactionRepo.getRecent(limit, equipmentId, commandCode);
+  }
+
+  /**
+   * Xử lý gửi lệnh thủ công (Manual Command) từ UI FE xuống thiết bị và nhận phản hồi
+   */
+  async executeManualCommand(cmd: ManualCommandDto): Promise<{
+    success: boolean;
+    txRecord: TransactionRecord;
+    rxRecord?: TransactionRecord;
+    parsedResult?: any;
+    errorMessage?: string;
+  }> {
+    const equipment = await this.equipmentRepo.findById(cmd.equipmentId);
+    if (!equipment) {
+      throw new Error(`Thiết bị không tồn tại: ${cmd.equipmentId}`);
+    }
+
+    const startTime = Date.now();
+    const payloadBuffer = cmd.payloadHex
+      ? ChecksumUtils.hexStringToBuffer(cmd.payloadHex)
+      : Buffer.alloc(0);
+
+    // 1. Đóng gói Frame nhị phân chuẩn TX
+    const txBuffer = this.frameCodec.encode(
+      equipment.DEVICE_ID,
+      equipment.SERVER_NO,
+      cmd.commandCode,
+      cmd.subCode || 0,
+      payloadBuffer
+    );
+
+    const txId = `TX-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const txRecord: TransactionRecord = {
+      transactionId: txId,
+      timestamp: new Date().toISOString(),
+      equipmentId: equipment.EQUIPMENT_ID,
+      commandCode: cmd.commandCode,
+      direction: 'TX',
+      rawHex: ChecksumUtils.bufferToHexString(txBuffer),
+      status: 'SUCCESS',
+      durationMs: 0,
+      payloadJson: JSON.stringify({ manualTrigger: true, length: txBuffer.length }),
+    };
+
+    await this.transactionRepo.logTransaction(txRecord);
+    this.transactionStream$.next(txRecord);
+
+    // 2. Phân phối và thực thi qua CommandDispatcher (Hoạt động cho cả môi trường thật lẫn thiết bị ảo)
+    const decodedTx = this.frameCodec.decode(txBuffer);
+    if (!decodedTx) {
+      return {
+        success: false,
+        txRecord,
+        errorMessage: 'Không thể giải mã frame TX vừa đóng gói',
+      };
+    }
+
+    const dispatchResult = await this.commandDispatcher.dispatch(decodedTx, equipment);
+    const durationMs = Date.now() - startTime;
+
+    // 3. Đóng gói RX Record
+    let rxRecord: TransactionRecord | undefined;
+    if (dispatchResult.responsePayload) {
+      const rxBuffer = this.frameCodec.encode(
+        equipment.DEVICE_ID,
+        equipment.SERVER_NO,
+        cmd.commandCode,
+        0,
+        dispatchResult.responsePayload
+      );
+
+      const rxId = `RX-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      rxRecord = {
+        transactionId: rxId,
+        timestamp: new Date().toISOString(),
+        equipmentId: equipment.EQUIPMENT_ID,
+        commandCode: cmd.commandCode,
+        direction: 'RX',
+        rawHex: ChecksumUtils.bufferToHexString(rxBuffer),
+        status: dispatchResult.success ? 'SUCCESS' : 'ERROR',
+        durationMs,
+        payloadJson: JSON.stringify(dispatchResult.parsedData || {}),
+        errorMessage: dispatchResult.errorMessage,
+      };
+
+      await this.transactionRepo.logTransaction(rxRecord);
+      this.transactionStream$.next(rxRecord);
+    }
+
+    return {
+      success: dispatchResult.success,
+      txRecord,
+      rxRecord,
+      parsedResult: dispatchResult.parsedData,
+      errorMessage: dispatchResult.errorMessage,
+    };
+  }
+
+  /**
+   * Tiếp nhận dữ liệu raw buffer từ TCP Socket nhận được từ máy ngoài xưởng
+   */
+  async handleIncomingRawBuffer(equipmentId: string, rawBuffer: Buffer): Promise<Buffer | null> {
+    const rawStr = rawBuffer.toString('ascii');
+
+    // 1. Kiểm tra nếu là bản tin kiểm tra tài khoản (Authority S002)
+    if (this.authorityService.isAuthorityMessage(rawStr)) {
+      const authResult = await this.authorityService.processAuthorityMessage(rawStr, equipmentId);
+      if (authResult?.records) {
+        authResult.records.forEach((r) => this.transactionStream$.next(r));
+      }
+      if (authResult?.responseMessage) {
+        return Buffer.from(authResult.responseMessage, 'ascii');
+      }
+      return null;
+    }
+
+    const equipment = await this.equipmentRepo.findById(equipmentId);
+    if (!equipment) return null;
+
+    const frame = this.frameCodec.decode(rawBuffer);
+    if (!frame) return null;
+
+    // Ghi nhận RX
+    const rxRecord: TransactionRecord = {
+      transactionId: this.generateTxId('RX'),
+      timestamp: new Date().toISOString(),
+      equipmentId: equipment.EQUIPMENT_ID,
+      commandCode: frame.commandCode,
+      direction: 'RX',
+      rawHex: frame.rawHex || ChecksumUtils.bufferToHexString(rawBuffer),
+      status: 'SUCCESS',
+      durationMs: 0,
+    };
+    await this.transactionRepo.logTransaction(rxRecord);
+    this.transactionStream$.next(rxRecord);
+
+    // Xử lý lệnh
+    const result = await this.commandDispatcher.dispatch(frame, equipment);
+
+    if (result.responsePayload) {
+      const respBuffer = this.frameCodec.encode(
+        equipment.DEVICE_ID,
+        equipment.SERVER_NO,
+        frame.commandCode,
+        0,
+        result.responsePayload
+      );
+
+      // Ghi nhận TX phản hồi
+      const txRecord: TransactionRecord = {
+        transactionId: this.generateTxId('TX'),
+        timestamp: new Date().toISOString(),
+        equipmentId: equipment.EQUIPMENT_ID,
+        commandCode: frame.commandCode,
+        direction: 'TX',
+        rawHex: ChecksumUtils.bufferToHexString(respBuffer),
+        status: result.success ? 'SUCCESS' : 'ERROR',
+        durationMs: 0,
+      };
+      await this.transactionRepo.logTransaction(txRecord);
+      this.transactionStream$.next(txRecord);
+
+      return respBuffer;
+    }
+
+    return null;
+  }
+}

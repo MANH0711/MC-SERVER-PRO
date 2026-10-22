@@ -1,0 +1,50 @@
+/**
+ * communication.service.proto
+ * ─────────────────────────────────────────────────────────
+ * gRPC Service: Giám sát giao tiếp truyền thông thiết bị
+ * Hỗ trợ: Truy vấn transaction, streaming real-time, inject frame test
+ * ─────────────────────────────────────────────────────────
+ */
+
+syntax = "proto3";
+
+package mc_server;
+
+import "common.types.proto";
+
+service CommunicationService {
+  // Truy vấn lịch sử giao dịch
+  rpc GetTransactions (GetTransactionsRequest) returns (GetTransactionsResponse);
+  
+  // Streaming giao dịch real-time (server-streaming)
+  rpc StreamTransactions (StreamTransactionsRequest) returns (stream TransactionRecord);
+  
+  // Inject frame thủ công (dùng để test)
+  rpc InjectFrame (InjectFrameRequest) returns (StatusResponse);
+}
+
+message GetTransactionsRequest {
+  string equipment_id = 1;           // Lọc theo thiết bị (optional)
+  string message_code = 2;           // Lọc theo mã lệnh (optional)
+  string direction = 3;              // INBOUND | OUTBOUND (optional)
+  string from_timestamp = 4;         // Từ thời điểm (ISO 8601)
+  string to_timestamp = 5;           // Đến thời điểm (ISO 8601)
+  int32 limit = 6;                   // Giới hạn kết quả (mặc định 100)
+  int32 offset = 7;                  // Phân trang
+}
+
+message GetTransactionsResponse {
+  repeated TransactionRecord transactions = 1;
+  int32 total_count = 2;
+}
+
+message StreamTransactionsRequest {
+  repeated string equipment_ids = 1; // Danh sách EQ_ID (rỗng = tất cả)
+  repeated string message_codes = 2; // Lọc mã lệnh (rỗng = tất cả)
+}
+
+message InjectFrameRequest {
+  string equipment_id = 1;           // Thiết bị mục tiêu
+  string raw_data = 2;               // Dữ liệu frame raw (hex hoặc ASCII)
+  string format = 3;                 // HEX | ASCII
+}

@@ -34,7 +34,7 @@ export class SessionManager {
   private logListeners: Set<LogListener> = new Set();
 
   private simulationTimer: any = null;
-  private isSimulating: boolean = true;
+  private isSimulating: boolean = false;
 
   constructor(
     initialDevices: DeviceModel[],
@@ -50,11 +50,20 @@ export class SessionManager {
       this.parsers.set(dev.id, new IndustrialFrameParser(config.server.bufferSizeLimitBytes));
     }
 
-    this.startLiveSimulation();
+    // Default: Chế độ kết nối vật lý thực tế. Không tự động phát sinh gói tin ảo.
   }
 
   public getDevices(): DeviceModel[] {
     return Array.from(this.devices.values());
+  }
+
+  public setDevices(newDevices: DeviceModel[]): void {
+    this.devices.clear();
+    this.parsers.clear();
+    for (const dev of newDevices) {
+      this.devices.set(dev.id, { ...dev });
+      this.parsers.set(dev.id, new IndustrialFrameParser(this.config.server.bufferSizeLimitBytes));
+    }
   }
 
   public getDevice(id: string): DeviceModel | undefined {
@@ -113,30 +122,123 @@ export class SessionManager {
       level: 'INFO',
       category: 'COMMUNICATION',
       equipmentId: id,
-      message: `Initiating manual socket reconnection for ${id} (${dev.ipAddress}:${dev.port})...`,
+      message: `Đang kết nối lại tới thiết bị ${id} (${dev.ipAddress}:${dev.port})...`,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      const res = await fetch(`http://localhost:3005/api/communication/reconnect/${encodeURIComponent(id)}`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.connected === true) {
+        this.updateDevice(id, {
+          status: 'Ready',
+          reconnectCount: dev.reconnectCount + 1,
+          lastConnectedAt: new Date().toISOString(),
+          consecutiveTimeouts: 0,
+        });
+        this.emitLog({
+          id: `LOG_REC_OK_${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          level: 'INFO',
+          category: 'COMMUNICATION',
+          equipmentId: id,
+          message: `Kết nối thành công tới ${id} (${dev.ipAddress}:${dev.port}). Socket ONLINE.`,
+        });
+        return true;
+      } else {
+        this.updateDevice(id, { status: 'Disconnected' });
+        this.emitLog({
+          id: `LOG_REC_ERR_${Date.now()}`,
+          timestamp: new Date().toISOString(),
+          level: 'WARN',
+          category: 'COMMUNICATION',
+          equipmentId: id,
+          message: `Không thể kết nối tới ${id} (${dev.ipAddress}:${dev.port}): Thiết bị chưa bật nguồn hoặc chưa mở port.`,
+        });
+        return false;
+      }
+    } catch {
+      this.updateDevice(id, { status: 'Disconnected' });
+      return false;
+    }
+  }
 
-    const updated = this.updateDevice(id, {
-      status: 'Ready',
-      reconnectCount: dev.reconnectCount + 1,
-      lastConnectedAt: new Date().toISOString(),
-      consecutiveTimeouts: 0,
+  /**
+   * Dừng kết nối thiết bị và gửi tín hiệu xuống backend tắt Auto-Reconnect
+   */
+  public async stopDevice(id: string): Promise<boolean> {
+    const dev = this.devices.get(id);
+    this.updateDevice(id, { status: 'Disconnected', enabled: false });
+    this.emitLog({
+      id: `LOG_STOP_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      level: 'WARN',
+      category: 'COMMUNICATION',
+      equipmentId: id,
+      message: `Đã dừng thiết bị ${id}${dev ? ` (${dev.ipAddress}:${dev.port})` : ''}. Tắt tự động kết nối lại.`,
     });
 
-    if (updated) {
-      this.emitLog({
-        id: `LOG_REC_OK_${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        level: 'INFO',
-        category: 'COMMUNICATION',
-        equipmentId: id,
-        message: `Socket re-established successfully for ${id}. Handshake M001 synchronized.`,
+    try {
+      await fetch(`http://localhost:3005/api/communication/stop/${encodeURIComponent(id)}`, {
+        method: 'POST',
       });
       return true;
+    } catch {
+      return false;
     }
-    return false;
+  }
+
+  /**
+   * Dừng toàn bộ thiết bị và gửi lệnh dừng xuống backend
+   */
+  public async stopAll(): Promise<boolean> {
+    for (const dev of this.devices.values()) {
+      this.updateDevice(dev.id, { status: 'Disconnected', enabled: false });
+    }
+    this.emitLog({
+      id: `LOG_STOP_ALL_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      level: 'WARN',
+      category: 'COMMUNICATION',
+      equipmentId: 'ALL',
+      message: `Đã dừng toàn bộ thiết bị và tắt tính năng tự động kết nối lại.`,
+    });
+
+    try {
+      await fetch(`http://localhost:3005/api/communication/stop-all`, {
+        method: 'POST',
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Khởi động lại toàn bộ thiết bị và kích hoạt lại kết nối
+   */
+  public async startAll(): Promise<boolean> {
+    for (const dev of this.devices.values()) {
+      this.updateDevice(dev.id, { status: 'Connecting' });
+    }
+    this.emitLog({
+      id: `LOG_START_ALL_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      level: 'INFO',
+      category: 'COMMUNICATION',
+      equipmentId: 'ALL',
+      message: `Đang khởi động và kết nối lại toàn bộ thiết bị...`,
+    });
+
+    try {
+      await fetch(`http://localhost:3005/api/communication/start-all`, {
+        method: 'POST',
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -275,6 +377,14 @@ export class SessionManager {
 
   public toggleSimulation(active?: boolean): boolean {
     this.isSimulating = active !== undefined ? active : !this.isSimulating;
+    if (this.isSimulating) {
+      this.startLiveSimulation();
+    } else {
+      if (this.simulationTimer) {
+        clearInterval(this.simulationTimer);
+        this.simulationTimer = null;
+      }
+    }
     return this.isSimulating;
   }
 

@@ -1,8 +1,14 @@
 node_modules/
+**/node_modules/
 build/
 dist/
+**/dist/
 coverage/
 .DS_Store
 *.log
-.env*
+npm-debug.log*
+.env
+.env.local
+.env.*.local
+mc-server-backend/.env
 !.env.example

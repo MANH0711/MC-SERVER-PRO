@@ -9,7 +9,7 @@ import { useTranslation } from '../i18n/LanguageContext';
 import { useApp } from '../context/AppContext';
 
 export const StatusBar: React.FC = () => {
-  const { formatNumber } = useTranslation();
+  const { t, formatNumber } = useTranslation();
   const { devices, transactions, mesStatus, config } = useApp();
 
   const connectedCount = devices.filter((d) => d.status === 'Connected' || d.status === 'Ready' || d.status === 'Busy').length;
@@ -44,12 +44,12 @@ export const StatusBar: React.FC = () => {
       <div className="flex items-center gap-3 text-slate-500">
         <span className="flex items-center gap-1 text-slate-400">
           <Shield className="w-3 h-3 text-emerald-500" />
-          <span>RBAC LEVEL 4 ENFORCED</span>
+          <span>{t('statusbar.rbacEnforced')}</span>
         </span>
         <span className="text-slate-700">|</span>
-        <span className="text-slate-400">MC-PROTO 20.013/20.014 AUTO</span>
+        <span className="text-slate-400">{t('statusbar.protoAuto')}</span>
         <span className="text-slate-700">|</span>
-        <span className="text-blue-400 font-semibold">ENTERPRISE EDITION</span>
+        <span className="text-blue-400 font-semibold">{t('statusbar.enterpriseEdition')}</span>
       </div>
     </footer>
   );

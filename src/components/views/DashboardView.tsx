@@ -36,7 +36,9 @@ import {
   Wifi,
   CornerDownRight,
   ChevronRight,
+  ChevronLeft,
   ChevronDown,
+  ChevronUp,
   Folder,
   FolderOpen,
   Plus,
@@ -45,6 +47,11 @@ import {
   Search,
   Maximize2,
   Minimize2,
+  Grid,
+  List,
+  Filter,
+  ExternalLink,
+  Terminal,
 } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useApp } from '../../context/AppContext';
@@ -61,13 +68,13 @@ export const DashboardView: React.FC = () => {
   const { t, formatNumber } = useTranslation();
   const {
     devices,
-    deviceGroups,
-    addDeviceGroup,
-    deleteDeviceGroup,
     transactions,
     alarms,
     mesStatus,
     reconnectDevice,
+    stopDevice,
+    stopAllDevices,
+    startAllDevices,
     updateDevice,
     setActiveView,
     clearTransactions,
@@ -76,14 +83,68 @@ export const DashboardView: React.FC = () => {
   // Selected station for the detail box at the bottom of the matrix
   const [selectedStationId, setSelectedStationId] = useState<string>(devices[0]?.id || 'EQP_SMT_01');
 
-  // Tree View State: which groups are expanded
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    GRP_SMT_A: true,
-    GRP_SMT_B: true,
-    GRP_QC_TEST: true,
-    GRP_PACKAGING: true,
-    UNASSIGNED: true,
+  // Dynamic Groups derived directly from the real GROUP_NAME column in DB
+  const dynamicGroups = React.useMemo(() => {
+    const map = new Map<string, DeviceModel[]>();
+    devices.forEach((dev) => {
+      const gName = (dev.groupName && dev.groupName.trim()) ? dev.groupName.trim() : 'UNASSIGNED';
+      if (!map.has(gName)) {
+        map.set(gName, []);
+      }
+      map.get(gName)!.push(dev);
+    });
+
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([groupName, groupDevs]) => ({
+        id: groupName,
+        name: groupName,
+        devices: groupDevs,
+      }));
+  }, [devices]);
+
+  // Tree View State: which groups are expanded (default all groups to true)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('mcserver_expanded_groups');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {};
   });
+
+  // Check if all groups are currently expanded
+  const isAllGroupsExpanded =
+    dynamicGroups.length > 0 &&
+    dynamicGroups.every((g) => expandedGroups[g.id] !== false);
+
+  // Toggle tree node group expansion
+  const toggleGroupExpand = (groupId: string) => {
+    setExpandedGroups((prev) => {
+      const currentlyExpanded = prev[groupId] !== false;
+      const next = {
+        ...prev,
+        [groupId]: !currentlyExpanded,
+      };
+      try {
+        localStorage.setItem('mcserver_expanded_groups', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // 1 Nút Đóng / Mở rộng tất cả Group
+  const toggleExpandAllGroups = () => {
+    const targetState = !isAllGroupsExpanded;
+    const next: Record<string, boolean> = {};
+    dynamicGroups.forEach((g) => {
+      next[g.id] = targetState;
+    });
+    setExpandedGroups(next);
+    try {
+      localStorage.setItem('mcserver_expanded_groups', JSON.stringify(next));
+    } catch {}
+    showToast(targetState ? 'Đã mở rộng tất cả các nhóm' : 'Đã thu gọn tất cả các nhóm');
+  };
 
   // Stream controls
   const [isStreamPaused, setIsStreamPaused] = useState<boolean>(false);
@@ -112,11 +173,16 @@ export const DashboardView: React.FC = () => {
   // Action notification toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // User adjustable width for "Thông Tin Thiết Bị" panel (saved in localStorage)
+  // View mode for Equipment Panel: 'cards' (rich visual cards) | 'tree' (compact hierarchical tree)
+  const [deviceViewMode, setDeviceViewMode] = useState<'cards' | 'tree'>('cards');
+  // Station Details Dock collapsed toggle state (thu nhỏ ô xem thông tin chi tiết thiết bị)
+  const [isStationDetailsCollapsed, setIsStationDetailsCollapsed] = useState<boolean>(false);
+
+  // User adjustable width for "Thông Tin Thiết Bị" panel (saved in localStorage, min 160px)
   const [leftPanelWidth, setLeftPanelWidth] = useState<number>(() => {
     const saved = localStorage.getItem('mcserver_dashboard_left_width');
-    const parsed = saved ? parseInt(saved, 10) : 320;
-    return isNaN(parsed) || parsed < 220 || parsed > 650 ? 320 : parsed;
+    const parsed = saved ? parseInt(saved, 10) : 240;
+    return isNaN(parsed) || parsed < 160 || parsed > 650 ? 240 : parsed;
   });
   const [isResizing, setIsResizing] = useState<boolean>(false);
   const splitPaneRef = useRef<HTMLDivElement | null>(null);
@@ -135,7 +201,7 @@ export const DashboardView: React.FC = () => {
       const rect = splitPaneRef.current.getBoundingClientRect();
       const currentX = e.clientX - rect.left;
       const maxWidth = Math.min(650, rect.width * 0.55);
-      const clamped = Math.max(220, Math.min(maxWidth, currentX));
+      const clamped = Math.max(160, Math.min(maxWidth, currentX));
       setLeftPanelWidth(Math.round(clamped));
     };
 
@@ -201,6 +267,9 @@ export const DashboardView: React.FC = () => {
   // Selected station object
   const activeDevice = devices.find((d) => d.id === selectedStationId) || devices[0] || null;
 
+  // Devices list directly
+  const filteredDevices: DeviceModel[] = devices;
+
   // Counts
   const total = devices.length;
   const connected = devices.filter((d) => ['Connected', 'Ready', 'Busy'].includes(d.status)).length;
@@ -262,43 +331,65 @@ export const DashboardView: React.FC = () => {
     }
   };
 
-  // Right-click Handler
+  // Right-click Handler with smooth viewport clamping
   const handleContextMenu = (e: React.MouseEvent, dev: DeviceModel) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const menuWidth = 240;
-    const menuHeight = 220;
-    const x = e.clientX + menuWidth > window.innerWidth ? window.innerWidth - menuWidth - 10 : e.clientX;
-    const y = e.clientY + menuHeight > window.innerHeight ? window.innerHeight - menuHeight - 10 : e.clientY;
+    const menuWidth = 265;
+    const menuHeight = 330;
+    const padding = 16;
+    const x = Math.min(e.clientX, window.innerWidth - menuWidth - padding);
+    const y = Math.min(e.clientY, window.innerHeight - menuHeight - padding);
 
     setSelectedStationId(dev.id);
     setContextMenu({
       visible: true,
-      x,
-      y,
+      x: Math.max(padding, x),
+      y: Math.max(padding, y),
       device: dev,
     });
   };
 
-  // Context Menu Actions
-  const handleToggleStartStop = (dev: DeviceModel) => {
-    const isRunning = dev.status !== 'Disconnected';
-    if (isRunning) {
-      updateDevice(dev.id, { status: 'Disconnected', enabled: false });
-      showToast(`${t('dashboard.toasts.stopped')} ${dev.name} [${dev.id}]`);
-    } else {
-      updateDevice(dev.id, { status: 'Connected', enabled: true });
-      showToast(`${t('dashboard.toasts.started')} ${dev.name} [${dev.id}]`);
+  const handleCopyText = (text: string, label: string) => {
+    try {
+      navigator.clipboard?.writeText(text);
+      showToast(`Đã sao chép ${label}: ${text}`);
+    } catch {
+      showToast(`Sao chép: ${text}`);
     }
     setContextMenu({ visible: false, x: 0, y: 0, device: null });
+  };
+
+  // Context Menu Actions
+  const handleToggleStartStop = async (dev: DeviceModel) => {
+    const isRunning = dev.status !== 'Disconnected' && dev.status !== 'Error';
+    setContextMenu({ visible: false, x: 0, y: 0, device: null });
+
+    if (isRunning) {
+      await stopDevice(dev.id);
+      showToast(`${t('dashboard.toasts.stopped')} ${dev.name} [${dev.id}] - Đã tắt tự động kết nối lại.`);
+    } else {
+      updateDevice(dev.id, { status: 'Connecting' });
+      showToast(`Đang kết nối tới ${dev.name} [${dev.id}] tại ${dev.ipAddress}:${dev.port}...`);
+      const success = await reconnectDevice(dev.id);
+      if (success) {
+        showToast(`${t('dashboard.toasts.started')} ${dev.name} [${dev.id}] - Kết nối Socket thành công!`);
+      } else {
+        showToast(`Không thể kết nối tới ${dev.name} [${dev.id}]: Thiết bị chưa bật nguồn hoặc chưa mở cổng ${dev.port}.`);
+      }
+    }
   };
 
   const handleReset = async (dev: DeviceModel) => {
     showToast(`${t('dashboard.toasts.resetting')} ${dev.name} [${dev.id}]...`);
     setContextMenu({ visible: false, x: 0, y: 0, device: null });
-    await reconnectDevice(dev.id);
-    showToast(`${t('dashboard.toasts.resetSuccess')} ${dev.name} [${dev.id}].`);
+    const success = await reconnectDevice(dev.id);
+    if (success) {
+      showToast(`${t('dashboard.toasts.resetSuccess')} ${dev.name} [${dev.id}].`);
+    } else {
+      showToast(`Không thể kết nối lại ${dev.name} [${dev.id}]: Cổng TCP ${dev.port} chưa mở.`);
+    }
   };
 
   const handlePing = async (dev: DeviceModel) => {
@@ -323,16 +414,51 @@ export const DashboardView: React.FC = () => {
     showToast(`${t('dashboard.toasts.autoReconnectTriggered')} ${dev.name} [${dev.id}]...`);
     setContextMenu({ visible: false, x: 0, y: 0, device: null });
 
-    updateDevice(dev.id, { status: 'Reconnecting' });
-    await new Promise((r) => setTimeout(r, 850));
-    updateDevice(dev.id, {
-      status: 'Ready',
-      reconnectCount: dev.reconnectCount + 1,
-      lastConnectedAt: new Date().toISOString(),
-      consecutiveTimeouts: 0,
-    });
+    const success = await reconnectDevice(dev.id);
     setReconnectingId(null);
-    showToast(`${t('dashboard.toasts.autoReconnectSuccess')} ${dev.name} [${dev.id}].`);
+    if (success) {
+      showToast(`${t('dashboard.toasts.autoReconnectSuccess')} ${dev.name} [${dev.id}].`);
+    } else {
+      showToast(`Kết nối lại thất bại cho ${dev.name} [${dev.id}]: Cổng ${dev.port} chưa mở.`);
+    }
+  };
+
+  // Batch Operations: Start All, Stop All, Reset All
+  const [isBatchProcessing, setIsBatchProcessing] = useState<boolean>(false);
+
+  const handleStartAll = async () => {
+    if (isBatchProcessing || devices.length === 0) return;
+    setIsBatchProcessing(true);
+    showToast(`Đang kích hoạt và kết nối lại toàn bộ ${devices.length} thiết bị qua TCP Socket...`);
+
+    await startAllDevices();
+    const disconnectedDevs = devices.filter((d) => d.status === 'Disconnected' || d.status === 'Error');
+    const results = await Promise.allSettled(disconnectedDevs.map((d) => reconnectDevice(d.id)));
+    const successCount = results.filter((r) => r.status === 'fulfilled' && r.value === true).length;
+
+    setIsBatchProcessing(false);
+    showToast(`Start All: ${successCount}/${devices.length} thiết bị kết nối thành công.`);
+  };
+
+  const handleStopAll = async () => {
+    if (isBatchProcessing || devices.length === 0) return;
+    setIsBatchProcessing(true);
+    await stopAllDevices();
+    setIsBatchProcessing(false);
+    showToast(`Đã dừng và ngắt kết nối toàn bộ ${devices.length} thiết bị (Tắt Auto-Reconnect).`);
+  };
+
+  const handleResetAll = async () => {
+    if (isBatchProcessing || devices.length === 0) return;
+    setIsBatchProcessing(true);
+    showToast(`Đang khởi động lại (Reset) toàn bộ ${devices.length} thiết bị...`);
+
+    devices.forEach((d) => updateDevice(d.id, { status: 'Reconnecting' }));
+    const results = await Promise.allSettled(devices.map((d) => reconnectDevice(d.id)));
+    const successCount = results.filter((r) => r.status === 'fulfilled' && r.value === true).length;
+
+    setIsBatchProcessing(false);
+    showToast(`Reset All: ${successCount}/${devices.length} thiết bị sẵn sàng.`);
   };
 
   // Format Date and Time: YYYY-MM-DD HH:mm:ss
@@ -357,6 +483,7 @@ export const DashboardView: React.FC = () => {
   const getPayloadSummary = (payload: any): string => {
     if (!payload) return '--';
     if (typeof payload === 'string') return payload;
+    if (payload.summary) return payload.summary;
     const parts: string[] = [];
     if (payload.lotId || payload.lotNumber) parts.push(`lot:${payload.lotId || payload.lotNumber}`);
     if (payload.carrierId) parts.push(`car:${payload.carrierId}`);
@@ -382,46 +509,7 @@ export const DashboardView: React.FC = () => {
     }
   };
 
-  // Toggle tree node group expansion
-  const toggleGroupExpand = (groupId: string) => {
-    setExpandedGroups((prev) => ({
-      ...prev,
-      [groupId]: !prev[groupId],
-    }));
-  };
 
-  const expandAllGroups = () => {
-    const allExpanded: Record<string, boolean> = { UNASSIGNED: true };
-    deviceGroups.forEach((g) => {
-      allExpanded[g.id] = true;
-    });
-    setExpandedGroups(allExpanded);
-  };
-
-  const collapseAllGroups = () => {
-    const allCollapsed: Record<string, boolean> = { UNASSIGNED: false };
-    deviceGroups.forEach((g) => {
-      allCollapsed[g.id] = false;
-    });
-    setExpandedGroups(allCollapsed);
-  };
-
-
-
-  // Devices grouped by groupId
-  const devicesByGroup = React.useMemo(() => {
-    const map = new Map<string, DeviceModel[]>();
-    // Pre-populate registered groups
-    deviceGroups.forEach((g) => map.set(g.id, []));
-    map.set('UNASSIGNED', []);
-
-    devices.forEach((dev) => {
-      const gId = dev.groupId && map.has(dev.groupId) ? dev.groupId : 'UNASSIGNED';
-      map.get(gId)?.push(dev);
-    });
-
-    return map;
-  }, [devices, deviceGroups]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-2.5 sm:p-3 space-y-2 bg-[#070B14] text-slate-100 select-none font-sans">
@@ -538,376 +626,605 @@ export const DashboardView: React.FC = () => {
         }`}
       >
         {/* ========================================================================= */}
-        {/* LEFT COLUMN: THÔNG TIN THIẾT BỊ (ĐIỀU CHỈNH ĐƯỢC ĐỘ RỘNG BẰNG KÉO THẢ)    */}
+        {/* LEFT COLUMN: THÔNG TIN THIẾT BỊ (HIỂN THỊ CHÍNH EQUIP_ID & BATCH CONTROLS) */}
         {/* ========================================================================= */}
         <div
           style={{ width: typeof window !== 'undefined' && window.innerWidth >= 1024 ? `${leftPanelWidth}px` : undefined }}
           className="flex flex-col rounded-lg bg-[#0C1220]/95 border border-slate-800/90 min-h-0 overflow-hidden shadow-md shrink-0 w-full lg:shrink-0 max-lg:!w-full"
         >
-          {/* Card Header: Title changed to 'Thông Tin Thiết Bị' with width indicator */}
-          <div className="px-3 py-2 bg-slate-950/80 border-b border-slate-800/80 flex items-center justify-between gap-2 shrink-0">
-            <div className="flex items-center gap-2 min-w-0">
+          {/* Header: Title, Station Count, View Mode Switcher */}
+          <div className="px-3 py-2 bg-slate-950/90 border-b border-slate-800/80 flex items-center justify-between gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 min-w-0">
               <Layers className="w-3.5 h-3.5 text-blue-400 shrink-0" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200 truncate">
                 {t('dashboard.equipmentMatrix.title')}
               </h3>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-semibold shrink-0">
-                {devices.length} {t('dashboard.equipmentMatrix.stationCount')}
+              <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-slate-800 text-cyan-400 font-bold shrink-0">
+                {devices.length}
               </span>
             </div>
 
-            {/* Quick Action buttons on header: Width Reset + Expand/Collapse All */}
+            {/* Action Toolbar on Header: Card/Tree Switcher + Width Reset */}
             <div className="flex items-center gap-1 shrink-0">
-              {/* Width Indicator & Quick Reset */}
+              {/* View Mode Toggle: Cards vs Tree */}
+              <div className="flex items-center rounded bg-slate-900 border border-slate-800 p-0.5">
+                <button
+                  onClick={() => setDeviceViewMode('cards')}
+                  className={`p-1 rounded transition-colors ${
+                    deviceViewMode === 'cards'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Chế độ xem Thẻ thiết bị trực quan (Card View)"
+                >
+                  <Grid className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={() => setDeviceViewMode('tree')}
+                  className={`p-1 rounded transition-colors ${
+                    deviceViewMode === 'tree'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Chế độ xem Cây phân cấp (Tree View)"
+                >
+                  <List className="w-3 h-3" />
+                </button>
+              </div>
+
+              {/* Nút Đóng / Mở rộng tất cả Group khi ở Tree View */}
+              {deviceViewMode === 'tree' && (
+                <button
+                  onClick={toggleExpandAllGroups}
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-cyan-500 hover:text-cyan-300 text-[10px] font-mono text-slate-300 transition-colors shadow-xs active:scale-95"
+                  title={isAllGroupsExpanded ? "Thu gọn (đóng) tất cả các nhóm" : "Mở rộng tất cả các nhóm"}
+                >
+                  {isAllGroupsExpanded ? (
+                    <>
+                      <ChevronUp className="w-3 h-3 text-cyan-400" />
+                      <span className="hidden sm:inline">Đóng</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-3 h-3 text-cyan-400" />
+                      <span className="hidden sm:inline">Mở</span>
+                    </>
+                  )}
+                </button>
+              )}
+
+              {/* Width Reset Preset */}
               <button
-                onClick={() => setLeftPanelWidth(320)}
-                className="hidden lg:flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-blue-500 hover:text-blue-300 text-[10px] font-mono text-slate-400 transition-colors"
-                title="Bấm để đặt lại độ rộng card về mặc định (320px)"
+                onClick={() => setLeftPanelWidth(leftPanelWidth <= 200 ? 280 : 180)}
+                className="hidden lg:flex items-center px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-blue-500 hover:text-blue-300 text-[10px] font-mono text-slate-400 transition-colors"
+                title="Nhấp để chuyển đổi kích thước thanh thiết bị (180px / 280px)"
               >
                 <span>{leftPanelWidth}px</span>
-              </button>
-
-              {/* Expand / Collapse All */}
-              <button
-                onClick={() => {
-                  const anyCollapsed = Object.values(expandedGroups).some((v) => !v);
-                  if (anyCollapsed) expandAllGroups();
-                  else collapseAllGroups();
-                }}
-                className="p-1 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 transition-colors"
-                title="Mở rộng / Thu gọn toàn bộ cây"
-              >
-                {Object.values(expandedGroups).some((v) => !v) ? (
-                  <Maximize2 className="w-3 h-3" />
-                ) : (
-                  <Minimize2 className="w-3 h-3" />
-                )}
               </button>
             </div>
           </div>
 
           {/* ========================================================================= */}
-          {/* CÂY GROUP THIẾT BỊ (HIỂN THỊ CẢ TÊN MÁY VÀ ID MÁY)                        */}
+          {/* BATCH CONTROLS TOOLBAR: START ALL, STOP ALL, RESET ALL                    */}
           {/* ========================================================================= */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-2">
-            {/* Render Registered Groups */}
-            {deviceGroups.map((group) => {
-              const groupDevs = devicesByGroup.get(group.id) || [];
-              const isExpanded = !!expandedGroups[group.id];
-              const readyInGroup = groupDevs.filter((d) => ['Ready', 'Connected', 'Busy'].includes(d.status)).length;
-              const errorInGroup = groupDevs.filter((d) => ['Error', 'Warning'].includes(d.status)).length;
+          <div className="px-2 py-1.5 bg-[#090E1B] border-b border-slate-800/80 flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={handleStartAll}
+              disabled={isBatchProcessing || devices.length === 0}
+              className="flex-1 py-1 px-1.5 rounded bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-[10px] font-mono font-bold tracking-tight transition-all flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95"
+              title="Start All: Kết nối tất cả thiết bị qua TCP Socket"
+            >
+              <Play className="w-2.5 h-2.5 shrink-0 fill-current" />
+              <span>Start All</span>
+            </button>
 
-              return (
-                <div key={group.id} className="rounded-md border border-slate-800/80 bg-slate-950/60 overflow-hidden">
-                  {/* Group Tree Parent Node */}
-                  <div
-                    onClick={() => toggleGroupExpand(group.id)}
-                    className="px-2.5 py-1.5 bg-slate-900/80 hover:bg-slate-900 cursor-pointer transition-colors flex items-center justify-between gap-2 border-b border-slate-800/40"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-slate-400 hover:text-slate-200">
-                        {isExpanded ? (
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        ) : (
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        )}
-                      </span>
-                      {isExpanded ? (
-                        <FolderOpen className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                      ) : (
-                        <Folder className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                      )}
-                      <span className="text-xs font-bold text-slate-100 truncate font-sans">
-                        {group.name}
-                      </span>
-                      <span className="text-[10px] font-mono text-slate-500 font-semibold shrink-0">
-                        [{group.id}]
-                      </span>
-                    </div>
+            <button
+              onClick={handleStopAll}
+              disabled={isBatchProcessing || devices.length === 0}
+              className="flex-1 py-1 px-1.5 rounded bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-[10px] font-mono font-bold tracking-tight transition-all flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95"
+              title="Stop All: Dừng và ngắt kết nối toàn bộ thiết bị"
+            >
+              <Power className="w-2.5 h-2.5 shrink-0" />
+              <span>Stop All</span>
+            </button>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {errorInGroup > 0 && (
-                        <span className="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.9)] animate-pulse" />
-                      )}
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-semibold">
-                        {groupDevs.length} máy
-                      </span>
-                    </div>
-                  </div>
+            <button
+              onClick={handleResetAll}
+              disabled={isBatchProcessing || devices.length === 0}
+              className="flex-1 py-1 px-1.5 rounded bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/40 text-[10px] font-mono font-bold tracking-tight transition-all flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95"
+              title="Reset All: Khởi động lại (Reset) toàn bộ socket thiết bị"
+            >
+              <RotateCcw className={`w-2.5 h-2.5 shrink-0 ${isBatchProcessing ? 'animate-spin' : ''}`} />
+              <span>Reset All</span>
+            </button>
+          </div>
 
-                  {/* Group Children (Leaf Nodes - Machines) */}
-                  {isExpanded && (
-                    <div className="p-1.5 space-y-1 bg-[#080D19]/60 border-t border-slate-800/30">
-                      {groupDevs.length === 0 ? (
-                        <div className="py-2 px-3 text-[11px] text-slate-500 italic">
-                          Chưa có thiết bị nào trong group này.
-                        </div>
-                      ) : (
-                        groupDevs.map((dev) => {
-                          const isSelected = dev.id === selectedStationId;
-                          const statusCfg = getStatusBadge(dev.status);
-                          const pingMs = pingLatencies[dev.id];
-                          const isPinging = pingingId === dev.id;
-                          const isReconnecting = reconnectingId === dev.id;
-
-                          return (
-                            <div
-                              key={dev.id}
-                              onClick={() => setSelectedStationId(dev.id)}
-                              onContextMenu={(e) => handleContextMenu(e, dev)}
-                              className={`p-1.5 rounded border cursor-pointer transition-all flex items-center justify-between group select-none ml-2 ${
-                                isSelected
-                                  ? 'bg-blue-600/20 border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)] ring-1 ring-blue-500/70'
-                                  : 'bg-slate-900/60 border-slate-800/60 hover:border-slate-700 hover:bg-slate-900/90'
-                              }`}
-                              title={`${dev.name} [${dev.id}] - ${statusCfg.label}\n• Nhấp xem chi tiết ở ô bên dưới\n• Chuột phải để Start/Stop, Reset, Ping, Tự động kết nối lại`}
-                            >
-                              {/* Left: LED indicator & CHỈ HIỂN THỊ MÃ THIẾT BỊ (ID) */}
-                              <div className="flex items-center gap-2 min-w-0 pr-1">
-                                <span
-                                  className={`w-2.5 h-2.5 rounded-full shrink-0 transition-transform group-hover:scale-125 ${statusCfg.dot} ${
-                                    isReconnecting ? 'animate-ping' : ''
-                                  }`}
-                                />
-                                <span
-                                  className={`font-mono text-xs font-bold tracking-wider truncate transition-colors ${
-                                    isSelected
-                                      ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)] font-extrabold'
-                                      : 'text-slate-100 group-hover:text-cyan-300'
-                                  }`}
-                                >
-                                  {dev.id}
-                                </span>
-                              </div>
-
-                              {/* Right: Quick Ping badge if active */}
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                {isPinging && (
-                                  <span className="text-[9px] font-mono text-cyan-400 animate-pulse">
-                                    ping...
-                                  </span>
-                                )}
-                                {!isPinging && pingMs !== undefined && (
-                                  <span className="text-[9px] font-mono font-bold text-cyan-400 bg-cyan-950/90 px-1 py-0.2 rounded border border-cyan-800/80 shadow-xs">
-                                    {pingMs}ms
-                                  </span>
-                                )}
-                                <span
-                                  className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold ${statusCfg.className}`}
-                                >
-                                  {statusCfg.label}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  )}
+            {/* ========================================================================= */}
+            {/* BODY: DANH SÁCH THIẾT BỊ (HIỂN THỊ CHÍNH LÀ EQUIP_ID)                     */}
+            {/* ========================================================================= */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+              {devices.length === 0 ? (
+                <div className="text-center py-8 text-xs text-slate-500 italic">
+                  Chưa có thiết bị nào được kết nối.
                 </div>
-              );
-            })}
+              ) : deviceViewMode === 'cards' ? (
+                /* =================================================================== */
+                /* 1. CHẾ ĐỘ THẺ THIẾT BỊ: HIỂN THỊ CHÍNH LÀ EQUIP_ID                 */
+                /* =================================================================== */
+                devices.map((dev) => {
+                  const isSelected = dev.id === selectedStationId;
+                  const statusCfg = getStatusBadge(dev.status);
+                  const pingMs = pingLatencies[dev.id];
+                  const isPinging = pingingId === dev.id;
+                  const isReconnecting = reconnectingId === dev.id;
 
-            {/* Unassigned Devices Group Branch (if any) */}
-            {(() => {
-              const unassignedDevs = devicesByGroup.get('UNASSIGNED') || [];
-              if (unassignedDevs.length === 0) return null;
-              const isExpanded = !!expandedGroups['UNASSIGNED'];
+                  return (
+                    <div
+                      key={dev.id}
+                      onClick={() => setSelectedStationId(dev.id)}
+                      onContextMenu={(e) => handleContextMenu(e, dev)}
+                      className={`rounded-lg p-2 border transition-all cursor-pointer select-none space-y-1.5 group relative overflow-hidden ${
+                        isSelected
+                          ? 'bg-gradient-to-br from-blue-950/50 via-slate-900/90 to-[#0A1224] border-blue-500 shadow-[0_0_16px_rgba(59,130,246,0.25)] ring-1 ring-blue-500/70'
+                          : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/90 hover:shadow-md'
+                      }`}
+                    >
+                      {/* Active Accent Bar on Left edge */}
+                      {isSelected && (
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                      )}
 
-              return (
-                <div className="rounded-md border border-slate-800/80 bg-slate-950/60 overflow-hidden">
-                  <div
-                    onClick={() => toggleGroupExpand('UNASSIGNED')}
-                    className="px-2.5 py-1.5 bg-slate-900/80 hover:bg-slate-900 cursor-pointer transition-colors flex items-center justify-between gap-2 border-b border-slate-800/40"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-slate-400 hover:text-slate-200">
-                        {isExpanded ? (
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        ) : (
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        )}
-                      </span>
-                      <Folder className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span className="text-xs font-bold text-slate-400 font-sans">
-                        {t('dashboard.equipmentMatrix.unassignedGroup')}
-                      </span>
-                    </div>
-
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-semibold shrink-0">
-                      {unassignedDevs.length} máy
-                    </span>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="p-1.5 space-y-1 bg-[#080D19]/60">
-                      {unassignedDevs.map((dev) => {
-                        const isSelected = dev.id === selectedStationId;
-                        const statusCfg = getStatusBadge(dev.status);
-                        const pingMs = pingLatencies[dev.id];
-
-                        return (
-                          <div
-                            key={dev.id}
-                            onClick={() => setSelectedStationId(dev.id)}
-                            onContextMenu={(e) => handleContextMenu(e, dev)}
-                            className={`p-1.5 rounded border cursor-pointer transition-all flex items-center justify-between group select-none ml-2 ${
+                      {/* Card Header: LED + EQUIP_ID (CHÍNH) + Status Badge */}
+                      <div className="flex items-center justify-between gap-1.5 pl-0.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={`w-2.5 h-2.5 rounded-full shrink-0 transition-transform group-hover:scale-125 ${
+                              statusCfg.dot
+                            } ${isReconnecting ? 'animate-ping' : ''}`}
+                          />
+                          {/* EQUIP_ID LÀ TIÊU ĐỀ CHÍNH TO NHẤT */}
+                          <span
+                            className={`font-mono text-sm sm:text-base font-extrabold tracking-wider truncate ${
                               isSelected
-                                ? 'bg-blue-600/20 border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)] ring-1 ring-blue-500/70'
-                                : 'bg-slate-900/60 border-slate-800/60 hover:border-slate-700 hover:bg-slate-900/90'
+                                ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]'
+                                : 'text-slate-100 group-hover:text-cyan-300'
                             }`}
                           >
-                            <div className="flex items-center gap-2 min-w-0 pr-1">
-                              <span className={`w-2.5 h-2.5 rounded-full shrink-0 transition-transform group-hover:scale-125 ${statusCfg.dot}`} />
-                              <span
-                                className={`font-mono text-xs font-bold tracking-wider truncate transition-colors ${
-                                  isSelected
-                                    ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)] font-extrabold'
-                                    : 'text-slate-100 group-hover:text-cyan-300'
-                                }`}
-                              >
-                                {dev.id}
+                            {dev.id}
+                          </span>
+                        </div>
+
+                        {/* Status + Ping */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isPinging && (
+                            <span className="text-[9px] font-mono text-cyan-400 animate-pulse font-semibold">
+                              ping...
+                            </span>
+                          )}
+                          {!isPinging && pingMs !== undefined && (
+                            <span className="text-[9px] font-mono font-bold text-cyan-400 bg-cyan-950/90 px-1 py-0.2 rounded border border-cyan-800/80 shadow-xs">
+                              {pingMs}ms
+                            </span>
+                          )}
+                          <span
+                            className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold ${statusCfg.className}`}
+                          >
+                            {statusCfg.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Telemetry Tags Row: Host:Port, Model, Server/Device ID */}
+                      <div className="grid grid-cols-2 gap-1 text-[10px] font-mono">
+                        <div
+                          className="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden"
+                          title={`Địa chỉ TCP Socket: ${dev.ipAddress}:${dev.port}`}
+                        >
+                          <span className="text-slate-500 text-[9px] shrink-0">TCP</span>
+                          <span className="text-slate-300 truncate font-semibold">
+                            {dev.ipAddress}:{dev.port}
+                          </span>
+                        </div>
+
+                        <div
+                          className="px-1.5 py-0.5 rounded bg-slate-950/80 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden"
+                          title={`Model thiết bị: ${dev.equipmentModel || dev.model}`}
+                        >
+                          <span className="text-slate-500 text-[9px] shrink-0">MDL</span>
+                          <span className="text-emerald-400 truncate font-semibold">
+                            {dev.equipmentModel || dev.model || 'IBS_SEMI'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card Footer: Quick Actions */}
+                      <div className="pt-1 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400">
+                        <span className="text-[9px] font-mono text-slate-500">
+                          {dev.plant || 'ITMVPSG'} · S{dev.serverNo ?? 15}:D{dev.deviceId ?? 0}
+                        </span>
+
+                        {/* Action buttons on card */}
+                        <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePing(dev);
+                            }}
+                            className="p-1 rounded bg-slate-950/90 border border-slate-800 hover:border-cyan-500 hover:text-cyan-400 text-slate-400 transition-colors"
+                            title="Gửi gói kiểm tra Ping"
+                          >
+                            <Wifi className="w-2.5 h-2.5" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReset(dev);
+                            }}
+                            className="p-1 rounded bg-slate-950/90 border border-slate-800 hover:border-blue-500 hover:text-blue-400 text-slate-400 transition-colors"
+                            title="Khởi động lại kết nối Socket"
+                          >
+                            <RotateCcw className="w-2.5 h-2.5" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleStartStop(dev);
+                            }}
+                            className={`p-1 rounded border transition-colors ${
+                              dev.status === 'Disconnected'
+                                ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-600 hover:text-white'
+                                : 'bg-red-600/20 text-red-400 border-red-500/40 hover:bg-red-600 hover:text-white'
+                            }`}
+                            title={dev.status === 'Disconnected' ? 'Bật kết nối' : 'Ngắt kết nối'}
+                          >
+                            <Power className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                /* =================================================================== */
+                /* 2. CHẾ ĐỘ CÂY PHÂN CẤP: LẤY GROUP THỰC TẾ TRONG CỘT GROUP TRONG DB */
+                /* =================================================================== */
+                <div className="space-y-2">
+                  {/* Nút bấm Đóng / Mở rộng tất cả Group */}
+                  <div className="flex items-center justify-between px-2 py-1 bg-slate-900/90 rounded border border-slate-800/80 text-[10px] font-mono text-slate-400">
+                    <div className="flex items-center gap-1.5">
+                      <Folder className="w-3.5 h-3.5 text-blue-400" />
+                      <span className="font-semibold text-slate-200">
+                        {dynamicGroups.length} Nhóm từ DB
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={toggleExpandAllGroups}
+                      className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 hover:border-cyan-500 hover:text-cyan-300 text-slate-300 flex items-center gap-1 transition-all active:scale-95 shadow-xs font-semibold"
+                      title={isAllGroupsExpanded ? "Thu gọn (đóng) tất cả các nhóm" : "Mở rộng tất cả các nhóm"}
+                    >
+                      {isAllGroupsExpanded ? (
+                        <>
+                          <ChevronUp className="w-3 h-3 text-cyan-400" />
+                          <span>Đóng tất cả</span>
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-3 h-3 text-cyan-400" />
+                          <span>Mở tất cả</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {dynamicGroups.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-slate-500 italic">
+                      Chưa có thiết bị hoặc nhóm nào trong cơ sở dữ liệu.
+                    </div>
+                  ) : (
+                    dynamicGroups.map((group) => {
+                      const groupDevs = group.devices;
+                      const isExpanded = expandedGroups[group.id] !== false;
+                      const errorInGroup = groupDevs.filter((d) => ['Error', 'Warning'].includes(d.status)).length;
+
+                      return (
+                        <div key={group.id} className="rounded-md border border-slate-800/80 bg-slate-950/60 overflow-hidden">
+                          {/* Group Tree Parent Node */}
+                          <div
+                            onClick={() => toggleGroupExpand(group.id)}
+                            className="px-2.5 py-1.5 bg-slate-900/80 hover:bg-slate-900 cursor-pointer transition-colors flex items-center justify-between gap-2 border-b border-slate-800/40"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-slate-400 hover:text-slate-200">
+                                {isExpanded ? (
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ChevronRight className="w-3.5 h-3.5" />
+                                )}
+                              </span>
+                              {isExpanded ? (
+                                <FolderOpen className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                              ) : (
+                                <Folder className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                              )}
+                              <span className="text-xs font-bold text-slate-100 truncate font-sans">
+                                {group.name}
                               </span>
                             </div>
 
                             <div className="flex items-center gap-1.5 shrink-0">
-                              {pingMs !== undefined && (
-                                <span className="text-[9px] font-mono font-bold text-cyan-400 bg-cyan-950/90 px-1 py-0.2 rounded border border-cyan-800/80">
-                                  {pingMs}ms
-                                </span>
+                              {errorInGroup > 0 && (
+                                <span className="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.9)] animate-pulse" />
                               )}
-                              <span
-                                className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold ${statusCfg.className}`}
-                              >
-                                {statusCfg.label}
+                              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-semibold">
+                                {groupDevs.length}
                               </span>
                             </div>
                           </div>
-                        );
-                      })}
+
+                          {/* Group Children (Leaf Nodes - Machines): HIỂN THỊ CHÍNH EQUIP_ID */}
+                          {isExpanded && (
+                            <div className="p-1.5 space-y-1 bg-[#080D19]/60 border-t border-slate-800/30">
+                              {groupDevs.length === 0 ? (
+                                <div className="py-2 px-3 text-[11px] text-slate-500 italic">
+                                  {t('dashboard.equipmentMatrix.noDevicesInGroup')}
+                                </div>
+                              ) : (
+                                groupDevs.map((dev) => {
+                                  const isSelected = dev.id === selectedStationId;
+                                  const statusCfg = getStatusBadge(dev.status);
+                                  const pingMs = pingLatencies[dev.id];
+                                  const isPinging = pingingId === dev.id;
+                                  const isReconnecting = reconnectingId === dev.id;
+
+                                  return (
+                                    <div
+                                      key={dev.id}
+                                      onClick={() => setSelectedStationId(dev.id)}
+                                      onContextMenu={(e) => handleContextMenu(e, dev)}
+                                      className={`p-1.5 rounded border cursor-pointer transition-all flex items-center justify-between group select-none ml-1.5 ${
+                                        isSelected
+                                          ? 'bg-blue-600/20 border-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.3)] ring-1 ring-blue-500/70'
+                                          : 'bg-slate-900/60 border-slate-800/60 hover:border-slate-700 hover:bg-slate-900/90'
+                                      }`}
+                                      title={`${dev.id} - ${statusCfg.label}\n${dev.ipAddress}:${dev.port}`}
+                                    >
+                                      {/* Left: LED + EQUIP_ID (CHÍNH) */}
+                                      <div className="flex items-center gap-2 min-w-0 pr-1">
+                                        <span
+                                          className={`w-2.5 h-2.5 rounded-full shrink-0 transition-transform group-hover:scale-125 ${statusCfg.dot} ${
+                                            isReconnecting ? 'animate-ping' : ''
+                                          }`}
+                                        />
+                                        <div className="min-w-0 truncate">
+                                          <div
+                                            className={`font-mono text-xs font-bold tracking-wider truncate transition-colors ${
+                                              isSelected
+                                                ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)] font-extrabold'
+                                                : 'text-slate-100 group-hover:text-cyan-300'
+                                            }`}
+                                          >
+                                            {dev.id}
+                                          </div>
+                                          <div className="text-[10px] text-slate-400 font-mono truncate">
+                                            {dev.ipAddress}:{dev.port}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Right: Ping & Status */}
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        {isPinging && (
+                                          <span className="text-[9px] font-mono text-cyan-400 animate-pulse">
+                                            ping...
+                                          </span>
+                                        )}
+                                        {!isPinging && pingMs !== undefined && (
+                                          <span className="text-[9px] font-mono font-bold text-cyan-400 bg-cyan-950/90 px-1 py-0.2 rounded border border-cyan-800/80 shadow-xs">
+                                            {pingMs}ms
+                                          </span>
+                                        )}
+                                        <span
+                                          className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold ${statusCfg.className}`}
+                                        >
+                                          {statusCfg.label}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ========================================================================= */}
+            {/* Ô THÔNG TIN CHI TIẾT TRẠM MÁY (HIỂN THỊ CHÍNH LÀ EQUIP_ID)                */}
+            {/* ========================================================================= */}
+            {/* ========================================================================= */}
+            {/* Ô THÔNG TIN CHI TIẾT TRẠM MÁY (HỖ TRỢ THU NHỎ / MỞ RỘNG & HIỂN THỊ EQUIP_ID) */}
+            {/* ========================================================================= */}
+            <div className="border-t border-slate-800/90 bg-[#090E1B] shrink-0 transition-all duration-200">
+              {/* Header Bar của ô thông tin thiết bị (Bấm để Thu nhỏ / Mở rộng) */}
+              <div
+                onClick={() => setIsStationDetailsCollapsed(!isStationDetailsCollapsed)}
+                className="px-2.5 py-1.5 flex items-center justify-between cursor-pointer hover:bg-slate-900/70 transition-colors select-none"
+                title={isStationDetailsCollapsed ? "Bấm để mở rộng xem thông tin thiết bị" : "Bấm để thu nhỏ phần xem thông tin thiết bị"}
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {activeDevice ? (
+                    <>
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          getStatusBadge(activeDevice.status).dot
+                        }`}
+                      />
+                      <span className="font-mono text-xs font-extrabold text-cyan-400 tracking-wider truncate">
+                        {activeDevice.id}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono hidden sm:inline truncate">
+                        ({activeDevice.equipmentModel || activeDevice.model || 'IBS_SEMI'})
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                      {t('dashboard.stationDetails.title')}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  {activeDevice && (
+                    <span
+                      className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold ${
+                        getStatusBadge(activeDevice.status).className
+                      }`}
+                    >
+                      {getStatusBadge(activeDevice.status).label}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsStationDetailsCollapsed(!isStationDetailsCollapsed);
+                    }}
+                    className="p-1 rounded text-slate-400 hover:text-cyan-400 hover:bg-slate-800/80 transition-colors"
+                    title={isStationDetailsCollapsed ? "Mở rộng" : "Thu nhỏ"}
+                  >
+                    {isStationDetailsCollapsed ? (
+                      <ChevronUp className="w-3.5 h-3.5 text-cyan-400" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Nội dung chi tiết chỉ hiển thị khi KHÔNG thu nhỏ */}
+              {!isStationDetailsCollapsed && (
+                <div className="px-2.5 pb-2.5 pt-1 space-y-2 border-t border-slate-800/50">
+                  {activeDevice ? (
+                    <div className="space-y-2">
+                      {/* Telemetry Grid: Thông số chuẩn 18 Cột (SOCKET, MODEL, SRV/DEV, PLANT) */}
+                      <div className="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
+                        {/* Socket Address with Copy button */}
+                        <div
+                          className="px-2 py-1 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden group/item"
+                          title={`Địa chỉ TCP Socket: ${activeDevice.ipAddress}:${activeDevice.port}`}
+                        >
+                          <span className="text-slate-500 text-[9px] shrink-0 font-medium">SOCKET</span>
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className="text-amber-400 font-bold truncate">
+                              {activeDevice.ipAddress}:{activeDevice.port}
+                            </span>
+                            <button
+                              onClick={() => handleCopyText(`${activeDevice.ipAddress}:${activeDevice.port}`, 'IP:Port')}
+                              className="opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-cyan-400 transition-opacity"
+                              title="Sao chép IP:Port"
+                            >
+                              <Copy className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Model */}
+                        <div
+                          className="px-2 py-1 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden"
+                          title={`MODEL: ${activeDevice.equipmentModel || activeDevice.model}`}
+                        >
+                          <span className="text-slate-500 text-[9px] shrink-0 font-medium">MODEL</span>
+                          <span className="text-emerald-400 font-semibold truncate">
+                            {activeDevice.equipmentModel || activeDevice.model || 'IBS_SEMI'}
+                          </span>
+                        </div>
+
+                        {/* Server No & Device ID */}
+                        <div
+                          className="px-2 py-1 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden"
+                          title={`SERVER_NO: ${activeDevice.serverNo ?? 15} | DEVICE_ID: ${activeDevice.deviceId ?? 0}`}
+                        >
+                          <span className="text-slate-500 text-[9px] shrink-0 font-medium">SRV/DEV</span>
+                          <span className="text-purple-400 font-bold truncate">
+                            S{activeDevice.serverNo ?? 15} : D{activeDevice.deviceId ?? 0}
+                          </span>
+                        </div>
+
+                        {/* Plant & Group */}
+                        <div
+                          className="px-2 py-1 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden"
+                          title={`PLANT: ${activeDevice.plant || 'ITMVPSG'} | GROUP: ${activeDevice.groupName || 'SMT'}`}
+                        >
+                          <span className="text-slate-500 text-[9px] shrink-0 font-medium">PLANT</span>
+                          <span className="text-cyan-400 font-semibold truncate">
+                            {activeDevice.plant || 'ITMVPSG'} · {activeDevice.groupName || 'SMT'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Quick Action Buttons Control Toolbar */}
+                      <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/60 text-[10px]">
+                        <span className="text-slate-500 font-mono text-[9px]">
+                          Up: {Math.floor(activeDevice.uptimeSeconds / 3600)}h {Math.floor((activeDevice.uptimeSeconds % 3600) / 60)}m
+                        </span>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => handlePing(activeDevice)}
+                            className="px-2 py-1 rounded bg-slate-900 border border-slate-800 hover:border-cyan-500 hover:text-cyan-400 text-slate-300 transition-colors font-mono flex items-center gap-1 text-[10px]"
+                            title={t('dashboard.equipmentMatrix.pingProbeTooltip')}
+                          >
+                            <Wifi className="w-2.5 h-2.5 text-cyan-400" />
+                            <span>Ping</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleReset(activeDevice)}
+                            className="px-2 py-1 rounded bg-slate-900 border border-slate-800 hover:border-blue-500 hover:text-blue-400 text-slate-300 transition-colors font-mono flex items-center gap-1 text-[10px]"
+                            title={t('dashboard.equipmentMatrix.resetSocketTooltip')}
+                          >
+                            <RotateCcw className="w-2.5 h-2.5 text-blue-400" />
+                            <span>Reset</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleToggleStartStop(activeDevice)}
+                            className={`px-2 py-1 rounded border transition-colors font-mono flex items-center gap-1 text-[10px] font-bold ${
+                              activeDevice.status === 'Disconnected'
+                                ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-600 hover:text-white'
+                                : 'bg-red-600/20 text-red-300 border-red-500/40 hover:bg-red-600 hover:text-white'
+                            }`}
+                            title={t('dashboard.equipmentMatrix.toggleDeviceTooltip')}
+                          >
+                            <Power className="w-2.5 h-2.5" />
+                            <span>{activeDevice.status === 'Disconnected' ? 'Start' : 'Stop'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleAutoReconnect(activeDevice)}
+                            className="px-2 py-1 rounded bg-purple-600/20 text-purple-300 border border-purple-500/40 hover:bg-purple-600 hover:text-white transition-colors font-mono flex items-center gap-1 text-[10px]"
+                            title={t('dashboard.equipmentMatrix.autoReconnectTooltip')}
+                          >
+                            <RefreshCw className="w-2.5 h-2.5 text-purple-400" />
+                            <span>Auto</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-3 text-[11px] text-slate-500 italic">
+                      {t('dashboard.stationDetails.selectPrompt')}
                     </div>
                   )}
                 </div>
-              );
-            })()}
-          </div>
-
-          {/* ========================================================================= */}
-          {/* Ô THÔNG TIN CHI TIẾT Ở CUỐI (HIỂN THỊ TÊN MÁY CHI TIẾT VÀ THÔNG SỐ ĐẦY ĐỦ) */}
-          {/* ========================================================================= */}
-          {/* ========================================================================= */}
-          {/* Ô THÔNG TIN CHI TIẾT Ở CUỐI (TỐI ƯU SIÊU NHỎ GỌN, TIẾT KIỆM DIỆN TÍCH)    */}
-          {/* ========================================================================= */}
-          <div className="border-t border-slate-800/90 bg-[#090E1B] p-2 shrink-0 space-y-1.5">
-            {activeDevice ? (
-              <div className="space-y-1.5">
-                {/* Header: LED + Tên máy + ID + Status */}
-                <div className="flex items-center justify-between pb-1 border-b border-slate-800/70">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span
-                      className={`w-2 h-2 rounded-full shrink-0 ${
-                        getStatusBadge(activeDevice.status).dot
-                      }`}
-                    />
-                    <span className="font-bold text-xs text-slate-100 font-sans truncate" title={activeDevice.name}>
-                      {activeDevice.name}
-                    </span>
-                    <span className="font-mono text-[9px] text-cyan-400 shrink-0 font-semibold bg-cyan-950/60 px-1 py-0.2 rounded border border-cyan-900/60">
-                      {activeDevice.id}
-                    </span>
-                  </div>
-
-                  <span
-                    className={`text-[9px] font-mono px-1.5 py-0.2 rounded border uppercase font-bold shrink-0 ${
-                      getStatusBadge(activeDevice.status).className
-                    }`}
-                  >
-                    {getStatusBadge(activeDevice.status).label}
-                  </span>
-                </div>
-
-                {/* Telemetry Grid: Chỉ giữ IP, RCP, Ping, Group (Đã bỏ LOT, KHUNG, GÓI, LỖI) */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 font-mono text-[10px]">
-                  {/* IP & Port */}
-                  <div className="px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden" title={`${activeDevice.ipAddress}:${activeDevice.port}`}>
-                    <span className="text-slate-500 text-[9px] shrink-0">IP</span>
-                    <span className="text-slate-200 truncate text-[10px]">{activeDevice.ipAddress}:{activeDevice.port}</span>
-                  </div>
-
-                  {/* Recipe */}
-                  <div className="px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden" title={activeDevice.currentRecipe}>
-                    <span className="text-slate-500 text-[9px] shrink-0">RCP</span>
-                    <span className="text-blue-400 font-semibold truncate text-[10px]">{activeDevice.currentRecipe?.replace('RCP_', '') || 'DEFAULT'}</span>
-                  </div>
-
-                  {/* Latency */}
-                  <div className="px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden">
-                    <span className="text-slate-500 text-[9px] shrink-0">Ping</span>
-                    <span className="text-amber-400 font-semibold tabular-nums text-[10px]">{activeDevice.avgResponseTimeMs}ms</span>
-                  </div>
-
-                  {/* Group */}
-                  <div className="px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden">
-                    <span className="text-slate-500 text-[9px] shrink-0">Group</span>
-                    <span className="text-emerald-400 truncate text-[10px] font-semibold">{activeDevice.groupId?.replace('GRP_', '') || 'NONE'}</span>
-                  </div>
-                </div>
-
-                {/* Quick Action Buttons Toolbar */}
-                <div className="flex items-center justify-between pt-1 border-t border-slate-800/60 text-[10px]">
-                  <span className="text-slate-500 font-mono text-[9px]">
-                    Up: {Math.floor(activeDevice.uptimeSeconds / 3600)}h {Math.floor((activeDevice.uptimeSeconds % 3600) / 60)}m
-                  </span>
-
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => handlePing(activeDevice)}
-                      className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-cyan-500 hover:text-cyan-400 text-slate-300 transition-colors font-mono flex items-center gap-1 text-[10px]"
-                      title="Gửi gói ICMP/TCP ping probe"
-                    >
-                      <Wifi className="w-2.5 h-2.5 text-cyan-400" />
-                      <span>Ping</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleReset(activeDevice)}
-                      className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 hover:border-blue-500 hover:text-blue-400 text-slate-300 transition-colors font-mono flex items-center gap-1 text-[10px]"
-                      title="Đặt lại TCP socket"
-                    >
-                      <RotateCcw className="w-2.5 h-2.5 text-blue-400" />
-                      <span>Reset</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleToggleStartStop(activeDevice)}
-                      className={`px-1.5 py-0.5 rounded border transition-colors font-mono flex items-center gap-1 text-[10px] ${
-                        activeDevice.status === 'Disconnected'
-                          ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-600 hover:text-white'
-                          : 'bg-red-600/20 text-red-300 border-red-500/40 hover:bg-red-600 hover:text-white'
-                      }`}
-                      title="Bật / Tắt phiên máy"
-                    >
-                      <Power className="w-2.5 h-2.5" />
-                      <span>{activeDevice.status === 'Disconnected' ? 'Start' : 'Stop'}</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleAutoReconnect(activeDevice)}
-                      className="px-1.5 py-0.5 rounded bg-purple-600/20 text-purple-300 border border-purple-500/40 hover:bg-purple-600 hover:text-white transition-colors font-mono flex items-center gap-1 text-[10px]"
-                      title="Tự động kết nối lại"
-                    >
-                      <RefreshCw className="w-2.5 h-2.5 text-purple-400" />
-                      <span>Auto-Rec</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-2 text-[11px] text-slate-500 italic">
-                {t('dashboard.stationDetails.selectPrompt')}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
         </div>
 
         {/* ========================================================================= */}
@@ -915,9 +1232,9 @@ export const DashboardView: React.FC = () => {
         {/* ========================================================================= */}
         <div
           onMouseDown={handleMouseDownResize}
-          onDoubleClick={() => setLeftPanelWidth(320)}
+          onDoubleClick={() => setLeftPanelWidth(240)}
           className="hidden lg:flex items-center justify-center w-2.5 hover:w-3 mx-0.5 cursor-col-resize group shrink-0 transition-all select-none hover:bg-blue-600/10 rounded"
-          title="Kéo chuột sang trái / phải để điều chỉnh độ rộng card Thông Tin Thiết Bị (Nhấp đúp để về 320px)"
+          title={t('dashboard.equipmentMatrix.dragDividerTooltip')}
         >
           <div
             className={`w-1 h-12 rounded-full transition-colors flex flex-col items-center justify-center gap-1 ${
@@ -984,19 +1301,20 @@ export const DashboardView: React.FC = () => {
                 title={t('dashboard.liveStream.clear')}
               >
                 <Trash2 className="w-3 h-3" />
-                <span>Clear</span>
+                <span>{t('dashboard.liveStream.clear')}</span>
               </button>
             </div>
           </div>
 
           {/* Table Column Headers - Ngắn gọn, chuẩn xác */}
           <div className="px-3 py-1.5 bg-slate-950/90 border-b border-slate-800/80 grid grid-cols-12 text-[10px] font-mono uppercase tracking-wider text-slate-400 shrink-0 gap-1 items-center">
-            <span className="col-span-3">Thời Gian</span>
-            <span className="col-span-1 text-center">Chiều</span>
-            <span className="col-span-2">Mã Máy</span>
-            <span className="col-span-1">Lệnh</span>
-            <span className="col-span-4">Nội Dung Tóm Tắt</span>
-            <span className="col-span-1 text-right">Độ trễ</span>
+            <span className="col-span-2">{t('dashboard.liveStream.colTime')}</span>
+            <span className="col-span-1 text-center">{t('dashboard.liveStream.colDirection')}</span>
+            <span className="col-span-2">{t('dashboard.liveStream.colMachineId')}</span>
+            <span className="col-span-1">{t('dashboard.liveStream.colCommand')}</span>
+            <span className="col-span-1 text-center font-bold text-slate-200 tracking-wider">RESULT</span>
+            <span className="col-span-4">{t('dashboard.liveStream.colSummary')}</span>
+            <span className="col-span-1 text-right">{t('dashboard.liveStream.colLatency')}</span>
           </div>
 
           {/* Table Stream Rows */}
@@ -1004,7 +1322,7 @@ export const DashboardView: React.FC = () => {
             {streamBuffer.length === 0 ? (
               <div className="p-8 text-center text-slate-500 text-xs italic space-y-2">
                 <Activity className="w-6 h-6 mx-auto text-slate-600 animate-pulse" />
-                <p>Đang chờ các gói tin truyền thông TCP từ trạm sản xuất...</p>
+                <p>{t('dashboard.liveStream.waitingPackets')}</p>
               </div>
             ) : (
               streamBuffer.slice(0, 100).map((tx) => {
@@ -1024,7 +1342,7 @@ export const DashboardView: React.FC = () => {
                     title={`${formatFullDateTime(tx.timestamp)} · ${tx.direction} · ${tx.equipmentId} · ${tx.messageCode}\nNhấp để xem chi tiết Hex Dump & JSON`}
                   >
                     {/* Thời gian: Đầy đủ NGÀY THÁNG NĂM & GIỜ PHÚT GIÂY */}
-                    <span className="col-span-3 text-slate-300 font-mono text-[10px] tabular-nums whitespace-nowrap truncate font-medium">
+                    <span className="col-span-2 text-slate-300 font-mono text-[10px] tabular-nums whitespace-nowrap truncate font-medium">
                       {formatFullDateTime(tx.timestamp)}
                     </span>
 
@@ -1051,6 +1369,23 @@ export const DashboardView: React.FC = () => {
                       <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold border ${codeColor}`}>
                         {tx.messageCode}
                       </span>
+                    </span>
+
+                    {/* Cột RESULT Nổi Bật Màu Sắc */}
+                    <span className="col-span-1 flex justify-center">
+                      {tx.status === 'SUCCESS' ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/60 shadow-[0_0_8px_rgba(16,185,129,0.35)]">
+                          OK
+                        </span>
+                      ) : tx.status === 'TIMEOUT' ? (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black bg-amber-500/20 text-amber-400 border border-amber-500/60 shadow-[0_0_8px_rgba(245,158,11,0.35)]">
+                          TO
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black bg-rose-500/25 text-rose-400 border border-rose-500/70 shadow-[0_0_8px_rgba(244,63,94,0.4)]">
+                          NG
+                        </span>
+                      )}
                     </span>
 
                     {/* Nội dung tóm tắt ngắn gọn */}
@@ -1101,67 +1436,181 @@ export const DashboardView: React.FC = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. CUSTOM RIGHT-CLICK CONTEXT MENU                                        */}
+      {/* 4. CUSTOM RIGHT-CLICK CONTEXT MENU (PREMIUM INDUSTRIAL GLASSMORPHISM)     */}
       {/* ========================================================================= */}
       {contextMenu.visible && contextMenu.device && (
-        <div
-          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
-          className="fixed z-50 w-56 rounded-lg bg-[#0D1424] border border-slate-700/90 shadow-2xl py-1 text-xs font-sans text-slate-200 divide-y divide-slate-800/80 animate-in fade-in zoom-in-95 duration-100"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header of Context Menu */}
-          <div className="px-3 py-1.5 bg-slate-950/80 font-mono text-[10px] text-slate-400 flex items-center justify-between">
-            <span className="font-bold text-slate-200 truncate">{contextMenu.device.name}</span>
-            <span className="text-cyan-400 font-bold">{contextMenu.device.id}</span>
-          </div>
+        <>
+          {/* Transparent Backdrop to capture click outside instantly without lag */}
+          <div
+            className="fixed inset-0 z-50 bg-black/20 backdrop-blur-[0.5px]"
+            onClick={() => setContextMenu({ visible: false, x: 0, y: 0, device: null })}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setContextMenu({ visible: false, x: 0, y: 0, device: null });
+            }}
+          />
 
-          {/* Menu Items */}
-          <div className="py-1">
-            {/* Start / Stop */}
-            <button
-              onClick={() => handleToggleStartStop(contextMenu.device!)}
-              className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-slate-800 transition-colors"
-            >
-              <Power
-                className={`w-3.5 h-3.5 ${
-                  contextMenu.device.status === 'Disconnected' ? 'text-emerald-400' : 'text-red-400'
+          <div
+            style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+            className="fixed z-50 w-64 rounded-xl bg-[#0B1220]/95 backdrop-blur-xl border border-slate-700/80 shadow-[0_20px_60px_rgba(0,0,0,0.85),0_0_20px_rgba(59,130,246,0.15)] py-1.5 text-xs font-sans text-slate-200 divide-y divide-slate-800/80 animate-in fade-in zoom-in-95 duration-150 ring-1 ring-white/10 select-none"
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            {/* Header: LED + Device Name + ID + IP:Port */}
+            <div className="px-3 py-2 bg-gradient-to-r from-slate-950 to-slate-900/90 font-mono">
+              <div className="flex items-center justify-between gap-1.5 mb-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span
+                    className={`w-2 h-2 rounded-full shrink-0 ${
+                      getStatusBadge(contextMenu.device.status).dot
+                    }`}
+                  />
+                  <span className="font-bold text-slate-100 text-[11px] truncate" title={contextMenu.device.name}>
+                    {contextMenu.device.name}
+                  </span>
+                </div>
+                <span className="text-cyan-400 font-extrabold text-[10px] bg-cyan-950/80 border border-cyan-800/60 px-1.5 py-0.2 rounded shrink-0">
+                  {contextMenu.device.id}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-slate-400">
+                <span className="truncate">{contextMenu.device.ipAddress}:{contextMenu.device.port}</span>
+                <span className={`px-1 py-0.2 rounded border font-semibold ${getStatusBadge(contextMenu.device.status).className}`}>
+                  {getStatusBadge(contextMenu.device.status).label}
+                </span>
+              </div>
+            </div>
+
+            {/* Main Operations: Socket Control */}
+            <div className="py-1">
+              {/* Start / Stop */}
+              <button
+                onClick={() => handleToggleStartStop(contextMenu.device!)}
+                className={`w-full text-left px-3 py-1.5 flex items-center justify-between transition-colors group ${
+                  contextMenu.device.status === 'Disconnected'
+                    ? 'hover:bg-emerald-950/40 text-slate-200 hover:text-emerald-300'
+                    : 'hover:bg-red-950/40 text-slate-200 hover:text-red-300'
                 }`}
-              />
-              <span>
-                {contextMenu.device.status === 'Disconnected'
-                  ? t('dashboard.contextMenu.start')
-                  : t('dashboard.contextMenu.stop')}
-              </span>
-            </button>
+              >
+                <div className="flex items-center gap-2">
+                  <Power
+                    className={`w-3.5 h-3.5 transition-transform group-hover:scale-110 ${
+                      contextMenu.device.status === 'Disconnected' ? 'text-emerald-400' : 'text-red-400'
+                    }`}
+                  />
+                  <span className="font-medium">
+                    {contextMenu.device.status === 'Disconnected'
+                      ? 'Bắt đầu kết nối (Start Socket)'
+                      : 'Ngắt kết nối trạm (Stop Socket)'}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-500 group-hover:text-slate-400">
+                  {contextMenu.device.status === 'Disconnected' ? 'TCP Up' : 'TCP Down'}
+                </span>
+              </button>
 
-            {/* Reset */}
-            <button
-              onClick={() => handleReset(contextMenu.device!)}
-              className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-slate-800 transition-colors"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-blue-400" />
-              <span>{t('dashboard.contextMenu.reset')}</span>
-            </button>
+              {/* Reset Socket */}
+              <button
+                onClick={() => handleReset(contextMenu.device!)}
+                className="w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-blue-950/40 text-slate-200 hover:text-blue-300 transition-colors group"
+              >
+                <div className="flex items-center gap-2">
+                  <RotateCcw className="w-3.5 h-3.5 text-blue-400 transition-transform group-hover:-rotate-90 duration-200" />
+                  <span className="font-medium">Khởi động lại kết nối (Reset)</span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-500">Reconnect</span>
+              </button>
 
-            {/* Ping */}
-            <button
-              onClick={() => handlePing(contextMenu.device!)}
-              className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-slate-800 transition-colors"
-            >
-              <Wifi className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{t('dashboard.contextMenu.ping')}</span>
-            </button>
+              {/* Ping Probe */}
+              <button
+                onClick={() => handlePing(contextMenu.device!)}
+                className="w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-cyan-950/40 text-slate-200 hover:text-cyan-300 transition-colors group"
+              >
+                <div className="flex items-center gap-2">
+                  <Wifi className="w-3.5 h-3.5 text-cyan-400 group-hover:animate-pulse" />
+                  <span className="font-medium">Đo độ trễ mạng (Ping Probe)</span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-500">ICMP/TCP</span>
+              </button>
 
-            {/* Auto-reconnect */}
-            <button
-              onClick={() => handleAutoReconnect(contextMenu.device!)}
-              className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-slate-800 transition-colors text-purple-300"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-purple-400" />
-              <span>{t('dashboard.contextMenu.autoReconnect')}</span>
-            </button>
+              {/* Auto Reconnect */}
+              <button
+                onClick={() => handleAutoReconnect(contextMenu.device!)}
+                className="w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-purple-950/40 text-slate-200 hover:text-purple-300 transition-colors group"
+              >
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-3.5 h-3.5 text-purple-400 group-hover:rotate-180 transition-transform duration-300" />
+                  <span className="font-medium">Tự động kết nối lại (Auto-Rec)</span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-500">Daemon</span>
+              </button>
+            </div>
+
+            {/* Quick Actions & Utilities */}
+            <div className="py-1">
+              {/* Copy IP:Port */}
+              <button
+                onClick={() => handleCopyText(`${contextMenu.device?.ipAddress}:${contextMenu.device?.port}`, 'Địa chỉ IP:Port')}
+                className="w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-800/80 text-slate-300 hover:text-slate-100 transition-colors group"
+              >
+                <div className="flex items-center gap-2">
+                  <Copy className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400" />
+                  <span>Sao chép IP & Port</span>
+                </div>
+                <span className="text-[9px] font-mono text-slate-500">{contextMenu.device.ipAddress}</span>
+              </button>
+
+              {/* Copy Device ID */}
+              <button
+                onClick={() => handleCopyText(contextMenu.device?.id || '', 'Mã thiết bị')}
+                className="w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-slate-800/80 text-slate-300 hover:text-slate-100 transition-colors group"
+              >
+                <div className="flex items-center gap-2">
+                  <Copy className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-400" />
+                  <span>Sao chép ID Thiết bị</span>
+                </div>
+                <span className="text-[9px] font-mono text-cyan-400/80">{contextMenu.device.id}</span>
+              </button>
+
+              {/* Filter Live Stream by this device */}
+              <button
+                onClick={() => {
+                  setSelectedStationId(contextMenu.device!.id);
+                  setContextMenu({ visible: false, x: 0, y: 0, device: null });
+                  showToast(`Đã lọc luồng theo trạm ${contextMenu.device?.id}`);
+                }}
+                className="w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-amber-950/30 text-slate-300 hover:text-amber-300 transition-colors group"
+              >
+                <div className="flex items-center gap-2">
+                  <Terminal className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Lọc gói tin trạm này</span>
+                </div>
+                <span className="text-[9px] font-mono text-slate-500">Live Stream</span>
+              </button>
+
+              {/* Jump to Communication Monitor */}
+              <button
+                onClick={() => {
+                  setContextMenu({ visible: false, x: 0, y: 0, device: null });
+                  setActiveView('communication');
+                }}
+                className="w-full text-left px-3 py-1.5 flex items-center justify-between hover:bg-blue-950/30 text-slate-300 hover:text-blue-300 transition-colors group"
+              >
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Mở Giám sát Truyền thông</span>
+                </div>
+                <span className="text-[9px] font-mono text-slate-500">Tab</span>
+              </button>
+            </div>
+
+            {/* Footer Tip */}
+            <div className="px-3 py-1 bg-slate-950/60 text-[9px] font-mono text-slate-500 flex items-center justify-between">
+              <span>Nhấp chuột để chọn xem trạm</span>
+              <kbd className="px-1 py-0.2 rounded bg-slate-900 border border-slate-800 text-[8px]">ESC</kbd>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* ========================================================================= */}

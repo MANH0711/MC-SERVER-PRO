@@ -113,7 +113,7 @@ export const CommunicationMonitorView: React.FC = () => {
             onChange={(e) => setFilterEquip(e.target.value)}
             className="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-[11px] focus:outline-none focus:border-cyan-500"
           >
-            <option value="ALL">All Stations</option>
+            <option value="ALL">{t('communication.allStations')}</option>
             {devices.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.name} ({d.id})
@@ -127,7 +127,7 @@ export const CommunicationMonitorView: React.FC = () => {
             onChange={(e) => setFilterCode(e.target.value)}
             className="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-[11px] focus:outline-none focus:border-cyan-500"
           >
-            <option value="ALL">All Msg Codes</option>
+            <option value="ALL">{t('communication.allMsgCodes')}</option>
             {['M001', 'M002', 'S000', 'S001', 'S002', 'S003', 'S005', 'S006', 'S030', 'S031', 'S040', 'S041', 'E001'].map(
               (c) => (
                 <option key={c} value={c}>
@@ -161,18 +161,18 @@ export const CommunicationMonitorView: React.FC = () => {
           <button
             onClick={handleExportPackets}
             className="flex items-center gap-1 px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-200 hover:bg-slate-700 transition-colors text-[11px]"
-            title="Export packets as JSON"
+            title={t('communication.exportCapture')}
           >
             <Download className="w-3 h-3 text-cyan-400" />
-            <span>Export</span>
+            <span>{t('communication.exportBtn')}</span>
           </button>
           <button
             onClick={clearTransactions}
             className="flex items-center gap-1 px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-300 hover:text-red-400 transition-colors text-[11px]"
-            title="Clear capture buffer"
+            title={t('communication.clearBuffer')}
           >
             <Trash2 className="w-3 h-3" />
-            <span>Clear</span>
+            <span>{t('communication.clearBtn')}</span>
           </button>
         </div>
       </div>
@@ -182,9 +182,9 @@ export const CommunicationMonitorView: React.FC = () => {
         {/* Left Pane: Packet Table */}
         <div className="lg:col-span-6 rounded-lg bg-[#0C1220]/95 border border-slate-800/90 flex flex-col min-h-0 overflow-hidden shadow-xs">
           <div className="px-3 py-1.5 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400 shrink-0">
-            <span className="font-semibold uppercase tracking-wider text-slate-300 text-[11px]">Live Captured Stream</span>
+            <span className="font-semibold uppercase tracking-wider text-slate-300 text-[11px]">{t('communication.liveStreamHeader')}</span>
             <span className="font-mono text-[10px] text-slate-500">
-              Showing {filteredTransactions.length} of {transactions.length}
+              {t('communication.showingCount')} {filteredTransactions.length} {t('communication.ofTotal')} {transactions.length}
             </span>
           </div>
 
@@ -192,13 +192,14 @@ export const CommunicationMonitorView: React.FC = () => {
             <table className="w-full text-left font-mono text-[11px]">
               <thead className="sticky top-0 bg-slate-950 text-slate-400 text-[10px] uppercase border-b border-slate-800 z-10">
                 <tr>
-                  <th className="py-1.5 px-2">Time</th>
-                  <th className="py-1.5 px-1 text-center">Dir</th>
-                  <th className="py-1.5 px-2">Station</th>
-                  <th className="py-1.5 px-1.5">Code</th>
-                  <th className="py-1.5 px-2">Tx ID</th>
-                  <th className="py-1.5 px-1.5 text-right">Len</th>
-                  <th className="py-1.5 px-2 text-right">Chk</th>
+                  <th className="py-1.5 px-2">{t('communication.columns.time')}</th>
+                  <th className="py-1.5 px-1 text-center">{t('communication.columns.direction')}</th>
+                  <th className="py-1.5 px-2">{t('communication.columns.equipId')}</th>
+                  <th className="py-1.5 px-1.5">{t('communication.columns.msgCode')}</th>
+                  <th className="py-1.5 px-1 text-center font-bold text-slate-200">RESULT</th>
+                  <th className="py-1.5 px-2">{t('communication.columns.txId')}</th>
+                  <th className="py-1.5 px-1.5 text-right">{t('communication.columns.length')}</th>
+                  <th className="py-1.5 px-2 text-right">{t('communication.columns.checksum')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/40">
@@ -232,6 +233,21 @@ export const CommunicationMonitorView: React.FC = () => {
                         {tx.equipmentId}
                       </td>
                       <td className="py-1.5 px-1.5 font-bold text-cyan-400">{tx.messageCode}</td>
+                      <td className="py-1.5 px-1 text-center">
+                        {tx.status === 'SUCCESS' ? (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/60 shadow-[0_0_6px_rgba(16,185,129,0.3)]">
+                            OK
+                          </span>
+                        ) : tx.status === 'TIMEOUT' ? (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/60 shadow-[0_0_6px_rgba(245,158,11,0.3)]">
+                            TO
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-rose-500/25 text-rose-400 border border-rose-500/70 shadow-[0_0_6px_rgba(244,63,94,0.35)]">
+                            NG
+                          </span>
+                        )}
+                      </td>
                       <td className="py-1.5 px-2 text-slate-400 truncate max-w-[90px] text-[10px]">
                         {tx.correlationId}
                       </td>
@@ -301,21 +317,21 @@ export const CommunicationMonitorView: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 text-[10px]">
                     <div className="p-1 rounded bg-slate-900 border border-slate-800/80">
-                      <span className="text-slate-500 block text-[9px]">STX Delimiter</span>
+                      <span className="text-slate-500 block text-[9px]">{t('communication.stxDelimiter')}</span>
                       <span className="text-emerald-400 font-bold">0x02 [STX]</span>
                     </div>
                     <div className="p-1 rounded bg-slate-900 border border-slate-800/80">
-                      <span className="text-slate-500 block text-[9px]">Length Header</span>
+                      <span className="text-slate-500 block text-[9px]">{t('communication.lengthHeader')}</span>
                       <span className="text-cyan-400 font-bold">{activeTx.payloadLength} bytes</span>
                     </div>
                     <div className="p-1 rounded bg-slate-900 border border-slate-800/80">
-                      <span className="text-slate-500 block text-[9px]">Checksum LRC</span>
+                      <span className="text-slate-500 block text-[9px]">{t('communication.checksumLrc')}</span>
                       <span className="text-purple-400 font-bold">
                         {activeTx.checksum} ({activeTx.checksumStatus})
                       </span>
                     </div>
                     <div className="p-1 rounded bg-slate-900 border border-slate-800/80">
-                      <span className="text-slate-500 block text-[9px]">ETX Boundary</span>
+                      <span className="text-slate-500 block text-[9px]">{t('communication.etxBoundary')}</span>
                       <span className="text-emerald-400 font-bold">0x03 [ETX]</span>
                     </div>
                   </div>

@@ -1,0 +1,28 @@
+# Dependency
+node_modules/
+dist/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage/
+*.lcov
+
+# Build
+*.js.map
+*.d.ts
+!jest.config.ts
+
+# Logs
+logs/
+*.log
+npm-debug.log*

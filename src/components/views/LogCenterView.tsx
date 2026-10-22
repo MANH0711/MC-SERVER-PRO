@@ -222,19 +222,19 @@ export const LogCenterView: React.FC = () => {
               </span>
             </div>
             <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-400">
-              <span className="font-mono text-slate-300">{stats.total} sự kiện</span>
+              <span className="font-mono text-slate-300">{stats.total} {t('logs.stats.events')}</span>
               <span className="text-slate-600">•</span>
               {stats.errorCount > 0 && (
                 <span className="text-red-400 font-mono font-semibold flex items-center gap-0.5">
-                  <AlertOctagon className="w-3 h-3" /> {stats.errorCount} Lỗi
+                  <AlertOctagon className="w-3 h-3" /> {stats.errorCount} {t('logs.stats.errors')}
                 </span>
               )}
               {stats.warnCount > 0 && (
                 <span className="text-amber-400 font-mono flex items-center gap-0.5">
-                  <AlertTriangle className="w-3 h-3" /> {stats.warnCount} Cảnh báo
+                  <AlertTriangle className="w-3 h-3" /> {stats.warnCount} {t('logs.stats.warnings')}
                 </span>
               )}
-              <span className="text-purple-400 font-mono hidden md:inline">{stats.auditCount} Kiểm toán</span>
+              <span className="text-purple-400 font-mono hidden md:inline">{stats.auditCount} {t('logs.stats.audits')}</span>
             </div>
           </div>
         </div>
@@ -249,40 +249,40 @@ export const LogCenterView: React.FC = () => {
                 ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
                 : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
             }`}
-            title="Tự động cuộn khi có log mới"
+            title={t('logs.autoScroll')}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${autoScroll ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
-            <span className="hidden sm:inline">Tự cuộn</span>
+            <span className="hidden sm:inline">{t('logs.autoScroll')}</span>
           </button>
 
           {/* Export CSV */}
           <button
             onClick={handleExportCSV}
             className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-slate-800 border border-slate-700 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
-            title="Xuất file CSV"
+            title={t('logs.exportCsv')}
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">Xuất CSV</span>
+            <span className="hidden sm:inline">{t('logs.exportCsv')}</span>
           </button>
 
           {/* Export JSON */}
           <button
             onClick={handleExportJSON}
             className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-slate-800 border border-slate-700 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
-            title="Xuất dữ liệu JSON"
+            title={t('logs.exportJson')}
           >
             <Download className="w-3.5 h-3.5 text-blue-400" />
-            <span className="hidden sm:inline">JSON</span>
+            <span className="hidden sm:inline">{t('logs.exportJson')}</span>
           </button>
 
           {/* Clear Logs */}
           <button
             onClick={() => setShowClearConfirm(true)}
             className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-slate-800 border border-slate-700 text-slate-400 hover:text-red-400 hover:bg-red-950/30 transition-colors"
-            title="Xóa bộ đệm nhật ký"
+            title={t('logs.clear')}
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Xóa</span>
+            <span className="hidden sm:inline">{t('logs.clear')}</span>
           </button>
         </div>
       </div>
@@ -293,11 +293,11 @@ export const LogCenterView: React.FC = () => {
         <div className="flex items-center gap-1 overflow-x-auto py-0.5 max-w-full">
           {(
             [
-              { id: 'ALL', label: 'TẤT CẢ', count: logs.length },
-              { id: 'SYSTEM', label: 'HỆ THỐNG', count: stats.systemCount },
-              { id: 'COMMUNICATION', label: 'TRUYỀN THÔNG', count: stats.commCount },
-              { id: 'BUSINESS', label: 'NGHIỆP VỤ', count: stats.bizCount },
-              { id: 'AUDIT', label: 'KIỂM TOÁN', count: stats.auditCount },
+              { id: 'ALL', label: t('logs.tabs.all'), count: logs.length },
+              { id: 'SYSTEM', label: t('logs.tabs.system'), count: stats.systemCount },
+              { id: 'COMMUNICATION', label: t('logs.tabs.communication'), count: stats.commCount },
+              { id: 'BUSINESS', label: t('logs.tabs.business'), count: stats.bizCount },
+              { id: 'AUDIT', label: t('logs.tabs.audit'), count: stats.auditCount },
             ] as const
           ).map((cat) => (
             <button
@@ -328,13 +328,13 @@ export const LogCenterView: React.FC = () => {
             value={levelFilter}
             onChange={(e) => setLevelFilter(e.target.value)}
             className="px-2 py-1 rounded bg-slate-950 border border-slate-800 text-slate-300 font-mono text-[11px] focus:outline-none focus:border-blue-500"
-            title="Lọc theo mức độ nghiêm trọng"
+            title={t('logs.filterLevel')}
           >
-            <option value="ALL">MỨC: TẤT CẢ</option>
-            <option value="ERROR">MỨC: ERROR & FATAL</option>
-            <option value="WARN">MỨC: WARN</option>
-            <option value="INFO">MỨC: INFO</option>
-            <option value="DEBUG">MỨC: DEBUG</option>
+            <option value="ALL">{t('logs.levelFilter.all')}</option>
+            <option value="ERROR">{t('logs.levelFilter.error')}</option>
+            <option value="WARN">{t('logs.levelFilter.warn')}</option>
+            <option value="INFO">{t('logs.levelFilter.info')}</option>
+            <option value="DEBUG">{t('logs.levelFilter.debug')}</option>
           </select>
 
           {/* Equipment Filter */}
@@ -342,10 +342,10 @@ export const LogCenterView: React.FC = () => {
             value={equipmentFilter}
             onChange={(e) => setEquipmentFilter(e.target.value)}
             className="px-2 py-1 rounded bg-slate-950 border border-slate-800 text-slate-300 font-mono text-[11px] focus:outline-none focus:border-blue-500 max-w-[130px] truncate"
-            title="Lọc theo thiết bị"
+            title={t('logs.deviceFilter.all')}
           >
-            <option value="ALL">MÁY: TẤT CẢ</option>
-            <option value="SYSTEM">HỆ THỐNG (SYSTEM)</option>
+            <option value="ALL">{t('logs.deviceFilter.all')}</option>
+            <option value="SYSTEM">{t('logs.deviceFilter.system')}</option>
             {uniqueEquipments.map((eqId) => (
               <option key={eqId} value={eqId}>
                 {eqId}
@@ -360,7 +360,7 @@ export const LogCenterView: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm thông điệp, TxID, User..."
+              placeholder={t('logs.searchPlaceholder')}
               className="w-full pl-7 pr-6 py-1 rounded bg-slate-950 border border-slate-800 text-[11px] text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-blue-500 font-mono"
             />
             {searchQuery && (
@@ -378,7 +378,7 @@ export const LogCenterView: React.FC = () => {
             <button
               onClick={resetFilters}
               className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700 transition-colors"
-              title="Đặt lại bộ lọc"
+              title={t('logs.resetFilter')}
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
@@ -397,14 +397,14 @@ export const LogCenterView: React.FC = () => {
           {/* Sticky Header */}
           <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
             <tr>
-              <th className="py-1.5 px-2.5 w-[140px] shrink-0">Thời Gian</th>
-              <th className="py-1.5 px-2 w-[70px] shrink-0 text-center">Mức</th>
-              <th className="py-1.5 px-2 w-[90px] shrink-0 text-center">Phân Loại</th>
-              <th className="py-1.5 px-2 w-[110px] shrink-0">Thiết Bị</th>
-              <th className="py-1.5 px-2 w-[100px] shrink-0">Mã TxID</th>
-              <th className="py-1.5 px-2 w-[100px] shrink-0">Người Dùng</th>
-              <th className="py-1.5 px-2.5 min-w-[200px]">Nội Dung Thông Điệp & Kiểm Toán</th>
-              <th className="py-1.5 px-2 w-[45px] text-center shrink-0">Xem</th>
+              <th className="py-1.5 px-2.5 w-[140px] shrink-0">{t('logs.tableHeaders.time')}</th>
+              <th className="py-1.5 px-2 w-[70px] shrink-0 text-center">{t('logs.tableHeaders.level')}</th>
+              <th className="py-1.5 px-2 w-[90px] shrink-0 text-center">{t('logs.tableHeaders.category')}</th>
+              <th className="py-1.5 px-2 w-[110px] shrink-0">{t('logs.tableHeaders.device')}</th>
+              <th className="py-1.5 px-2 w-[100px] shrink-0">{t('logs.tableHeaders.txId')}</th>
+              <th className="py-1.5 px-2 w-[100px] shrink-0">{t('logs.tableHeaders.user')}</th>
+              <th className="py-1.5 px-2.5 min-w-[200px]">{t('logs.tableHeaders.message')}</th>
+              <th className="py-1.5 px-2 w-[45px] text-center shrink-0">{t('common.view', 'View')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -413,13 +413,13 @@ export const LogCenterView: React.FC = () => {
                 <td colSpan={8} className="py-12 text-center text-slate-500 font-sans">
                   <div className="flex flex-col items-center justify-center gap-1.5">
                     <ScrollText className="w-8 h-8 text-slate-700" />
-                    <p className="text-xs text-slate-400">Không tìm thấy bản ghi nhật ký phù hợp bộ lọc.</p>
+                    <p className="text-xs text-slate-400">{t('logs.emptyFiltered')}</p>
                     {hasActiveFilters && (
                       <button
                         onClick={resetFilters}
                         className="mt-1 text-xs text-blue-400 hover:underline flex items-center gap-1"
                       >
-                        <RotateCcw className="w-3 h-3" /> Đặt lại bộ lọc
+                        <RotateCcw className="w-3 h-3" /> {t('logs.resetFilter')}
                       </button>
                     )}
                   </div>
@@ -552,7 +552,7 @@ export const LogCenterView: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-slate-100 flex items-center gap-2">
-                    <span>CHI TIẾT NHẬT KÝ KIỂM TOÁN</span>
+                    <span>{t('logs.inspector.title')}</span>
                     <span className="font-mono text-[10px] text-slate-400">[{selectedLog.id}]</span>
                   </h3>
                   <p className="text-[10px] text-slate-400 font-mono">
@@ -567,7 +567,7 @@ export const LogCenterView: React.FC = () => {
                   disabled={!hasPrev}
                   onClick={() => hasPrev && setSelectedLog(filteredLogs[currentIndex - 1])}
                   className="p-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none text-slate-300"
-                  title="Bản ghi trước"
+                  title={t('common.prev', 'Previous')}
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -575,7 +575,7 @@ export const LogCenterView: React.FC = () => {
                   disabled={!hasNext}
                   onClick={() => hasNext && setSelectedLog(filteredLogs[currentIndex + 1])}
                   className="p-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none text-slate-300"
-                  title="Bản ghi sau"
+                  title={t('common.next', 'Next')}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -594,25 +594,25 @@ export const LogCenterView: React.FC = () => {
               {/* Key Attributes Bar */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-950 p-2.5 rounded border border-slate-800/80">
                 <div>
-                  <span className="text-[10px] text-slate-500 block">MỨC ĐỘ</span>
+                  <span className="text-[10px] text-slate-500 block">{t('logs.inspector.level')}</span>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded border inline-block mt-0.5 uppercase ${getLevelBadge(selectedLog.level)}`}>
                     {selectedLog.level}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 block">PHÂN LOẠI</span>
+                  <span className="text-[10px] text-slate-500 block">{t('logs.inspector.category')}</span>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded border inline-block mt-0.5 uppercase ${getCategoryBadge(selectedLog.category)}`}>
                     {selectedLog.category}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 block">THIẾT BỊ / NGUỒN</span>
+                  <span className="text-[10px] text-slate-500 block">{t('logs.inspector.source')}</span>
                   <span className="text-cyan-400 font-bold block mt-0.5">
                     {selectedLog.equipmentId || 'SYSTEM_CORE'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-500 block">NGƯỜI THAO TÁC</span>
+                  <span className="text-[10px] text-slate-500 block">{t('logs.inspector.operator')}</span>
                   <span className="text-slate-300 block mt-0.5">
                     {selectedLog.operator || 'SYSTEM_DAEMON'}
                   </span>
@@ -623,7 +623,7 @@ export const LogCenterView: React.FC = () => {
               {selectedLog.correlationId && (
                 <div className="flex items-center justify-between p-2 rounded bg-slate-950 border border-slate-800/80">
                   <div>
-                    <span className="text-[10px] text-slate-500 block">MÃ TRUY VẾT GIAO DỊCH (CORRELATION ID)</span>
+                    <span className="text-[10px] text-slate-500 block">{t('logs.inspector.correlationId')}</span>
                     <span className="text-blue-400 font-bold">{selectedLog.correlationId}</span>
                   </div>
                   <button
@@ -633,12 +633,12 @@ export const LogCenterView: React.FC = () => {
                     {copiedTxId === selectedLog.correlationId ? (
                       <>
                         <Check className="w-3 h-3 text-emerald-400" />
-                        <span className="text-emerald-400">Đã sao chép</span>
+                        <span className="text-emerald-400">{t('logs.inspector.copied')}</span>
                       </>
                     ) : (
                       <>
                         <Copy className="w-3 h-3" />
-                        <span>Sao chép</span>
+                        <span>{t('logs.inspector.copy')}</span>
                       </>
                     )}
                   </button>
@@ -647,7 +647,7 @@ export const LogCenterView: React.FC = () => {
 
               {/* Message */}
               <div>
-                <span className="text-[10px] text-slate-500 block uppercase mb-1">Nội dung thông điệp sự kiện:</span>
+                <span className="text-[10px] text-slate-500 block uppercase mb-1">{t('logs.inspector.eventContent')}</span>
                 <div className="p-3 rounded bg-slate-950 border border-slate-800 font-sans text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">
                   {selectedLog.message}
                 </div>
@@ -658,7 +658,7 @@ export const LogCenterView: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[10px] text-slate-500 block uppercase">
-                      Dữ liệu có cấu trúc (Structured Payload):
+                      {t('logs.inspector.structuredPayload')}
                     </span>
                     <button
                       onClick={() => handleCopy(JSON.stringify(selectedLog.details, null, 2))}
@@ -667,12 +667,12 @@ export const LogCenterView: React.FC = () => {
                       {copiedPayload ? (
                         <>
                           <Check className="w-3 h-3 text-emerald-400" />
-                          <span className="text-emerald-400">Đã sao chép JSON</span>
+                          <span className="text-emerald-400">{t('logs.inspector.copiedJson')}</span>
                         </>
                       ) : (
                         <>
                           <Copy className="w-3 h-3" />
-                          <span>Sao chép JSON</span>
+                          <span>{t('logs.inspector.copyJson')}</span>
                         </>
                       )}
                     </button>
@@ -698,7 +698,7 @@ export const LogCenterView: React.FC = () => {
                 onClick={() => setSelectedLog(null)}
                 className="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition-colors"
               >
-                Đóng
+                {t('logs.inspector.close')}
               </button>
             </div>
           </div>
@@ -718,18 +718,18 @@ export const LogCenterView: React.FC = () => {
             <div className="flex items-center gap-2.5 text-amber-400">
               <AlertTriangle className="w-5 h-5 shrink-0" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
-                Xác Nhận Xóa Bộ Đệm Nhật Ký
+                {t('logs.clearModal.title')}
               </h3>
             </div>
             <p className="text-xs text-slate-300">
-              Thao tác này sẽ xóa toàn bộ {logs.length} bản ghi nhật ký hiện có trong bộ đệm RAM của phiên làm việc.
+              {t('logs.clearModal.desc')} ({logs.length})
             </p>
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
               <button
                 onClick={() => setShowClearConfirm(false)}
                 className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"
               >
-                Hủy
+                {t('logs.clearModal.cancel')}
               </button>
               <button
                 onClick={() => {
@@ -738,7 +738,7 @@ export const LogCenterView: React.FC = () => {
                 }}
                 className="px-3 py-1.5 rounded bg-red-600 hover:bg-red-500 text-xs text-white font-medium shadow-md shadow-red-600/30"
               >
-                Xóa sạch bộ đệm
+                {t('logs.clearModal.confirm')}
               </button>
             </div>
           </div>

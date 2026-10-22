@@ -27,6 +27,8 @@ import {
 } from '../storage/database';
 import { SessionManager } from '../communication/sessionManager';
 import { MesAdapter } from '../mes/mesAdapter';
+import { deviceApi } from '../services/deviceApi';
+import { fetchRecentTransactions, subscribeTransactionStream } from '../services/transactionApi';
 
 export type NavView =
   | 'dashboard'
@@ -59,13 +61,18 @@ interface AppContextType {
   isSimulating: boolean;
   toggleSimulation: () => void;
   // Actions
+  refreshDevices: () => Promise<void>;
   addDevice: (device: DeviceModel) => void;
   updateDevice: (id: string, updates: Partial<DeviceModel>) => void;
   deleteDevice: (id: string) => void;
+  batchImportDevices: (newDevices: DeviceModel[]) => void;
   addDeviceGroup: (group: DeviceGroup) => void;
   updateDeviceGroup: (id: string, updates: Partial<DeviceGroup>) => void;
   deleteDeviceGroup: (id: string) => void;
   reconnectDevice: (id: string) => Promise<boolean>;
+  stopDevice: (id: string) => Promise<boolean>;
+  stopAllDevices: () => Promise<boolean>;
+  startAllDevices: () => Promise<boolean>;
   acknowledgeAlarm: (id: string, note?: string) => void;
   clearTransactions: () => void;
   clearLogs: () => void;
@@ -97,7 +104,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [transactions, setTransactions] = useState<CommunicationTransaction[]>([]);
   const [alarms, setAlarms] = useState<AlarmItem[]>(INITIAL_ALARMS);
   const [logs, setLogs] = useState<LogEntry[]>(INITIAL_LOGS);
-  const [isSimulating, setIsSimulating] = useState<boolean>(true);
+  const [isSimulating, setIsSimulating] = useState<boolean>(false);
 
   // Initialize Core Services
   const mesAdapter = useMemo(() => new MesAdapter(INITIAL_CONFIG.mes.endpointUrl), []);
@@ -111,6 +118,41 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     // Sync initial devices from session manager
     setDevices(sessionManager.getDevices());
+
+    // Fetch real devices from Oracle table MIGHTY.GATEWAY_DEVICES via Backend REST API
+    let isSubscribed = true;
+    const fetchRealData = async () => {
+      try {
+        const realDevices = await deviceApi.fetchDevices();
+        if (isSubscribed && realDevices.length > 0) {
+          sessionManager.setDevices(realDevices);
+          setDevices(sessionManager.getDevices());
+
+          // Automatically extract and register any groups present in real devices
+          const existingGroupIds = new Set(deviceGroups.map((g) => g.id));
+          const newGroups: DeviceGroup[] = [];
+          for (const d of realDevices) {
+            const gId = d.groupName || d.groupId;
+            if (gId && !existingGroupIds.has(gId)) {
+              existingGroupIds.add(gId);
+              newGroups.push({
+                id: gId,
+                name: gId,
+                description: `Nhóm dây chuyền ${gId}`,
+                color: 'cyan',
+                createdAt: new Date().toISOString(),
+              });
+            }
+          }
+          if (newGroups.length > 0) {
+            setDeviceGroups((prev) => [...prev, ...newGroups]);
+          }
+        }
+      } catch (err: any) {
+        console.warn('Không thể tải danh sách thiết bị thật từ backend MIGHTY.GATEWAY_DEVICES:', err);
+      }
+    };
+    fetchRealData();
 
     // Subscribe to transactions
     const unsubTx = sessionManager.onTransaction((tx) => {
@@ -138,12 +180,49 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setMesStatus(mesAdapter.getStatus());
     }, 3000);
 
+    // Periodically sync live TCP socket connection status from Backend
+    const deviceSyncInterval = setInterval(() => {
+      fetchRealData();
+    }, 4000);
+
+    // 1. Luồng Server-Sent Events (SSE): Nhận giao dịch thời gian thực tức thì (<50ms)
+    const unsubSse = subscribeTransactionStream((newTx) => {
+      if (!isSubscribed) return;
+      setTransactions((prev) => {
+        if (prev.some((t) => t.id === newTx.id)) return prev;
+        return [newTx, ...prev].slice(0, 500);
+      });
+    });
+
+    // 2. Dự phòng (Fallback Polling): Đồng bộ lại lịch sử mỗi 8 giây phòng trường hợp rớt mạng
+    const syncRealTransactions = async () => {
+      try {
+        const realTxs = await fetchRecentTransactions(100);
+        if (isSubscribed && realTxs.length > 0) {
+          setTransactions((prev) => {
+            const existingIds = new Set(prev.map((t) => t.id));
+            const newTxs = realTxs.filter((t) => !existingIds.has(t.id));
+            if (newTxs.length === 0) return prev;
+            return [...newTxs, ...prev].slice(0, 500);
+          });
+        }
+      } catch (err) {
+        // Backend đang khởi động hoặc chưa sẵn sàng
+      }
+    };
+    syncRealTransactions();
+    const txSyncInterval = setInterval(syncRealTransactions, 8000);
+
     return () => {
+      isSubscribed = false;
+      unsubSse();
       unsubTx();
       unsubDev();
       unsubAlarm();
       unsubLog();
       clearInterval(mesInterval);
+      clearInterval(deviceSyncInterval);
+      clearInterval(txSyncInterval);
       sessionManager.destroy();
     };
   }, [sessionManager, mesAdapter]);
@@ -162,19 +241,84 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setIsSimulating(nextState);
   };
 
+  const refreshDevices = async () => {
+    try {
+      const realDevices = await deviceApi.fetchDevices();
+      sessionManager.setDevices(realDevices);
+      setDevices(sessionManager.getDevices());
+    } catch (err: any) {
+      console.warn('Lỗi làm mới danh sách thiết bị từ Oracle MIGHTY.GATEWAY_DEVICES:', err);
+    }
+  };
+
   const addDevice = (device: DeviceModel) => {
     sessionManager.addDevice(device);
     setDevices(sessionManager.getDevices());
+    // Persist to MIGHTY.GATEWAY_DEVICES in Backend
+    deviceApi.saveDevice(device).catch((err) => {
+      console.error('Lỗi lưu thiết bị vào MIGHTY.GATEWAY_DEVICES:', err);
+    });
   };
 
   const updateDevice = (id: string, updates: Partial<DeviceModel>) => {
-    sessionManager.updateDevice(id, updates);
+    const updated = sessionManager.updateDevice(id, updates);
     setDevices(sessionManager.getDevices());
+    if (updated) {
+      // Persist to MIGHTY.GATEWAY_DEVICES in Backend
+      deviceApi.saveDevice(updated).catch((err) => {
+        console.error('Lỗi cập nhật thiết bị vào MIGHTY.GATEWAY_DEVICES:', err);
+      });
+    }
   };
 
   const deleteDevice = (id: string) => {
     sessionManager.deleteDevice(id);
     setDevices(sessionManager.getDevices());
+    // Remove from MIGHTY.GATEWAY_DEVICES in Backend
+    deviceApi.deleteDevice(id).catch((err) => {
+      console.error('Lỗi xóa thiết bị khỏi MIGHTY.GATEWAY_DEVICES:', err);
+    });
+  };
+
+  const batchImportDevices = (newDevices: DeviceModel[]) => {
+    // Register groups that don't exist yet
+    const existingGroupIds = new Set(deviceGroups.map((g) => g.id));
+    const newGroupsToAdd: DeviceGroup[] = [];
+
+    for (const dev of newDevices) {
+      if (dev.groupId && !existingGroupIds.has(dev.groupId)) {
+        existingGroupIds.add(dev.groupId);
+        newGroupsToAdd.push({
+          id: dev.groupId,
+          name: dev.groupId,
+          description: `Group ${dev.groupId} (Imported)`,
+          color: 'cyan',
+          createdAt: new Date().toISOString(),
+        });
+      }
+      sessionManager.addDevice(dev);
+    }
+
+    if (newGroupsToAdd.length > 0) {
+      setDeviceGroups((prev) => [...prev, ...newGroupsToAdd]);
+    }
+
+    setDevices(sessionManager.getDevices());
+
+    // Batch persist to MIGHTY.GATEWAY_DEVICES in Backend
+    deviceApi.batchSaveDevices(newDevices).catch((err) => {
+      console.error('Lỗi lưu hàng loạt thiết bị vào MIGHTY.GATEWAY_DEVICES:', err);
+    });
+
+    const log: LogEntry = {
+      id: `LOG_BATCH_IMPORT_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      level: 'INFO',
+      category: 'AUDIT',
+      message: `Batch imported ${newDevices.length} equipment nodes into master inventory.`,
+      operator: userSession.username,
+    };
+    setLogs((prev) => [log, ...prev]);
   };
 
   const addDeviceGroup = (group: DeviceGroup) => {
@@ -214,6 +358,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const reconnectDevice = async (id: string) => {
     const success = await sessionManager.reconnectDevice(id);
+    setDevices(sessionManager.getDevices());
+    return success;
+  };
+
+  const stopDevice = async (id: string) => {
+    const success = await sessionManager.stopDevice(id);
+    setDevices(sessionManager.getDevices());
+    return success;
+  };
+
+  const stopAllDevices = async () => {
+    const success = await sessionManager.stopAll();
+    setDevices(sessionManager.getDevices());
+    return success;
+  };
+
+  const startAllDevices = async () => {
+    const success = await sessionManager.startAll();
     setDevices(sessionManager.getDevices());
     return success;
   };
@@ -420,13 +582,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setServerOnline,
         isSimulating,
         toggleSimulation,
+        refreshDevices,
         addDevice,
         updateDevice,
         deleteDevice,
+        batchImportDevices,
         addDeviceGroup,
         updateDeviceGroup,
         deleteDeviceGroup,
         reconnectDevice,
+        stopDevice,
+        stopAllDevices,
+        startAllDevices,
         acknowledgeAlarm,
         clearTransactions,
         clearLogs,

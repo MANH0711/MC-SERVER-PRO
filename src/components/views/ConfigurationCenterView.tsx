@@ -56,7 +56,7 @@ export const ConfigurationCenterView: React.FC = () => {
           {saveSuccess && (
             <span className="text-emerald-400 text-xs font-mono flex items-center gap-1 animate-in fade-in">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Saved!</span>
+              <span>{t('config.saved')}</span>
             </span>
           )}
           <button
@@ -136,7 +136,7 @@ export const ConfigurationCenterView: React.FC = () => {
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
                   TCP Sockets & Watchdog Settings
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">PORTS & SESSIONS</span>
+                <span className="text-[10px] text-slate-500 font-mono">{t('config.portsAndSessions')}</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
@@ -286,13 +286,13 @@ export const ConfigurationCenterView: React.FC = () => {
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
                   Framing & Boundary Rules
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">SEMI & CUSTOM PROTOCOL</span>
+                <span className="text-[10px] text-slate-500 font-mono">{t('config.semiCustomProtocol')}</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 <div>
                   <label className="block text-slate-400 text-[10px] uppercase font-semibold mb-0.5">
-                    Default Boundary Mode
+                    {t('config.defaultBoundaryLabel')}
                   </label>
                   <select
                     value={formData.protocol.defaultBoundary}
@@ -313,7 +313,7 @@ export const ConfigurationCenterView: React.FC = () => {
 
                 <div>
                   <label className="block text-slate-400 text-[10px] uppercase font-semibold mb-0.5">
-                    Default Checksum
+                    {t('config.defaultChecksumLabel')}
                   </label>
                   <select
                     value={formData.protocol.checksumAlgorithm}
@@ -333,7 +333,7 @@ export const ConfigurationCenterView: React.FC = () => {
 
                 <div>
                   <label className="block text-slate-400 text-[10px] uppercase font-semibold mb-0.5">
-                    Delimiters
+                    {t('config.delimitersLabel')}
                   </label>
                   <div className="px-2.5 py-1 rounded bg-slate-950 border border-slate-800 text-slate-400 font-mono text-xs flex justify-between">
                     <span>STX: 0x02</span>
@@ -351,7 +351,7 @@ export const ConfigurationCenterView: React.FC = () => {
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
                   Upstream MES & Circuit Breaker
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">REST / TLS INTEGRATION</span>
+                <span className="text-[10px] text-slate-500 font-mono">{t('config.restTlsIntegration')}</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
@@ -416,7 +416,7 @@ export const ConfigurationCenterView: React.FC = () => {
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
                   Logging & Data Retention
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">AUDIT & TRACE</span>
+                <span className="text-[10px] text-slate-500 font-mono">{t('config.auditAndTrace')}</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -486,7 +486,7 @@ export const ConfigurationCenterView: React.FC = () => {
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
                   Security Policies & Safeguards
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">RBAC ACCESS</span>
+                <span className="text-[10px] text-slate-500 font-mono">{t('config.rbacAccess')}</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

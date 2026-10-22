@@ -1,0 +1,164 @@
+/**
+ * common.types.proto
+ * ─────────────────────────────────────────────────────────
+ * Kiểu dữ liệu dùng chung cho toàn bộ gRPC services.
+ * Bao gồm: DeviceInfo (18 cột), TransactionRecord, AlarmEvent,
+ *           MesStatus, ServerConfig, và các enum trạng thái.
+ * ─────────────────────────────────────────────────────────
+ */
+
+syntax = "proto3";
+
+package mc_server;
+
+// ═══ ENUMS ═══
+
+enum DeviceStatus {
+  DEVICE_STATUS_UNSPECIFIED = 0;
+  DISCONNECTED = 1;
+  CONNECTING = 2;
+  CONNECTED = 3;
+  INITIALIZING = 4;
+  READY = 5;
+  BUSY = 6;
+  WARNING = 7;
+  ERROR = 8;
+  RECONNECTING = 9;
+}
+
+enum AlarmSeverity {
+  ALARM_SEVERITY_UNSPECIFIED = 0;
+  INFO = 1;
+  ALARM_WARNING = 2;
+  ALARM_ERROR = 3;
+  CRITICAL = 4;
+}
+
+enum TransactionStatus {
+  TX_STATUS_UNSPECIFIED = 0;
+  SUCCESS = 1;
+  TX_ERROR = 2;
+  TIMEOUT = 3;
+  INTERLOCK_DENIED = 4;
+  PENDING = 5;
+}
+
+enum ChecksumAlgorithm {
+  CHECKSUM_UNSPECIFIED = 0;
+  LRC_MOD256 = 1;
+  XOR_HEX = 2;
+  CRC16_CCITT = 3;
+}
+
+enum FrameBoundary {
+  BOUNDARY_UNSPECIFIED = 0;
+  STANDARD_20013 = 1;
+  EXTENDED_20014 = 2;
+  VARIABLE_LENGTH = 3;
+  AUTO_DETECT = 4;
+}
+
+enum CircuitBreakerState {
+  CB_UNSPECIFIED = 0;
+  CLOSED = 1;
+  OPEN = 2;
+  HALF_OPEN = 3;
+}
+
+// ═══ MESSAGES ═══
+
+// Thiết bị sản xuất - Chuẩn Master Table 18 Cột
+message DeviceInfo {
+  // ─── 18 cột chuẩn ITM Industrial MES ───
+  string plant = 1;                    // PLANT - Mã nhà máy (e.g. ITMVPSG)
+  string host_address = 2;            // HOST_ADDRESS - IP thiết bị (e.g. 127.0.0.1)
+  int32  host_port = 3;               // HOST_PORT - Cổng TCP (e.g. 5010)
+  string device_id = 4;               // DEVICE_ID - Mã trạm con (e.g. 0)
+  string server_no = 5;               // SERVER_NO - Số MC Server (e.g. 15)
+  string equipment_id = 6;            // EQUIPMENT_ID - Mã thiết bị duy nhất (PK)
+  string group_name = 7;              // GROUP_NAME - Nhóm công đoạn (e.g. NET)
+  string equipment_order = 8;         // EQUIPMENT_ORDER - Thứ tự công đoạn
+  string equipment_main = 9;          // EQUIPMENT_MAIN - Mã cụm máy chính
+  string description = 10;            // DESCRIPTION - Mô tả thiết bị
+  string enable = 11;                 // ENABLE - YES/NO
+  string field_01 = 12;               // FIELD_01 - Trường mở rộng 1
+  string field_02 = 13;               // FIELD_02 - Trường mở rộng 2
+  string field_03 = 14;               // FIELD_03 - Trường mở rộng 3 (e.g. ITMVIET)
+  string interlock_recipe = 15;       // INTERLOCK_RECIPE - Khóa recipe (YES/NO)
+  string equipment_model = 16;        // EQUIPMENT_MODEL - Model thiết bị (e.g. IBS_BAKE)
+  string interlock_param = 17;        // INTERLOCK_PARAM - Khóa tham số
+  string interlock_trace = 18;        // INTERLOCK_TRACE - Khóa truy vết
+
+  // ─── Trạng thái runtime ───
+  DeviceStatus status = 20;
+  ChecksumAlgorithm checksum_algorithm = 21;
+  FrameBoundary frame_boundary = 22;
+  string last_connected_at = 23;
+  string last_data_received_at = 24;
+  int64  total_requests = 25;
+  int64  total_responses = 26;
+  int32  error_count = 27;
+  int32  reconnect_count = 28;
+  double avg_response_time_ms = 29;
+  int64  uptime_seconds = 30;
+  string current_recipe = 31;
+  string current_carrier_id = 32;
+  int32  consecutive_timeouts = 33;
+}
+
+// Bản ghi giao dịch truyền thông
+message TransactionRecord {
+  string id = 1;
+  string correlation_id = 2;
+  string equipment_id = 3;
+  string message_code = 4;
+  string direction = 5;              // INBOUND | OUTBOUND
+  string raw_hex = 6;
+  string raw_ascii = 7;
+  int32  payload_length = 8;
+  string payload_json = 9;           // JSON string
+  string checksum = 10;
+  string checksum_status = 11;       // VALID | INVALID | SKIPPED
+  double response_time_ms = 12;
+  TransactionStatus status = 13;
+  string timestamp = 14;
+  string error_detail = 15;
+}
+
+// Sự kiện cảnh báo
+message AlarmEvent {
+  string id = 1;
+  string equipment_id = 2;
+  string equipment_name = 3;
+  string alarm_code = 4;
+  AlarmSeverity severity = 5;
+  string description = 6;
+  bool   acknowledged = 7;
+  string acknowledged_by = 8;
+  string acknowledged_at = 9;
+  string resolution_note = 10;
+  string created_at = 11;
+}
+
+// Trạng thái MES
+message MesStatusInfo {
+  string endpoint = 1;
+  bool   connected = 2;
+  CircuitBreakerState circuit_breaker_state = 3;
+  int32  consecutive_failures = 4;
+  int64  total_requests = 5;
+  int64  successful_requests = 6;
+  int64  failed_requests = 7;
+  double average_latency_ms = 8;
+  double p95_latency_ms = 9;
+  double p99_latency_ms = 10;
+  string last_heartbeat = 11;
+  int32  pending_queue_size = 12;
+}
+
+// Generic response
+message StatusResponse {
+  bool   success = 1;
+  string message = 2;
+  string error_code = 3;
+}

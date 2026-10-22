@@ -224,48 +224,48 @@ export const UserManagementView: React.FC = () => {
     document.body.removeChild(dl);
   };
 
-  // Structured RBAC matrix permissions
-  const rbacMatrix = [
+  // Structured RBAC matrix permissions (fully localized)
+  const rbacMatrix = useMemo(() => [
     {
-      category: '1. Giám Sát Sản Xuất & Bảng Điều Khiển',
+      category: t('users.matrix.cat1'),
       permissions: [
-        { name: 'Xem Bảng Điều Khiển & Ma Trận Thiết Bị (Dashboard)', desc: 'Theo dõi trực quan trạng thái trạm máy và dây chuyền', OPERATOR: true, SUPERVISOR: true, ENGINEER: true, ADMIN: true },
-        { name: 'Xem Luồng Giao Dịch Thời Gian Thực (Live Stream)', desc: 'Giám sát khung truyền socket Inbound/Outbound', OPERATOR: true, SUPERVISOR: true, ENGINEER: true, ADMIN: true },
-        { name: 'Xuất Báo Cáo Thống Kê & Log CSV', desc: 'Tải dữ liệu giao dịch và lịch sử cảnh báo', OPERATOR: false, SUPERVISOR: true, ENGINEER: true, ADMIN: true },
+        { name: t('users.matrix.perm1_1'), desc: t('users.matrix.perm1_1_desc'), OPERATOR: true, SUPERVISOR: true, ENGINEER: true, ADMIN: true },
+        { name: t('users.matrix.perm1_2'), desc: t('users.matrix.perm1_2_desc'), OPERATOR: true, SUPERVISOR: true, ENGINEER: true, ADMIN: true },
+        { name: t('users.matrix.perm1_3'), desc: t('users.matrix.perm1_3_desc'), OPERATOR: false, SUPERVISOR: true, ENGINEER: true, ADMIN: true },
       ],
     },
     {
-      category: '2. Vận Hành & Điều Khiển Thiết Bị Trực Tiếp',
+      category: t('users.matrix.cat2'),
       permissions: [
-        { name: 'Kết Nối Lại / Reconnect Socket Trạm Máy', desc: 'Kích hoạt lệnh tái thiết lập socket TCP', OPERATOR: false, SUPERVISOR: true, ENGINEER: true, ADMIN: true },
-        { name: 'Bắn Gói Khung Tin Giả Lập (Inject Socket Frame)', desc: 'Gửi gói tin thử nghiệm vào máy qua giao diện Workbench', OPERATOR: false, SUPERVISOR: false, ENGINEER: true, ADMIN: true },
-        { name: 'Bật / Tắt Trạng Thái Kích Hoạt Thiết Bị (Enable/Disable)', desc: 'Tạm dừng thu thập dữ liệu một trạm máy', OPERATOR: false, SUPERVISOR: true, ENGINEER: true, ADMIN: true },
+        { name: t('users.matrix.perm2_1'), desc: t('users.matrix.perm2_1_desc'), OPERATOR: false, SUPERVISOR: true, ENGINEER: true, ADMIN: true },
+        { name: t('users.matrix.perm2_2'), desc: t('users.matrix.perm2_2_desc'), OPERATOR: false, SUPERVISOR: false, ENGINEER: true, ADMIN: true },
+        { name: t('users.matrix.perm2_3'), desc: t('users.matrix.perm2_3_desc'), OPERATOR: false, SUPERVISOR: true, ENGINEER: true, ADMIN: true },
       ],
     },
     {
-      category: '3. Quản Trị Cấu Hình Mạng & Giao Thức MC',
+      category: t('users.matrix.cat3'),
       permissions: [
-        { name: 'Đổi Cổng Lắng Nghe TCP / Buffer / Keep-Alive', desc: 'Điều chỉnh tham số server mạng cốt lõi', OPERATOR: false, SUPERVISOR: false, ENGINEER: true, ADMIN: true },
-        { name: 'Chuyển Đổi Biên Độ Khung (20.013 Standard vs 20.014 Extended)', desc: 'Cấu hình xử lý byte kết thúc ETX / LF', OPERATOR: false, SUPERVISOR: false, ENGINEER: true, ADMIN: true },
-        { name: 'Thay Đổi Thuật Toán Checksum (LRC MOD256 / XOR / CRC16)', desc: 'Điều chỉnh kiểm định tính toàn vẹn gói tin', OPERATOR: false, SUPERVISOR: false, ENGINEER: true, ADMIN: true },
+        { name: t('users.matrix.perm3_1'), desc: t('users.matrix.perm3_1_desc'), OPERATOR: false, SUPERVISOR: false, ENGINEER: true, ADMIN: true },
+        { name: t('users.matrix.perm3_2'), desc: t('users.matrix.perm3_2_desc'), OPERATOR: false, SUPERVISOR: false, ENGINEER: true, ADMIN: true },
+        { name: t('users.matrix.perm3_3'), desc: t('users.matrix.perm3_3_desc'), OPERATOR: false, SUPERVISOR: false, ENGINEER: true, ADMIN: true },
       ],
     },
     {
-      category: '4. Xử Lý Cảnh Báo & Sự Cố Dừng Máy',
+      category: t('users.matrix.cat4'),
       permissions: [
-        { name: 'Xác Nhận & Ghi Chú Biện Pháp Khắc Phục Cảnh Báo', desc: 'Acknowledge sự cố và lưu nguyên nhân vào nhật ký', OPERATOR: false, SUPERVISOR: true, ENGINEER: true, ADMIN: true },
-        { name: 'Kích Hoạt / Reset Circuit Breaker MES', desc: 'Bảo vệ quá tải đường truyền MES khi độ trễ cao', OPERATOR: false, SUPERVISOR: false, ENGINEER: true, ADMIN: true },
+        { name: t('users.matrix.perm4_1'), desc: t('users.matrix.perm4_1_desc'), OPERATOR: false, SUPERVISOR: true, ENGINEER: true, ADMIN: true },
+        { name: t('users.matrix.perm4_2'), desc: t('users.matrix.perm4_2_desc'), OPERATOR: false, SUPERVISOR: false, ENGINEER: true, ADMIN: true },
       ],
     },
     {
-      category: '5. Quản Trị Tài Khoản & Phân Quyền Người Dùng',
+      category: t('users.matrix.cat5'),
       permissions: [
-        { name: 'Tạo Mới & Chỉnh Sửa Tài Khoản Nhân Viên', desc: 'Cấp phát mã đăng nhập, vai trò và phân ca', OPERATOR: false, SUPERVISOR: false, ENGINEER: false, ADMIN: true },
-        { name: 'Khóa / Mở Khóa Tài Khoản & Đổi Mật Khẩu', desc: 'Kiểm soát truy cập an ninh phòng ban', OPERATOR: false, SUPERVISOR: false, ENGINEER: false, ADMIN: true },
-        { name: 'Xóa Sạch Bộ Đệm Nhật Ký Hệ Thống (Purge Audit Log)', desc: 'Xóa bộ nhớ nhật ký kiểm toán hệ thống', OPERATOR: false, SUPERVISOR: false, ENGINEER: false, ADMIN: true },
+        { name: t('users.matrix.perm5_1'), desc: t('users.matrix.perm5_1_desc'), OPERATOR: false, SUPERVISOR: false, ENGINEER: false, ADMIN: true },
+        { name: t('users.matrix.perm5_2'), desc: t('users.matrix.perm5_2_desc'), OPERATOR: false, SUPERVISOR: false, ENGINEER: false, ADMIN: true },
+        { name: t('users.matrix.perm5_3'), desc: t('users.matrix.perm5_3_desc'), OPERATOR: false, SUPERVISOR: false, ENGINEER: false, ADMIN: true },
       ],
     },
-  ];
+  ], [t]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full p-2.5 sm:p-3 bg-slate-950 text-slate-100 space-y-2 overflow-hidden font-sans">
@@ -296,17 +296,17 @@ export const UserManagementView: React.FC = () => {
           <button
             onClick={handleExportCSV}
             className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-slate-800 border border-slate-700 text-slate-200 hover:bg-slate-700 transition-colors"
-            title="Xuất danh sách người dùng CSV"
+            title={t('users.actions.exportCsv')}
           >
             <Download className="w-3.5 h-3.5 text-blue-400" />
-            <span className="hidden sm:inline">Xuất CSV</span>
+            <span className="hidden sm:inline">{t('users.actions.exportCsv')}</span>
           </button>
           <button
             onClick={handleOpenAddModal}
             className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-sm shadow-emerald-600/30"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Thêm Người Dùng</span>
+            <span>{t('users.actions.addUser')}</span>
           </button>
         </div>
       </div>
@@ -334,7 +334,7 @@ export const UserManagementView: React.FC = () => {
               <span className="truncate">{userSession.department}</span>
               <span className="text-slate-600">•</span>
               <span className="text-slate-500 font-mono">
-                Đăng nhập: {userSession.loginTime.split('T')[1].slice(0, 8)}
+                {t('users.actions.loginPrefix')} {userSession.loginTime.split('T')[1].slice(0, 8)}
               </span>
             </div>
           </div>
@@ -352,7 +352,7 @@ export const UserManagementView: React.FC = () => {
                   ? 'bg-blue-600 text-white font-bold shadow-sm shadow-blue-500/30'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
-              title={`Chuyển nhanh sang quyền ${role}`}
+              title={`${t('users.actions.testRoleTooltip')} ${role}`}
             >
               <span>{role}</span>
               {userSession.role === role && <Check className="w-2.5 h-2.5" />}
@@ -373,7 +373,7 @@ export const UserManagementView: React.FC = () => {
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Tài Khoản Người Dùng ({users.length})</span>
+            <span>{t('users.tabs.users')} ({users.length})</span>
           </button>
           <button
             onClick={() => setActiveTab('matrix')}
@@ -384,7 +384,7 @@ export const UserManagementView: React.FC = () => {
             }`}
           >
             <Grid3X3 className="w-3.5 h-3.5" />
-            <span>Ma Trận Phân Quyền RBAC</span>
+            <span>{t('users.tabs.matrix')}</span>
           </button>
           <button
             onClick={() => setActiveTab('policies')}
@@ -395,14 +395,14 @@ export const UserManagementView: React.FC = () => {
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>Chính Sách An Ninh & Tiêu Chuẩn</span>
+            <span>{t('users.tabs.policies')}</span>
           </button>
         </div>
 
         {/* Tab-specific quick count / note */}
         {activeTab === 'users' && (
           <span className="text-[11px] text-slate-500 pr-2 hidden sm:inline">
-            Hiển thị: {filteredUsers.length} / {users.length} tài khoản
+            {t('users.showing')} {filteredUsers.length} / {users.length} {t('users.accounts')}
           </span>
         )}
       </div>
@@ -420,7 +420,7 @@ export const UserManagementView: React.FC = () => {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Tìm theo tên, username, RFID..."
+                  placeholder={t('users.searchPlaceholder')}
                   className="w-full pl-7 pr-6 py-1 rounded bg-slate-950 border border-slate-800 text-[11px] text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-blue-500 font-mono"
                 />
                 {searchQuery && (
@@ -439,11 +439,11 @@ export const UserManagementView: React.FC = () => {
                 onChange={(e) => setRoleFilter(e.target.value)}
                 className="px-2 py-1 rounded bg-slate-950 border border-slate-800 text-slate-300 font-mono text-[11px] focus:outline-none focus:border-blue-500"
               >
-                <option value="ALL">VAI TRÒ: TẤT CẢ</option>
-                <option value="ADMIN">ADMIN (Quản trị viên)</option>
-                <option value="ENGINEER">ENGINEER (Kỹ sư)</option>
-                <option value="SUPERVISOR">SUPERVISOR (Giám sát)</option>
-                <option value="OPERATOR">OPERATOR (Vận hành)</option>
+                <option value="ALL">{t('users.roles.all')}</option>
+                <option value="ADMIN">{t('users.roles.admin')}</option>
+                <option value="ENGINEER">{t('users.roles.engineer')}</option>
+                <option value="SUPERVISOR">{t('users.roles.supervisor')}</option>
+                <option value="OPERATOR">{t('users.roles.operator')}</option>
               </select>
 
               {/* Status Filter */}
@@ -452,9 +452,9 @@ export const UserManagementView: React.FC = () => {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-2 py-1 rounded bg-slate-950 border border-slate-800 text-slate-300 font-mono text-[11px] focus:outline-none focus:border-blue-500"
               >
-                <option value="ALL">TRẠNG THÁI: TẤT CẢ</option>
-                <option value="ACTIVE">KÍCH HOẠT (ACTIVE)</option>
-                <option value="LOCKED">ĐÃ KHÓA (LOCKED)</option>
+                <option value="ALL">{t('users.statuses.all')}</option>
+                <option value="ACTIVE">{t('users.statuses.active')}</option>
+                <option value="LOCKED">{t('users.statuses.locked')}</option>
               </select>
 
               {(searchQuery || roleFilter !== 'ALL' || statusFilter !== 'ALL') && (
@@ -465,7 +465,7 @@ export const UserManagementView: React.FC = () => {
                     setStatusFilter('ALL');
                   }}
                   className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700 transition-colors"
-                  title="Đặt lại bộ lọc"
+                  title={t('users.resetFilter')}
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
@@ -478,14 +478,14 @@ export const UserManagementView: React.FC = () => {
             <table className="w-full text-left font-mono text-[11px] border-collapse">
               <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th className="py-1.5 px-2.5 w-[140px]">Tài Khoản</th>
-                  <th className="py-1.5 px-2.5 w-[180px]">Họ Và Tên</th>
-                  <th className="py-1.5 px-2 w-[100px] text-center">Vai Trò</th>
-                  <th className="py-1.5 px-2.5 min-w-[150px]">Phòng Ban / Vị Trí</th>
-                  <th className="py-1.5 px-2 w-[130px]">Ca Làm Việc</th>
-                  <th className="py-1.5 px-2 w-[90px] text-center">Trạng Thái</th>
-                  <th className="py-1.5 px-2 w-[130px]">Đăng Nhập Cuối</th>
-                  <th className="py-1.5 px-2 w-[120px] text-right">Thao Tác</th>
+                  <th className="py-1.5 px-2.5 w-[140px]">{t('users.tableHeaders.username')}</th>
+                  <th className="py-1.5 px-2.5 w-[180px]">{t('users.tableHeaders.fullName')}</th>
+                  <th className="py-1.5 px-2 w-[100px] text-center">{t('users.tableHeaders.role')}</th>
+                  <th className="py-1.5 px-2.5 min-w-[150px]">{t('users.tableHeaders.department')}</th>
+                  <th className="py-1.5 px-2 w-[130px]">{t('users.tableHeaders.shift')}</th>
+                  <th className="py-1.5 px-2 w-[90px] text-center">{t('users.tableHeaders.status')}</th>
+                  <th className="py-1.5 px-2 w-[130px]">{t('users.tableHeaders.lastLogin')}</th>
+                  <th className="py-1.5 px-2 w-[120px] text-right">{t('users.tableHeaders.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -493,7 +493,7 @@ export const UserManagementView: React.FC = () => {
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-slate-500 font-sans">
                       <Users className="w-7 h-7 mx-auto mb-1 text-slate-700" />
-                      <span>Không tìm thấy người dùng phù hợp điều kiện lọc.</span>
+                      <span>{t('users.noUsersFound')}</span>
                     </td>
                   </tr>
                 ) : (
@@ -525,7 +525,7 @@ export const UserManagementView: React.FC = () => {
                             <span className="font-medium text-slate-100">{u.displayName}</span>
                             {isActiveSession && (
                               <span className="text-[9px] font-mono px-1 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                                Hiện tại
+                                {t('users.currentSessionBadge')}
                               </span>
                             )}
                           </div>
@@ -560,10 +560,10 @@ export const UserManagementView: React.FC = () => {
                                 ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25'
                                 : 'bg-red-500/15 text-red-300 border-red-500/30 hover:bg-red-500/25'
                             }`}
-                            title="Bấm để chuyển đổi trạng thái Khóa / Mở"
+                            title={t('users.actions.toggleStatus')}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${u.status === 'ACTIVE' ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                            <span>{u.status === 'ACTIVE' ? 'HOẠT ĐỘNG' : 'ĐÃ KHÓA'}</span>
+                            <span>{u.status}</span>
                           </button>
                         </td>
 
@@ -580,7 +580,7 @@ export const UserManagementView: React.FC = () => {
                               <button
                                 onClick={() => switchActiveUser(u)}
                                 className="p-1 rounded text-slate-400 hover:text-emerald-400 hover:bg-slate-800 transition-colors"
-                                title="Đăng nhập thử bằng tài khoản này"
+                                title={t('users.actions.impersonate')}
                               >
                                 <LogIn className="w-3.5 h-3.5" />
                               </button>
@@ -590,7 +590,7 @@ export const UserManagementView: React.FC = () => {
                             <button
                               onClick={() => handleOpenEditModal(u)}
                               className="p-1 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
-                              title="Sửa thông tin tài khoản"
+                              title={t('users.actions.edit')}
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
@@ -600,7 +600,7 @@ export const UserManagementView: React.FC = () => {
                               disabled={isActiveSession}
                               onClick={() => setDeletingUser(u)}
                               className="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-slate-800 disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                              title="Xóa tài khoản"
+                              title={t('users.actions.delete')}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -622,7 +622,7 @@ export const UserManagementView: React.FC = () => {
           <table className="w-full text-left font-mono text-xs border-collapse">
             <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-2 px-3 min-w-[280px]">Hành Động & Quyền Hạn Hệ Thống</th>
+                <th className="py-2 px-3 min-w-[280px]">{t('users.matrix.headerAction')}</th>
                 <th className="py-2 px-3 w-[100px] text-center text-emerald-400">OPERATOR</th>
                 <th className="py-2 px-3 w-[110px] text-center text-sky-400">SUPERVISOR</th>
                 <th className="py-2 px-3 w-[110px] text-center text-indigo-400">ENGINEER</th>
@@ -715,10 +715,10 @@ export const UserManagementView: React.FC = () => {
             <div className="p-3 rounded bg-slate-900 border border-slate-800 space-y-2">
               <div className="flex items-center gap-2 text-emerald-400">
                 <Lock className="w-4 h-4" />
-                <h4 className="font-bold uppercase tracking-wider text-slate-200">Xác Thực & Phiên Làm Việc</h4>
+                <h4 className="font-bold uppercase tracking-wider text-slate-200">{t('users.policies.sessionTitle')}</h4>
               </div>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                Hạn định thời gian phiên làm việc tự động khóa sau 60 phút không có thao tác trên bàn điều khiển.
+                {t('users.policies.sessionDesc')}
               </p>
               <div className="p-2 rounded bg-slate-950 border border-slate-800/80 font-mono text-[10px] text-slate-300">
                 Session Timeout: 60 min • Single-Sign-On Token: JWT RS256
@@ -729,10 +729,10 @@ export const UserManagementView: React.FC = () => {
             <div className="p-3 rounded bg-slate-900 border border-slate-800 space-y-2">
               <div className="flex items-center gap-2 text-blue-400">
                 <BadgeCheck className="w-4 h-4" />
-                <h4 className="font-bold uppercase tracking-wider text-slate-200">Kiểm Toán Bất Biến (Audit Trail)</h4>
+                <h4 className="font-bold uppercase tracking-wider text-slate-200">{t('users.policies.auditTitle')}</h4>
               </div>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                Mọi thao tác đổi tham số cổng TCP, xử lý cảnh báo, và tạo người dùng đều được đóng dấu thời gian và ghi vào nhật ký.
+                {t('users.policies.auditDesc')}
               </p>
               <div className="p-2 rounded bg-slate-950 border border-slate-800/80 font-mono text-[10px] text-slate-300">
                 Enforcement: NON_REPUDIATION • Log Level: AUDIT_STRICT
@@ -743,10 +743,10 @@ export const UserManagementView: React.FC = () => {
             <div className="p-3 rounded bg-slate-900 border border-slate-800 space-y-2">
               <div className="flex items-center gap-2 text-purple-400">
                 <KeyRound className="w-4 h-4" />
-                <h4 className="font-bold uppercase tracking-wider text-slate-200">Mã Hóa & Mạng Nội Bộ</h4>
+                <h4 className="font-bold uppercase tracking-wider text-slate-200">{t('users.policies.securityTitle')}</h4>
               </div>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                Kênh truyền thông điều khiển giữa client và MC Server được bảo vệ bởi giao thức TLS 1.3 và mạng VLAN công nghiệp cô lập.
+                {t('users.policies.securityDesc')}
               </p>
               <div className="p-2 rounded bg-slate-950 border border-slate-800/80 font-mono text-[10px] text-slate-300">
                 Cipher: TLS_AES_256_GCM_SHA384 • VLAN: 10.0.10.0/24
@@ -774,10 +774,10 @@ export const UserManagementView: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider">
-                    {editingUser ? 'Chỉnh Sửa Tài Khoản Người Dùng' : 'Đăng Ký Tài Khoản Người Dùng Mới'}
+                    {editingUser ? t('users.modal.editTitle') : t('users.modal.addTitle')}
                   </h3>
                   <p className="text-[10px] text-slate-400 font-sans">
-                    Hệ thống xác thực và phân quyền RBAC MC Server
+                    {t('users.modal.subtitle')}
                   </p>
                 </div>
               </div>
@@ -802,7 +802,7 @@ export const UserManagementView: React.FC = () => {
                 {/* Username */}
                 <div>
                   <label className="text-[11px] font-medium text-slate-300 block mb-1">
-                    Tên Đăng Nhập (Username) *
+                    {t('users.modal.username')}
                   </label>
                   <input
                     type="text"
@@ -818,7 +818,7 @@ export const UserManagementView: React.FC = () => {
                 {/* Display Name */}
                 <div>
                   <label className="text-[11px] font-medium text-slate-300 block mb-1">
-                    Họ Và Tên Hiển Thị *
+                    {t('users.modal.displayName')}
                   </label>
                   <input
                     type="text"
@@ -833,45 +833,45 @@ export const UserManagementView: React.FC = () => {
                 {/* Role */}
                 <div>
                   <label className="text-[11px] font-medium text-slate-300 block mb-1">
-                    Vai Trò Quyền Hạn (Role) *
+                    {t('users.modal.role')}
                   </label>
                   <select
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
                     className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500"
                   >
-                    <option value="OPERATOR">OPERATOR (Vận hành trạm máy)</option>
-                    <option value="SUPERVISOR">SUPERVISOR (Giám sát ca sản xuất)</option>
-                    <option value="ENGINEER">ENGINEER (Kỹ sư hệ thống & MC)</option>
-                    <option value="ADMIN">ADMIN (Quản trị viên toàn quyền)</option>
+                    <option value="OPERATOR">{t('users.roles.operator')}</option>
+                    <option value="SUPERVISOR">{t('users.roles.supervisor')}</option>
+                    <option value="ENGINEER">{t('users.roles.engineer')}</option>
+                    <option value="ADMIN">{t('users.roles.admin')}</option>
                   </select>
                 </div>
 
                 {/* Status */}
                 <div>
                   <label className="text-[11px] font-medium text-slate-300 block mb-1">
-                    Trạng Thái Tài Khoản
+                    {t('users.modal.status')}
                   </label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as 'ACTIVE' | 'LOCKED' })}
                     className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-500"
                   >
-                    <option value="ACTIVE">KÍCH HOẠT (ACTIVE)</option>
-                    <option value="LOCKED">TẠM KHÓA (LOCKED)</option>
+                    <option value="ACTIVE">{t('users.statuses.active')}</option>
+                    <option value="LOCKED">{t('users.statuses.locked')}</option>
                   </select>
                 </div>
 
                 {/* Department */}
                 <div>
                   <label className="text-[11px] font-medium text-slate-300 block mb-1">
-                    Phòng Ban / Tổ Vận Hành
+                    {t('users.modal.department')}
                   </label>
                   <input
                     type="text"
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    placeholder="vd: Tổ Vận Hành SMT ST02"
+                    placeholder={t('users.modal.departmentPlaceholder')}
                     className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-800 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-blue-500"
                   />
                 </div>
@@ -879,7 +879,7 @@ export const UserManagementView: React.FC = () => {
                 {/* Shift */}
                 <div>
                   <label className="text-[11px] font-medium text-slate-300 block mb-1">
-                    Ca Làm Việc
+                    {t('users.modal.shift')}
                   </label>
                   <select
                     value={formData.shift}
@@ -889,14 +889,14 @@ export const UserManagementView: React.FC = () => {
                     <option value="Ca 1 (06:00 - 14:00)">Ca 1 (06:00 - 14:00)</option>
                     <option value="Ca 2 (14:00 - 22:00)">Ca 2 (14:00 - 22:00)</option>
                     <option value="Ca 3 (22:00 - 06:00)">Ca 3 (22:00 - 06:00)</option>
-                    <option value="Hành chính">Hành chính (08:00 - 17:00)</option>
+                    <option value="Hành chính">{t('users.modal.shiftOffice')}</option>
                   </select>
                 </div>
 
                 {/* RFID Badge */}
                 <div>
                   <label className="text-[11px] font-medium text-slate-300 block mb-1">
-                    Mã Thẻ Nhân Viên (RFID Badge ID)
+                    {t('users.modal.rfid')}
                   </label>
                   <input
                     type="text"
@@ -910,7 +910,7 @@ export const UserManagementView: React.FC = () => {
                 {/* Email */}
                 <div>
                   <label className="text-[11px] font-medium text-slate-300 block mb-1">
-                    Email Nội Bộ
+                    {t('users.modal.email')}
                   </label>
                   <input
                     type="email"
@@ -929,13 +929,13 @@ export const UserManagementView: React.FC = () => {
                   onClick={() => setIsAddUserModalOpen(false)}
                   className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"
                 >
-                  Hủy
+                  {t('users.modal.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-xs text-white font-medium shadow-md shadow-blue-600/30"
                 >
-                  {editingUser ? 'Cập Nhật Người Dùng' : 'Tạo Tài Khoản'}
+                  {editingUser ? t('users.modal.update') : t('users.modal.save')}
                 </button>
               </div>
             </form>
@@ -956,18 +956,18 @@ export const UserManagementView: React.FC = () => {
             <div className="flex items-center gap-2.5 text-red-400">
               <AlertTriangle className="w-5 h-5 shrink-0" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
-                Xác Nhận Xóa Tài Khoản
+                {t('users.deleteModal.title')}
               </h3>
             </div>
             <p className="text-xs text-slate-300">
-              Bạn có chắc chắn muốn xóa tài khoản <span className="font-bold text-white font-mono">@{deletingUser.username}</span> ({deletingUser.displayName}) khỏi hệ thống?
+              {t('users.deleteModal.descPre')} <span className="font-bold text-white font-mono">@{deletingUser.username}</span> ({deletingUser.displayName}) {t('users.deleteModal.descPost')}
             </p>
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
               <button
                 onClick={() => setDeletingUser(null)}
                 className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"
               >
-                Hủy
+                {t('users.deleteModal.cancel')}
               </button>
               <button
                 onClick={() => {
@@ -976,7 +976,7 @@ export const UserManagementView: React.FC = () => {
                 }}
                 className="px-3 py-1.5 rounded bg-red-600 hover:bg-red-500 text-xs text-white font-medium shadow-md shadow-red-600/30"
               >
-                Xóa tài khoản
+                {t('users.deleteModal.confirm')}
               </button>
             </div>
           </div>

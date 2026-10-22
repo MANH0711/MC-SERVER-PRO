@@ -73,7 +73,7 @@ export const Sidebar: React.FC = () => {
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 transition-colors"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? t('sidebar.expandSidebar') : t('sidebar.collapseSidebar')}
         >
           {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
         </button>
@@ -129,7 +129,7 @@ export const Sidebar: React.FC = () => {
             <span className="font-mono text-slate-400 font-medium">v2.4.0-ENT</span>
             <span className="flex items-center gap-1.5 text-emerald-400 font-semibold font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)] animate-pulse"></span>
-              CORE ACTIVE
+              {t('sidebar.coreActive')}
             </span>
           </div>
         ) : (

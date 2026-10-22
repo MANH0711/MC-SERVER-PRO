@@ -104,19 +104,19 @@ export const MesMonitorView: React.FC = () => {
         {/* Endpoint & Status */}
         <div className="p-4 rounded bg-slate-900 border border-slate-800 space-y-3">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block pb-2 border-b border-slate-800">
-            MES Link Target
+            {t('mes.linkTarget')}
           </span>
           <div className="space-y-2 text-xs font-mono">
             <div>
-              <span className="text-slate-500 block text-[11px]">Primary Endpoint URL</span>
+              <span className="text-slate-500 block text-[11px]">{t('mes.endpointUrl')}</span>
               <span className="text-cyan-400 break-all">{mesStatus.endpoint}</span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[11px]">Protocol Adapter</span>
-              <span className="text-slate-200">REST JSON / HTTPS Mutual TLS (v2.0)</span>
+              <span className="text-slate-500 block text-[11px]">{t('mes.adapter')}</span>
+              <span className="text-slate-200">{t('mes.adapterVal')}</span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[11px]">Last Sync Timestamp</span>
+              <span className="text-slate-500 block text-[11px]">{t('mes.lastSync')}</span>
               <span className="text-slate-300">{mesStatus.lastHeartbeat}</span>
             </div>
           </div>
@@ -125,11 +125,11 @@ export const MesMonitorView: React.FC = () => {
         {/* Circuit Breaker State Machine */}
         <div className="p-4 rounded bg-slate-900 border border-slate-800 space-y-3">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block pb-2 border-b border-slate-800">
-            Circuit Breaker Guardian
+            {t('mes.circuitGuardian')}
           </span>
 
           <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-300 font-medium">State Machine:</span>
+            <span className="text-xs text-slate-300 font-medium">{t('mes.stateMachine')}</span>
             <span
               className={`text-xs font-mono px-2.5 py-1 rounded border font-bold uppercase ${getBreakerBadge(
                 mesStatus.circuitBreakerState
@@ -141,16 +141,16 @@ export const MesMonitorView: React.FC = () => {
 
           <div className="p-3 rounded bg-slate-950 border border-slate-800/80 text-[11px] font-mono space-y-1.5 text-slate-300">
             <div className="flex justify-between">
-              <span className="text-slate-500">Consecutive Failures:</span>
+              <span className="text-slate-500">{t('mes.consecutiveFailures')}</span>
               <span className="text-red-400 font-bold">{mesStatus.consecutiveFailures} / {config.mes.circuitBreakerFailureThreshold}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Cooldown Timeout:</span>
+              <span className="text-slate-500">{t('mes.cooldownTimeout')}</span>
               <span>{config.mes.circuitBreakerCooldownMs} ms</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Max Retry Attempts:</span>
-              <span>{config.mes.retryMaxCount} attempts</span>
+              <span className="text-slate-500">{t('mes.maxRetry')}</span>
+              <span>{config.mes.retryMaxCount} {t('mes.attemptsUnit')}</span>
             </div>
           </div>
         </div>
@@ -158,26 +158,26 @@ export const MesMonitorView: React.FC = () => {
         {/* Reliability Metrics */}
         <div className="p-4 rounded bg-slate-900 border border-slate-800 space-y-3">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block pb-2 border-b border-slate-800">
-            Reliability & Total Stats
+            {t('mes.reliabilityTitle')}
           </span>
 
           <div className="grid grid-cols-2 gap-2 text-xs font-mono">
             <div className="p-2 rounded bg-slate-950 border border-slate-800/80">
-              <span className="text-slate-500 text-[10px] block">TOTAL REQUESTS</span>
+              <span className="text-slate-500 text-[10px] block">{t('mes.totalRequests')}</span>
               <span className="text-base font-bold text-slate-100">{formatNumber(mesStatus.totalRequests)}</span>
             </div>
             <div className="p-2 rounded bg-slate-950 border border-slate-800/80">
-              <span className="text-slate-500 text-[10px] block">SUCCESSFUL</span>
+              <span className="text-slate-500 text-[10px] block">{t('mes.successful')}</span>
               <span className="text-base font-bold text-emerald-400">
                 {formatNumber(mesStatus.successfulRequests)}
               </span>
             </div>
             <div className="p-2 rounded bg-slate-950 border border-slate-800/80">
-              <span className="text-slate-500 text-[10px] block">FAILED / DROPPED</span>
+              <span className="text-slate-500 text-[10px] block">{t('mes.failedDropped')}</span>
               <span className="text-base font-bold text-red-400">{mesStatus.failedRequests}</span>
             </div>
             <div className="p-2 rounded bg-slate-950 border border-slate-800/80">
-              <span className="text-slate-500 text-[10px] block">AVAILABILITY</span>
+              <span className="text-slate-500 text-[10px] block">{t('mes.availability')}</span>
               <span className="text-base font-bold text-emerald-400">99.99%</span>
             </div>
           </div>
@@ -191,12 +191,12 @@ export const MesMonitorView: React.FC = () => {
             <Clock className="w-4 h-4 text-amber-400" />
             {t('mes.latencyPercentiles')}
           </span>
-          <span className="text-[11px] text-slate-500 font-mono">SLA TARGET: &lt; 50ms</span>
+          <span className="text-[11px] text-slate-500 font-mono">{t('mes.slaTarget')}</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 font-mono text-xs">
           <div className="p-3 rounded bg-slate-950 border border-slate-800">
-            <span className="text-slate-500 text-[11px] block">AVERAGE LATENCY</span>
+            <span className="text-slate-500 text-[11px] block">{t('mes.avgLatency')}</span>
             <span className="text-2xl font-bold text-emerald-400 mt-1 block">
               {mesStatus.averageLatencyMs} <span className="text-xs font-normal">ms</span>
             </span>

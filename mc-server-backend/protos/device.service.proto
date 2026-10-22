@@ -1,0 +1,73 @@
+/**
+ * device.service.proto
+ * ─────────────────────────────────────────────────────────
+ * gRPC Service: Quản lý thiết bị sản xuất (CRUD + Streaming)
+ * Hỗ trợ: Thêm/Sửa/Xóa/Tìm thiết bị, streaming trạng thái real-time
+ * ─────────────────────────────────────────────────────────
+ */
+
+syntax = "proto3";
+
+package mc_server;
+
+import "common.types.proto";
+
+service DeviceService {
+  // Lấy danh sách tất cả thiết bị
+  rpc GetAllDevices (GetAllDevicesRequest) returns (GetAllDevicesResponse);
+  
+  // Lấy thông tin 1 thiết bị theo EQUIPMENT_ID
+  rpc GetDeviceById (GetDeviceByIdRequest) returns (DeviceInfo);
+  
+  // Thêm thiết bị mới
+  rpc CreateDevice (CreateDeviceRequest) returns (StatusResponse);
+  
+  // Cập nhật thông tin thiết bị
+  rpc UpdateDevice (UpdateDeviceRequest) returns (StatusResponse);
+  
+  // Xóa thiết bị
+  rpc DeleteDevice (DeleteDeviceRequest) returns (StatusResponse);
+  
+  // Streaming real-time trạng thái thiết bị (server-streaming)
+  rpc StreamDeviceStatus (StreamDeviceStatusRequest) returns (stream DeviceInfo);
+  
+  // Kết nối lại thiết bị
+  rpc ReconnectDevice (ReconnectDeviceRequest) returns (StatusResponse);
+}
+
+message GetAllDevicesRequest {
+  string plant_filter = 1;           // Lọc theo nhà máy (optional)
+  string group_filter = 2;           // Lọc theo nhóm (optional)
+  string enable_filter = 3;          // Lọc YES/NO (optional)
+}
+
+message GetAllDevicesResponse {
+  repeated DeviceInfo devices = 1;
+  int32 total_count = 2;
+}
+
+message GetDeviceByIdRequest {
+  string equipment_id = 1;           // EQUIPMENT_ID (PK)
+}
+
+message CreateDeviceRequest {
+  DeviceInfo device = 1;
+}
+
+message UpdateDeviceRequest {
+  string equipment_id = 1;           // EQUIPMENT_ID để tìm
+  DeviceInfo device = 2;             // Dữ liệu cập nhật
+}
+
+message DeleteDeviceRequest {
+  string equipment_id = 1;
+}
+
+message StreamDeviceStatusRequest {
+  repeated string equipment_ids = 1; // Danh sách EQ_ID cần theo dõi (rỗng = tất cả)
+  int32 interval_ms = 2;             // Tần suất gửi (mặc định 2000ms)
+}
+
+message ReconnectDeviceRequest {
+  string equipment_id = 1;
+}

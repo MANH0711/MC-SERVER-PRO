@@ -39,5 +39,6 @@
 - [x] **Phase 3: Core Communication Engine** - Quản lý Session, TCP parser, buffer chống tràn, reconnect watchdog.
 - [x] **Phase 4: MES Integration & Business Engine** - Handshake, Recipe validation, Carrier/PCB Move-In/Move-Out, Safety interlocks.
 - [x] **Phase 5: Persistence, Audit & Alarms** - Local DB, Correlation ID tracking, Alarm lifecycle (Active, Ack, Cleared).
-- [x] **Phase 6: Industrial UI/UX & 4-Language Localization** - Dashboard KPI, Hex Monitor, Protocol Workbench, Device Manager, vi/en/ko/zh switcher.
+- [x] **Phase 6: Industrial UI/UX & 4-Language Localization** - Dashboard KPI, Hex Monitor, Protocol Workbench, Device Manager, vi/en/ko/zh switcher (100% key parity).
 - [x] **Phase 7: Comprehensive Testing & Verification** - Unit tests cho parser/checksum, simulation tests cho multi-device concurrency.
+- [x] **Phase 8: Enterprise Master Table Schema & Tabless Form Architecture** - Chuẩn hóa 18 cột Master Table (ITM Industrial Schema), sao chép/dán TSV từ Excel, trích xuất CSV, tự động phân nhóm thiết bị, tái cấu trúc modal Thêm/Sửa theo hệ lưới 6 cột căn thẳng hàng, nhãn ngắn gọn và chuyển đổi 4 ngôn ngữ trực tiếp trong modal.

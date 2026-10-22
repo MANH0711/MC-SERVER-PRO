@@ -211,7 +211,7 @@ export const ProtocolExplorerView: React.FC = () => {
                   <Terminal className="w-3.5 h-3.5 text-blue-400" />
                   <span>{t('protocol.workbench.constructFrame')}</span>
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">FRAME ASSEMBLY</span>
+                <span className="text-[10px] text-slate-500 font-mono">{t('protocol.frameAssembly')}</span>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
@@ -399,10 +399,10 @@ export const ProtocolExplorerView: React.FC = () => {
                     <table className="w-full text-left font-mono text-[10px] border border-slate-800 rounded">
                       <thead className="bg-slate-900 text-slate-400">
                         <tr>
-                          <th className="py-1 px-2">Field</th>
-                          <th className="py-1 px-2">Type</th>
-                          <th className="py-1 px-2">Req</th>
-                          <th className="py-1 px-2">Description</th>
+                          <th className="py-1 px-2">{t('protocol.colField')}</th>
+                          <th className="py-1 px-2">{t('protocol.colType')}</th>
+                          <th className="py-1 px-2">{t('protocol.colReq')}</th>
+                          <th className="py-1 px-2">{t('protocol.colDesc')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -438,19 +438,19 @@ export const ProtocolExplorerView: React.FC = () => {
                 onClick={() => runBoundaryTest('20013')}
                 className="px-2.5 py-1 rounded bg-slate-950 border border-slate-700 hover:border-blue-500 text-slate-200 transition-colors"
               >
-                20.013 Frame (ETX)
+                {t('protocol.boundaryTest.test20013')}
               </button>
               <button
                 onClick={() => runBoundaryTest('20014')}
                 className="px-2.5 py-1 rounded bg-slate-950 border border-slate-700 hover:border-purple-500 text-slate-200 transition-colors"
               >
-                20.014 Frame (ETX+LF)
+                {t('protocol.boundaryTest.test20014')}
               </button>
               <button
                 onClick={() => runBoundaryTest('corrupted')}
                 className="px-2.5 py-1 rounded bg-slate-950 border border-slate-700 hover:border-red-500 text-red-300 transition-colors"
               >
-                Corrupted Checksum Test
+                {t('protocol.boundaryTest.testCorrupted')}
               </button>
             </div>
 

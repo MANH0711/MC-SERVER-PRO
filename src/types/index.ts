@@ -55,21 +55,63 @@ export interface DeviceGroup {
   createdAt?: string;
 }
 
+export interface DeviceInfoRecord {
+  PLANT: string;
+  HOST_ADDRESS: string;
+  HOST_PORT: number | string;
+  DEVICE_ID: string | number;
+  SERVER_NO: string | number;
+  EQUIPMENT_ID: string;
+  GROUP_NAME: string;
+  EQUIPMENT_ORDER: string | number;
+  EQUIPMENT_MAIN?: string;
+  DESCRIPTION?: string;
+  ENABLE: 'YES' | 'NO' | string;
+  FIELD_01?: string;
+  FIELD_02?: string;
+  FIELD_03?: string;
+  INTERLOCK_RECIPE?: 'YES' | 'NO' | string;
+  EQUIPMENT_MODEL?: string;
+  INTERLOCK_PARAM?: string;
+  INTERLOCK_TRACE?: string;
+}
+
 export interface DeviceModel {
-  id: string; // e.g. EQP_SMT_01
+  id: string; // e.g. EQP_SMT_01 or BAKE01 (EQUIPMENT_ID)
   name: string;
-  factory: string;
+  factory: string; // PLANT e.g. ITMVPSG
   line: string;
   station: string;
-  groupId?: string; // Group reference, e.g. GRP_SMT_A
-  model: string;
-  ipAddress: string;
-  port: number;
+  groupId?: string; // Group reference, e.g. GRP_SMT_A or NET
+  model: string; // EQUIPMENT_MODEL e.g. IBS_BAKE
+  ipAddress: string; // HOST_ADDRESS e.g. 127.0.0.1
+  port: number; // HOST_PORT e.g. 5010
   role: TcpRole;
   protocolVersion: ProtocolVersion;
   frameBoundary: FrameBoundary;
   checksumAlgorithm: ChecksumAlgorithm;
   status: DeviceStatus;
+
+  // 18-Column Industrial Device Master Schema
+  plant?: string;             // PLANT (e.g. 'ITMVPSG')
+  hostAddress?: string;       // HOST_ADDRESS (e.g. '127.0.0.1')
+  hostPort?: number;          // HOST_PORT (e.g. 5010)
+  deviceId?: string | number; // DEVICE_ID (e.g. '0')
+  serverNo?: string | number; // SERVER_NO (e.g. '15')
+  equipmentId?: string;       // EQUIPMENT_ID (e.g. 'BAKE01')
+  groupName?: string;         // GROUP_NAME (e.g. 'NET')
+  equipmentOrder?: string | number; // EQUIPMENT_ORDER (e.g. '20110')
+  equipmentMain?: string;    // EQUIPMENT_MAIN
+  description?: string;      // DESCRIPTION
+  enable?: 'YES' | 'NO' | string; // ENABLE ('YES' | 'NO')
+  field01?: string;          // FIELD_01
+  field02?: string;          // FIELD_02
+  field03?: string;          // FIELD_03 (e.g. 'ITMVIET')
+  interlockRecipe?: 'YES' | 'NO' | string; // INTERLOCK_RECIPE (e.g. 'YES')
+  equipmentModel?: string;   // EQUIPMENT_MODEL (e.g. 'IBS_BAKE')
+  interlockParam?: string;   // INTERLOCK_PARAM
+  interlockTrace?: string;   // INTERLOCK_TRACE
+
   lastConnectedAt?: string;
   lastDataReceivedAt?: string;
   totalRequests: number;

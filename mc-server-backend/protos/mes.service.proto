@@ -1,0 +1,47 @@
+/**
+ * mes.service.proto
+ * ─────────────────────────────────────────────────────────
+ * gRPC Service: Tích hợp hệ thống MES (Manufacturing Execution System)
+ * Hỗ trợ: Trạng thái MES, Circuit Breaker, Ping, Retry Queue
+ * ─────────────────────────────────────────────────────────
+ */
+
+syntax = "proto3";
+
+package mc_server;
+
+import "common.types.proto";
+
+service MesService {
+  // Lấy trạng thái MES hiện tại
+  rpc GetMesStatus (GetMesStatusRequest) returns (MesStatusInfo);
+  
+  // Ping endpoint MES kiểm tra kết nối
+  rpc PingMesEndpoint (PingMesRequest) returns (PingMesResponse);
+  
+  // Bật/tắt Circuit Breaker thủ công
+  rpc ToggleCircuitBreaker (ToggleCircuitBreakerRequest) returns (StatusResponse);
+  
+  // Flush retry queue
+  rpc FlushRetryQueue (FlushRetryQueueRequest) returns (FlushRetryQueueResponse);
+}
+
+message GetMesStatusRequest {}
+
+message PingMesRequest {}
+
+message PingMesResponse {
+  bool   success = 1;
+  double latency_ms = 2;
+  string message = 3;
+}
+
+message ToggleCircuitBreakerRequest {
+  string action = 1;                 // TRIP | RESET
+}
+
+message FlushRetryQueueRequest {}
+
+message FlushRetryQueueResponse {
+  int32 flushed_count = 1;
+}

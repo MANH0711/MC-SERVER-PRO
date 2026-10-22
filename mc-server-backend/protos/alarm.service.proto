@@ -1,0 +1,48 @@
+/**
+ * alarm.service.proto
+ * ─────────────────────────────────────────────────────────
+ * gRPC Service: Quản lý cảnh báo sự cố thiết bị
+ * Hỗ trợ: Truy vấn, xác nhận (ACK), streaming cảnh báo real-time
+ * ─────────────────────────────────────────────────────────
+ */
+
+syntax = "proto3";
+
+package mc_server;
+
+import "common.types.proto";
+
+service AlarmService {
+  // Lấy danh sách cảnh báo
+  rpc GetAlarms (GetAlarmsRequest) returns (GetAlarmsResponse);
+  
+  // Xác nhận cảnh báo (Acknowledge)
+  rpc AcknowledgeAlarm (AcknowledgeAlarmRequest) returns (StatusResponse);
+  
+  // Streaming cảnh báo real-time
+  rpc StreamAlarms (StreamAlarmsRequest) returns (stream AlarmEvent);
+}
+
+message GetAlarmsRequest {
+  string equipment_id = 1;           // Lọc theo thiết bị (optional)
+  string severity = 2;               // Lọc severity: INFO|WARNING|ERROR|CRITICAL
+  bool   unacknowledged_only = 3;    // Chỉ lấy chưa ACK
+  int32  limit = 4;
+  int32  offset = 5;
+}
+
+message GetAlarmsResponse {
+  repeated AlarmEvent alarms = 1;
+  int32 total_count = 2;
+}
+
+message AcknowledgeAlarmRequest {
+  string alarm_id = 1;
+  string acknowledged_by = 2;        // Tên operator xác nhận
+  string resolution_note = 3;        // Ghi chú xử lý
+}
+
+message StreamAlarmsRequest {
+  repeated string equipment_ids = 1;
+  repeated string severities = 2;    // Lọc mức độ
+}

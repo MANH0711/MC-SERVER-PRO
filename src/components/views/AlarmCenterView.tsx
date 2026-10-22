@@ -118,7 +118,7 @@ export const AlarmCenterView: React.FC = () => {
       {/* Filter Bar (Compact Height: 36px) */}
       <div className="px-3 py-1.5 rounded bg-slate-900/80 border border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
         <div className="flex items-center gap-1">
-          <span className="text-slate-500 text-[11px] mr-1">Severity:</span>
+          <span className="text-slate-500 text-[11px] mr-1">{t('alarm.severityLabel')}</span>
           {(['ALL', 'CRITICAL', 'ERROR', 'WARNING', 'INFO'] as const).map((sev) => (
             <button
               key={sev}
@@ -135,7 +135,7 @@ export const AlarmCenterView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-1">
-          <span className="text-slate-500 text-[11px] mr-1">Status:</span>
+          <span className="text-slate-500 text-[11px] mr-1">{t('alarm.statusLabel')}</span>
           {(['ALL', 'UNACK', 'ACK'] as const).map((st) => (
             <button
               key={st}
@@ -146,7 +146,7 @@ export const AlarmCenterView: React.FC = () => {
                   : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
               }`}
             >
-              {st === 'ALL' ? 'All' : st === 'UNACK' ? 'Pending' : 'Resolved'}
+              {st === 'ALL' ? t('alarm.statusAll') : st === 'UNACK' ? t('alarm.statusPending') : t('alarm.statusResolved')}
             </button>
           ))}
         </div>
@@ -191,11 +191,11 @@ export const AlarmCenterView: React.FC = () => {
                     {alarm.acknowledged ? (
                       <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-sans">
                         <CheckCircle2 className="w-3 h-3" />
-                        <span>Resolved ({alarm.acknowledgedBy})</span>
+                        <span>{t('alarm.statusResolved')} ({alarm.acknowledgedBy})</span>
                       </span>
                     ) : (
                       <span className="text-[10px] text-amber-400 font-bold uppercase font-mono animate-pulse">
-                        PENDING ACK
+                        {t('alarm.unacknowledged')}
                       </span>
                     )}
                   </td>
@@ -205,14 +205,14 @@ export const AlarmCenterView: React.FC = () => {
                         onClick={() => handleOpenAckModal(alarm)}
                         className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-300 border border-blue-500/40 hover:bg-blue-600 hover:text-white transition-colors text-[10px] font-sans font-semibold"
                       >
-                        Acknowledge
+                        {t('dashboard.recentAlarms.acknowledge')}
                       </button>
                     ) : (
                       <button
                         onClick={() => handleOpenAckModal(alarm)}
                         className="text-[10px] text-slate-500 hover:text-slate-300 font-sans underline"
                       >
-                        View Note
+                        {t('common.view', 'View Note')}
                       </button>
                     )}
                   </td>
@@ -242,11 +242,11 @@ export const AlarmCenterView: React.FC = () => {
 
             <div className="p-2 rounded bg-slate-950 border border-slate-800 font-mono text-[11px] space-y-1">
               <div className="flex justify-between">
-                <span className="text-slate-500">Node:</span>
+                <span className="text-slate-500">{t('alarm.nodeLabel')}</span>
                 <span className="text-slate-200 font-bold">{selectedAlarm.equipmentId}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Alarm:</span>
+                <span className="text-slate-500">{t('alarm.alarmLabel')}</span>
                 <span className="text-red-400 font-bold">{selectedAlarm.alarmCode}</span>
               </div>
               <p className="text-slate-300 font-sans text-xs border-t border-slate-900 pt-1">
@@ -258,7 +258,7 @@ export const AlarmCenterView: React.FC = () => {
             {!selectedAlarm.acknowledged && (
               <div>
                 <label className="block text-slate-400 text-[10px] uppercase font-semibold mb-1">
-                  Quick Resolution Templates:
+                  {t('alarm.quickTemplates')}
                 </label>
                 <div className="space-y-1">
                   {quickTemplates.map((tmpl, idx) => (
