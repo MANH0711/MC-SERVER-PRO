@@ -57,8 +57,14 @@ export class TcpClientManagerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    if (this.sockets.has(equipmentId)) {
+    // Đảm bảo không bao giờ mở 2 socket cùng lúc cho 1 thiết bị
+    const existing = this.sockets.get(equipmentId);
+    if (existing && !existing.destroyed) {
       return;
+    }
+    if (existing) {
+      existing.removeAllListeners();
+      this.sockets.delete(equipmentId);
     }
 
     this.deviceService.updateStatus(equipmentId, 'CONNECTING');
@@ -67,9 +73,11 @@ export class TcpClientManagerService implements OnModuleInit, OnModuleDestroy {
     socket.setNoDelay(true); // Tắt thuật toán Nagle để gửi gói tin công nghiệp tức thời
     socket.setKeepAlive(true, 10000); // Kích hoạt TCP Keep-Alive chuẩn OS
 
+    // Lưu socket vào map ngay lập tức để chặn các yêu cầu kết nối trùng lặp
+    this.sockets.set(equipmentId, socket);
+
     socket.connect(port, host, () => {
       this.logger.log(`🟢 [TCP] Đã kết nối thành công thiết bị [${equipmentId}] tại ${host}:${port}`);
-      this.sockets.set(equipmentId, socket);
       this.lastActivityTimes.set(equipmentId, Date.now());
       this.deviceService.updateStatus(equipmentId, 'ONLINE');
       if (this.reconnectTimers.has(equipmentId)) {
@@ -82,7 +90,7 @@ export class TcpClientManagerService implements OnModuleInit, OnModuleDestroy {
       this.lastActivityTimes.set(equipmentId, Date.now());
       try {
         const responseBuffer = await this.commService.handleIncomingRawBuffer(equipmentId, chunk);
-        if (responseBuffer && socket.writable) {
+        if (responseBuffer && socket.writable && !socket.destroyed) {
           socket.write(responseBuffer);
           this.lastActivityTimes.set(equipmentId, Date.now());
         }
@@ -98,7 +106,10 @@ export class TcpClientManagerService implements OnModuleInit, OnModuleDestroy {
     });
 
     socket.on('close', () => {
-      this.sockets.delete(equipmentId);
+      socket.removeAllListeners();
+      if (this.sockets.get(equipmentId) === socket) {
+        this.sockets.delete(equipmentId);
+      }
       this.deviceService.updateStatus(equipmentId, 'OFFLINE');
       if (!this.manuallyStoppedDevices.has(equipmentId)) {
         this.scheduleReconnect(equipmentId, host, port);
@@ -212,6 +223,7 @@ export class TcpClientManagerService implements OnModuleInit, OnModuleDestroy {
     }
     const current = this.sockets.get(equipmentId);
     if (current) {
+      current.removeAllListeners();
       current.destroy();
       this.sockets.delete(equipmentId);
     }
@@ -222,40 +234,8 @@ export class TcpClientManagerService implements OnModuleInit, OnModuleDestroy {
       return false;
     }
 
-    return new Promise((resolve) => {
-      const socket = new net.Socket();
-      socket.setTimeout(5000);
-
-      socket.connect(device.HOST_PORT, device.HOST_ADDRESS, () => {
-        this.logger.log(`🟢 [TCP Reconnect] Thành công kết nối [${equipmentId}] tại ${device.HOST_ADDRESS}:${device.HOST_PORT}`);
-        this.sockets.set(equipmentId, socket);
-        this.deviceService.updateStatus(equipmentId, 'ONLINE');
-        resolve(true);
-      });
-
-      socket.on('data', async (chunk: Buffer) => {
-        try {
-          const responseBuffer = await this.commService.handleIncomingRawBuffer(equipmentId, chunk);
-          if (responseBuffer && socket.writable) {
-            socket.write(responseBuffer);
-          }
-        } catch (err: any) {
-          this.logger.error(`Lỗi xử lý dữ liệu từ ${equipmentId}: ${err.message}`);
-        }
-      });
-
-      socket.on('error', (err: any) => {
-        this.deviceService.updateStatus(equipmentId, 'OFFLINE');
-        this.logger.debug(`[TCP Socket Reconnect Error] ${equipmentId}: ${err.message}`);
-        resolve(false);
-      });
-
-      socket.on('close', () => {
-        this.sockets.delete(equipmentId);
-        this.deviceService.updateStatus(equipmentId, 'OFFLINE');
-        this.scheduleReconnect(equipmentId, device.HOST_ADDRESS, device.HOST_PORT);
-      });
-    });
+    this.connectToDevice(equipmentId, device.HOST_ADDRESS, device.HOST_PORT);
+    return true;
   }
 
   public writeBuffer(equipmentId: string, buffer: Buffer): boolean {

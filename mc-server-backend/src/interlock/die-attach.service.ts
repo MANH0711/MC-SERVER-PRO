@@ -141,58 +141,30 @@ export class DieAttachService {
   }
 
   /**
-   * Ánh xạ tên thiết bị sang tên máy thực tế trong Database (ví dụ CLEAN001 -> DA018VN/DA013VN)
+   * Ánh xạ tên thiết bị sang tên máy thực tế trong Database (ưu tiên ID từ kết nối Socket như cũ)
    */
   async resolveDbEquipmentName(parsedEquipment: string, socketEquipmentId?: string): Promise<string> {
-    const cleanInput = (parsedEquipment || '').trim();
-
-    // 1. Kiểm tra nếu parsedEquipment hoặc socketEquipmentId là máy Die Attach đã có trong ADM_GROUP_CATEGORY_DATA
-    const candidates = [cleanInput, socketEquipmentId?.trim()].filter(Boolean) as string[];
-
-    for (const cand of candidates) {
-      try {
-        const checkSql = `
-          SELECT group_object AS EQUIPMENT_ID
-            FROM adm_group_category_data
-           WHERE plant = 'ITMVIET'
-             AND group_target = 'EQUIPMENT'
-             AND group_index = 13
-             AND UPPER(group_object) = UPPER(:cand)
-        `;
-        const res = await this.oracleService.executeQuery<{ EQUIPMENT_ID: string }>(
-          checkSql,
-          { cand },
-          'ITMVMES'
-        );
-        if (res && res.length > 0 && res[0].EQUIPMENT_ID) {
-          return res[0].EQUIPMENT_ID;
-        }
-      } catch (e: any) {
-        this.logger.debug(`Lỗi kiểm tra candidate equipment ${cand}: ${e.message}`);
-      }
+    if (socketEquipmentId && socketEquipmentId.trim()) {
+      return socketEquipmentId.trim();
     }
 
-    // 2. Tra cứu mapping chuyên biệt cho Die Attach (CLEAN* -> D/A equipment như DA018VN / DA013VN)
+    const cleanInput = (parsedEquipment || '').trim();
+    if (!cleanInput) return 'UNKNOWN';
+
+    // Tra cứu trong Cache thiết bị thật (MIGHTY.GATEWAY_DEVICES)
     try {
-      const sql = `
-        SELECT EQUIPMENT_ID FROM (
-          SELECT GROUP_OBJECT as EQUIPMENT_ID
-          FROM adm_group_category_data
-          WHERE PLANT = 'ITMVIET' AND GROUP_TARGET = 'EQUIPMENT' AND GROUP_INDEX = 13
-            AND GROUP_VALUE = 'D/A'
-          ORDER BY CASE WHEN GROUP_OBJECT = 'DA018VN' THEN 1 WHEN GROUP_OBJECT = 'DA013VN' THEN 2 ELSE 3 END
-        ) WHERE ROWNUM = 1
-      `;
-      const rows = await this.oracleService.executeQuery<{ EQUIPMENT_ID: string }>(sql, {}, 'ITMVMES');
-      if (rows && rows.length > 0 && rows[0].EQUIPMENT_ID) {
-        return rows[0].EQUIPMENT_ID;
+      const allDevices = await this.equipmentRepo.findAll();
+      const exact = allDevices.find(
+        (d) => d.EQUIPMENT_ID.toUpperCase() === cleanInput.toUpperCase()
+      );
+      if (exact) {
+        return exact.EQUIPMENT_ID;
       }
     } catch (e: any) {
-      this.logger.debug(`Lỗi tra cứu D/A equipment: ${e.message}`);
+      this.logger.debug(`Lỗi kiểm tra cache thiết bị: ${e.message}`);
     }
 
-    // 3. Fallback: Dùng tên socket nếu có hoặc cleanInput
-    return cleanInput || socketEquipmentId?.trim() || 'UNKNOWN';
+    return cleanInput;
   }
 
   /**
@@ -482,20 +454,14 @@ export class DieAttachService {
     } catch (err: any) {
       this.logger.error(`[DieAttach SP Error] Lỗi khi gọi P_EQPIF_RULE_INTERLOCK_MAIN: ${err.message}`);
 
-      // Fallback an toàn: Kiểm tra cú pháp cơ bản của mã vạch và Lot để không ngưng trệ chuyền khi lỗi kết nối DB
-      const hasValidBarcode = !!(item.PCB_ID && item.PCB_ID.length >= 15);
-      const hasValidLot = !!(item.LOT_NUMBER && item.LOT_NUMBER.trim().length > 0);
-      const fallbackValid = hasValidBarcode && hasValidLot;
-
+      // Báo lỗi thực tế từ hệ thống, không tự động chuyển thành OK
       return {
-        isValid: fallbackValid,
+        isValid: false,
         operation,
-        rtnYN: fallbackValid ? 'OK' : 'NG',
+        rtnYN: 'NG',
         rtnPause: 'N',
-        rtnMsgID: fallbackValid ? 'EPBV001S' : 'EPBV002F',
-        rtnMsg: fallbackValid
-          ? 'BarcodeVerification successfully completed (Standalone Fallback).'
-          : `Invalid Barcode or Lot Number (Offline check): ${err.message}`,
+        rtnMsgID: 'EIF-ERR',
+        rtnMsg: `Interlock verification error: ${err.message}`,
       };
     }
   }
@@ -515,9 +481,13 @@ export class DieAttachService {
     const formattedDiv = div || 'WORKIN        ';
 
     const workInResult = isValid ? 'OK' : 'NG';
-    const workInMsg = isValid
-      ? '[EPBV001S] BarcodeVerification successfully completed.'
-      : `[${rtnMsgID || 'EPBV002F'}] ${rtnMsg || 'BarcodeVerification failed.'}`;
+    let workInMsg = '';
+    if (isValid) {
+      workInMsg = '[EPBV001S] BarcodeVerification successfully completed.';
+    } else {
+      const cleanMsg = (rtnMsg || 'BarcodeVerification failed.').trim();
+      workInMsg = cleanMsg.startsWith('[') ? cleanMsg : `[${rtnMsgID || 'EPBV002F'}] ${cleanMsg}`;
+    }
 
     const responsePayload = {
       DATA: [
