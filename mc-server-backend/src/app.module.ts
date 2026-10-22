@@ -12,6 +12,7 @@ import { AlarmModule } from './alarms/alarm.module';
 import { MesModule } from './mes/mes.module';
 import { SystemModule } from './system/system.module';
 import { AuthorityModule } from './authority/authority.module';
+import { InterlockModule } from './interlock/interlock.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { AuthorityModule } from './authority/authority.module';
     MesModule,
     SystemModule,
     AuthorityModule,
+    InterlockModule,
   ],
   providers: [
     {

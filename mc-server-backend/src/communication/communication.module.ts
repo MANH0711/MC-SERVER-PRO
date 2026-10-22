@@ -4,10 +4,11 @@ import { TcpClientManagerService } from './tcp-client-manager.service';
 import { CommunicationGrpcController } from './communication.grpc-controller';
 import { CommunicationRestController } from './communication.rest-controller';
 import { AuthorityModule } from '../authority/authority.module';
+import { InterlockModule } from '../interlock/interlock.module';
 
 @Global()
 @Module({
-  imports: [AuthorityModule],
+  imports: [AuthorityModule, InterlockModule],
   controllers: [CommunicationGrpcController, CommunicationRestController],
   providers: [CommunicationService, TcpClientManagerService],
   exports: [CommunicationService, TcpClientManagerService],

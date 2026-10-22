@@ -6,6 +6,7 @@ import { FrameCodec } from '../protocol/frame.codec';
 import { CommandDispatcher } from '../commands/router/command.dispatcher';
 import { ChecksumUtils } from '../protocol/checksum.utils';
 import { AuthorityService } from '../authority/authority.service';
+import { DieAttachService } from '../interlock/die-attach.service';
 
 export interface ManualCommandDto {
   equipmentId: string;
@@ -30,7 +31,8 @@ export class CommunicationService {
     private readonly equipmentRepo: EquipmentRepository,
     private readonly frameCodec: FrameCodec,
     private readonly commandDispatcher: CommandDispatcher,
-    private readonly authorityService: AuthorityService
+    private readonly authorityService: AuthorityService,
+    private readonly dieAttachService: DieAttachService
   ) {}
 
   getTransactionStream(): Observable<TransactionRecord> {
@@ -155,6 +157,18 @@ export class CommunicationService {
       }
       if (authResult?.responseMessage) {
         return Buffer.from(authResult.responseMessage, 'ascii');
+      }
+      return null;
+    }
+
+    // 2. Kiểm tra nếu là bản tin kiểm tra Work-In Interlock thiết bị Die Attach (State S050)
+    if (this.dieAttachService.isWorkInMessage(rawStr)) {
+      const workInResult = await this.dieAttachService.processWorkInMessage(rawStr, equipmentId);
+      if (workInResult?.records) {
+        workInResult.records.forEach((r) => this.transactionStream$.next(r));
+      }
+      if (workInResult?.responseMessage) {
+        return Buffer.from(workInResult.responseMessage, 'ascii');
       }
       return null;
     }

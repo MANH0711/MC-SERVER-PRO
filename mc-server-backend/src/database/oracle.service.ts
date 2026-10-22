@@ -136,6 +136,39 @@ export class OracleService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  public getOracledb(): any {
+    return oracledb;
+  }
+
+  public async executeProcedure<T = any>(
+    sql: string,
+    binds: Record<string, any> = {},
+    tnsName?: string
+  ): Promise<{ outBinds: T }> {
+    if (this.isFallbackMode) {
+      return { outBinds: {} as T };
+    }
+
+    const targetTns = tnsName || this.configService.get<string>('oracle.defaultTns') || 'ITMDEV';
+    const pool = this.pools.get(targetTns);
+    if (!pool) throw new Error(`Oracle pool [${targetTns}] chưa được khởi tạo.`);
+
+    let connection: any;
+    try {
+      connection = await pool.getConnection();
+      const result = await connection.execute(sql, binds, { autoCommit: true });
+      return { outBinds: (result.outBinds as T) || ({} as T) };
+    } finally {
+      if (connection) {
+        try {
+          await connection.close();
+        } catch (closeErr) {
+          this.logger.error('Lỗi giải phóng kết nối Oracle:', closeErr);
+        }
+      }
+    }
+  }
+
   public isUsingFallback(): boolean {
     return this.isFallbackMode;
   }
