@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MC SERVER PRO — Hướng Dẫn Vận Hành & Tài Liệu Kỹ Thuật Toàn Diện</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #070A11;
+      --bg-card: #0D1322;
+      --bg-card-hover: #121B30;
+      --bg-sidebar: #090D18;
+      --border: #1E293B;
+      --border-focus: #0EA5E9;
+      --text-main: #F1F5F9;
+      --text-muted: #94A3B8;
+      --text-sub: #64748B;
+      --primary: #06B6D4;
+      --primary-glow: rgba(6, 182, 212, 0.25);
+      --success: #10B981;
+      --success-glow: rgba(16, 185, 129, 0.2);
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --indigo: #6366F1;
+      --purple: #A855F7;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.5;
+      font-size: 13.5px;
+      overflow-x: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-main); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+    /* Top Navigation Header */
+    header {
+      height: 52px;
+      background: var(--bg-sidebar);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #0284C7, #06B6D4);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      color: #fff;
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      background: linear-gradient(to right, #fff, #94A3B8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge-ver {
+      font-size: 10px;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 12px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 20px;
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.2); }
+    }
+
+    /* Main Container Layout */
+    .app-container {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 52px);
+      overflow: hidden;
+    }
+
+    /* Sidebar Navigation */
+    aside {
+      width: 250px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .nav-search {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: #fff;
+      padding: 6px 10px;
+      font-size: 12px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    .nav-menu {
+      list-style: none;
+      padding: 8px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .nav-group-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 8px 10px 4px 10px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 12.5px;
+      transition: all 0.15s ease;
+      margin-bottom: 2px;
+    }
+
+    .nav-item:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(90deg, rgba(6, 182, 212, 0.15), transparent);
+      color: var(--primary);
+      border-left: 3px solid var(--primary);
+      font-weight: 600;
+    }
+
+    .nav-item svg {
+      width: 15px;
+      height: 15px;
+      stroke-width: 2;
+    }
+
+    /* Content Area */
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px 60px 24px;
+      background: var(--bg-main);
+    }
+
+    .view-panel {
+      display: none;
+      max-width: 1300px;
+      margin: 0 auto;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .view-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Typography & Section Styles */
+    .section-header {
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-subtitle {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    /* Grid & Cards */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+
+    @media (max-width: 1024px) {
+      .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .card-title {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .kpi-value {
+      font-size: 24px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: #fff;
+    }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Tables */
+    .table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-bottom: 18px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    th {
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 10.5px;
+      letter-spacing: 0.6px;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(30, 41, 59, 0.6);
+      color: #CBD5E1;
+      white-space: nowrap;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg-card-hover); }
+
+    /* Tags & Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+    }
+
+    .badge-cyan { background: rgba(6, 182, 212, 0.15); color: #22D3EE; border: 1px solid rgba(6, 182, 212, 0.3); }
+    .badge-green { background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-amber { background: rgba(245, 158, 11, 0.15); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-red { background: rgba(239, 68, 68, 0.15); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-purple { background: rgba(168, 85, 247, 0.15); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+    /* Code Block */
+    pre, code {
+      font-family: var(--font-mono);
+    }
+
+    pre {
+      background: #050811;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 11.5px;
+      color: #38BDF8;
+      overflow-x: auto;
+      margin: 8px 0;
+      line-height: 1.45;
+    }
+
+    /* Accordion / Collapsible */
+    .accordion-item {
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    .accordion-header {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.02);
+      transition: background 0.15s;
+    }
+
+    .accordion-header:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .accordion-body {
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      font-size: 12.5px;
+      color: #94A3B8;
+      display: none;
+      background: #080D1A;
+    }
+
+    .accordion-item.open .accordion-body {
+      display: block;
+    }
+
+    .accordion-item.open .accordion-header svg {
+      transform: rotate(180deg);
+    }
+
+    /* Action Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #1E293B;
+      color: #F8FAFC;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn:hover { background: #334155; }
+    .btn-primary { background: #0284C7; border-color: #0284C7; }
+    .btn-primary:hover { background: #0369A1; }
+    .btn-success { background: #059669; border-color: #059669; }
+    .btn-success:hover { background: #047857; }
+    .btn-danger { background: #DC2626; border-color: #DC2626; }
+    .btn-danger:hover { background: #B91C1C; }
+
+    /* Pipeline Step Diagram */
+    .pipeline-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: #070B14;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+    }
+
+    .pipeline-node {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      text-align: center;
+      min-width: 130px;
+      flex-shrink: 0;
+    }
+
+    .pipeline-node .title {
+      font-weight: 700;
+      font-size: 11.5px;
+      color: #fff;
+    }
+
+    .pipeline-node .sub {
+      font-size: 10px;
+      color: var(--text-sub);
+      font-family: var(--font-mono);
+    }
+
+    .pipeline-arrow {
+      color: var(--text-sub);
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">MC</div>
+      <div>
+        <span class="brand-title">MC SERVER PRO</span>
+        <span class="badge-ver">v2.5.0-PRO</span>
+      </div>
+    </div>
+
+    <div class="header-status">
+      <div class="status-pill">
+        <span class="pulse-dot"></span>
+        <span>SSE REALTIME: ACTIVE (&lt;50ms)</span>
+      </div>
+      <div style="color: var(--text-sub); font-family: var(--font-mono); font-size: 11px;">
+        TCP PORT: <b>5000</b> | REST: <b>3005</b> | gRPC: <b>50051</b>
+      </div>
+      <button class="btn btn-primary" onclick="window.print()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+        In Báo Cáo
+      </button>
+    </div>
+  </header>
+
+  <!-- APP CONTAINER -->
+  <div class="app-container">
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside>
+      <div class="nav-search">
+        <input type="text" id="sidebarSearch" class="search-input" placeholder="🔍 Tìm nhanh (M001, S002, SSE...)" onkeyup="filterContent()">
+      </div>
+
+      <ul class="nav-menu">
+        <li class="nav-group-title">Tổng Quan & Vận Hành</li>
+        <li class="nav-item active" onclick="switchTab('tab-overview')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          1. Giới Thiệu & Chỉ Số
+        </li>
+        <li class="nav-item" onclick="switchTab('tab-operation')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          2. Cẩm Nang Vận Hành
+        </li>
+        <li class="nav-item" onclick="switchTab('tab-authority')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+          3. Bản Tin S002/S003 (Auth)
+        </li>
+
+        <li class="nav-group-title">Kiến Trúc & Mã Lệnh</li>
+        <li class="nav-item" onclick="switchTab('tab-backend')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"></path></svg>
+          4. Kiến Trúc Backend (NestJS)
+        </li>
+        <li class="nav-item" onclick="switchTab('tab-frontend')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+          5. Kiến Trúc Frontend (React)
+        </li>
+        <li class="nav-item" onclick="switchTab('tab-commands')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+          6. Ma Trận Mã Lệnh (M/B/J)
+        </li>
+
+        <li class="nav-group-title">Báo Cáo & Xử Lý Lỗi</li>
+        <li class="nav-item" onclick="switchTab('tab-benchmark')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          7. Tải 1.000 Thiết Bị & Bảo Mật
+        </li>
+        <li class="nav-item" onclick="switchTab('tab-troubleshooting')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          8. Xử Lý Sự Cố (Troubleshooting)
+        </li>
+      </ul>
+    </aside>
+
+    <!-- MAIN CONTENT VIEW -->
+    <main>
+
+      <!-- TAB 1: OVERVIEW & METRICS -->
+      <div id="tab-overview" class="view-panel active">
+        <div class="section-header">
+          <div class="section-title">
+            <span>🏭 Giới Thiệu Dự Án MC Server Pro</span>
+            <span class="badge badge-cyan">Industrial IoT Gateway</span>
+          </div>
+          <div class="section-subtitle">Hệ thống Cổng Giao Tiếp Máy Sản Xuất & Điều Phối Dữ Liệu MES Tập Trung cấp Công Nghiệp (ITM Semiconductor / Electronics).</div>
+        </div>
+
+        <!-- KPI SUMMARY -->
+        <div class="grid-4">
+          <div class="card">
+            <div class="card-title">KHẢ NĂNG KẾT NỐI <span>⚡</span></div>
+            <div class="kpi-value" style="color: #38BDF8;">1,000+</div>
+            <div class="kpi-sub">TCP Client Sockets Đồng Thời</div>
+          </div>
+          <div class="card">
+            <div class="card-title">ĐỘ TRỄ HIỂN THỊ <span>📡</span></div>
+            <div class="kpi-value" style="color: #34D399;">&lt; 50ms</div>
+            <div class="kpi-sub">Server-Sent Events (SSE) Stream</div>
+          </div>
+          <div class="card">
+            <div class="card-title">ORACLE CONNECTION POOL <span>🗄️</span></div>
+            <div class="kpi-value" style="color: #FBBF24;">10 - 100</div>
+            <div class="kpi-sub">TNS ITMVMES / MIGHTY Schema</div>
+          </div>
+          <div class="card">
+            <div class="card-title">BẢO MẬT & BỘ ĐỆM <span>🛡️</span></div>
+            <div class="kpi-value" style="color: #C084FC;">5,000</div>
+            <div class="kpi-sub">RAM Buffer Records + Rate Limiter</div>
+          </div>
+        </div>
+
+        <!-- PIPELINE FLOW -->
+        <div class="card" style="margin-bottom: 16px;">
+          <div class="card-title">SƠ ĐỒ LUỒNG DỮ LIỆU ĐIỀU PHỐI (COMMUNICATION DATAFLOW)</div>
+          <div class="pipeline-container">
+            <div class="pipeline-node">
+              <div class="title">Thiết Bị Ngoài Xưởng</div>
+              <div class="sub">Reflow, Solder, Bend</div>
+            </div>
+            <div class="pipeline-arrow">➔ (TCP 5010)</div>
+            <div class="pipeline-node" style="border-color: #0284C7;">
+              <div class="title">MC Server TCP Client</div>
+              <div class="sub">TcpClientManager</div>
+            </div>
+            <div class="pipeline-arrow">➔ (Frame)</div>
+            <div class="pipeline-node" style="border-color: #06B6D4;">
+              <div class="title">Frame Codec & Router</div>
+              <div class="sub">STX, CRC16, ETX</div>
+            </div>
+            <div class="pipeline-arrow">➔ (Authority/Cmd)</div>
+            <div class="pipeline-node" style="border-color: #10B981;">
+              <div class="title">Oracle ADM_USER_INFO</div>
+              <div class="sub">Tra cứu OP^ / ME^</div>
+            </div>
+            <div class="pipeline-arrow">➔ (SSE Stream)</div>
+            <div class="pipeline-node" style="border-color: #A855F7;">
+              <div class="title">Web Dashboard FE</div>
+              <div class="sub">Tức Thời (&lt;50ms)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ARCHITECTURE BREAKDOWN -->
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">MỤC TIÊU & NHIỆM VỤ CỦA HỆ THỐNG</div>
+            <ul style="padding-left: 16px; color: #CBD5E1; font-size: 12.5px; line-height: 1.8;">
+              <li><b>Chuyển đổi giao thức nhị phân:</b> Đóng/mở khung gói tin công nghiệp chuẩn STX (0x02), CRC-16-IBM, ETX (0x03).</li>
+              <li><b>Xác thực người vận hành tự động:</b> Bắt bản tin quét thẻ tài khoản (S002), tra cứu cơ sở dữ liệu Oracle máy chủ MES và phản hồi lệnh cấp phép (S003) trong mili-giây.</li>
+              <li><b>Liên kết thiết bị thời gian thực:</b> Quản lý đồng thời hàng ngàn kết nối Socket TCP tới các máy Reflow, Máy Uốn (Bending), Lò Nung (Bake).</li>
+              <li><b>Giám sát Sniffer gói tin:</b> Hiển thị Hex Dump, mã lệnh, thời gian phản hồi, trạng thái OK/NG/Timeout trực quan cho kỹ sư.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">CÔNG NGHỆ CHỦ CHỐT (TECH STACK)</div>
+            <table style="margin-top: 4px;">
+              <tr><th>Phân Hệ</th><th>Công Nghệ Sử Dụng</th><th>Đặc Điểm Kỹ Thuật</th></tr>
+              <tr><td>Backend Core</td><td>NestJS 10.4 + Node.js 24</td><td>Non-blocking Event Loop, RxJS Observables</td></tr>
+              <tr><td>Microservice</td><td>gRPC (Protobuf v3)</td><td>Port 50051, RPC nhị phân siêu tốc độ</td></tr>
+              <tr><td>Realtime Push</td><td>Server-Sent Events (SSE)</td><td>HTTP long-lived stream, tự động kết nối lại</td></tr>
+              <tr><td>Database</td><td>Oracle Database (node-oracledb)</td><td>Thick mode, Connection Pooling, Bind Variables</td></tr>
+              <tr><td>Frontend UI</td><td>React 18 + Vite + Tailwind/CSS</td><td>Giao diện Dark Mode điều khiển cao cấp, 4 ngôn ngữ</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: OPERATION GUIDE -->
+      <div id="tab-operation" class="view-panel">
+        <div class="section-header">
+          <div class="section-title">
+            <span>🎮 Cẩm Nang Vận Hành & Khởi Động Hệ Thống</span>
+            <span class="badge badge-green">Operational Playbook</span>
+          </div>
+          <div class="section-subtitle">Hướng dẫn chi tiết quy trình chạy Backend, Frontend và điều khiển kết nối máy tại xưởng.</div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-title">BƯỚC 1: KHỞI ĐỘNG BACKEND</div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Mở PowerShell tại thư mục backend:</p>
+            <pre>cd e:\DATA\MC-SERVER-PRO-main\mc-server-backend
+npm run start:dev</pre>
+            <p style="font-size: 11px; color: #10B981; margin-top: 6px;">✔ Lắng nghe REST port 3005 và gRPC 50051</p>
+          </div>
+          <div class="card">
+            <div class="card-title">BƯỚC 2: KHỞI ĐỘNG FRONTEND</div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Mở PowerShell tại thư mục gốc:</p>
+            <pre>cd e:\DATA\MC-SERVER-PRO-main
+npm run dev -- --host</pre>
+            <p style="font-size: 11px; color: #10B981; margin-top: 6px;">✔ Truy cập web tại: http://localhost:5173</p>
+          </div>
+          <div class="card">
+            <div class="card-title">BƯỚC 3: GIÁM SÁT THỜI GIAN THỰC</div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Kiểm tra trên thanh TopBar:</p>
+            <ul style="padding-left: 14px; font-size: 11.5px; color: #CBD5E1; line-height: 1.6;">
+              <li>Đèn xanh: <b>API 3005: ONLINE</b></li>
+              <li>Bộ đếm: <b>ORACLE: CONNECTED</b></li>
+              <li>Luồng SSE tự động nhận giao dịch</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 16px;">
+          <div class="card-title">CƠ CHẾ ĐIỀU KHIỂN KẾT NỐI (START / STOP THIẾT BỊ)</div>
+          <table style="margin-top: 8px;">
+            <tr>
+              <th>Hành Động</th>
+              <th>Thao Tác Trên Giao Diện</th>
+              <th>Cơ Chế Backend (API)</th>
+              <th>Hành Vi Chống Tự Kết Nối Lại</th>
+            </tr>
+            <tr>
+              <td><span class="badge badge-red">Dừng 1 Máy (Stop)</span></td>
+              <td>Bấm nút <b>Dừng</b> tại thẻ thiết bị</td>
+              <td><code>POST /api/communication/stop/:id</code></td>
+              <td>Ghi nhận vào <code>manuallyStoppedDevices</code>, hủy socket và hủy timer auto-reconnect.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-red">Dừng Hết (Stop All)</span></td>
+              <td>Bấm nút đỏ <b>Dừng Tất Cả</b> trên TopBar</td>
+              <td><code>POST /api/communication/stop-all</code></td>
+              <td>Đóng toàn bộ 1.000 socket, chặn vĩnh viễn vòng lặp tự động kết nối lại.</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-green">Chạy Hết (Start All)</span></td>
+              <td>Bấm nút xanh <b>Khởi Động Tất Cả</b></td>
+              <td><code>POST /api/communication/start-all</code></td>
+              <td>Xóa danh sách cờ dừng, tự động mở kết nối TCP lệch pha (staggered delay).</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-cyan">Kết Nối Lại (Reset)</span></td>
+              <td>Bấm nút <b>Kết Nối Lại</b> tại thiết bị</td>
+              <td><code>POST /api/communication/reconnect/:id</code></td>
+              <td>Xóa cờ Stop của máy đó và lập tức tạo kết nối socket mới.</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 3: AUTHORITY S002/S003 -->
+      <div id="tab-authority" class="view-panel">
+        <div class="section-header">
+          <div class="section-title">
+            <span>🛡️ Bản Tin Kiểm Tra Quyền Hạn (Authority S002 / S003)</span>
+            <span class="badge badge-purple">Operator Card Validation</span>
+          </div>
+          <div class="section-subtitle">Chi tiết quy trình giải mã chuỗi quét thẻ từ máy xưởng và cấp phép vận hành dựa trên Oracle ADM_USER_INFO.</div>
+        </div>
+
+        <div class="card" style="margin-bottom: 14px;">
+          <div class="card-title">QUY TRÌNH BẢN TIN THỰC TẾ</div>
+          <div class="grid-2" style="margin-top: 8px;">
+            <div>
+              <p style="font-weight: 700; color: #38BDF8; margin-bottom: 4px;">1. Bản tin EQP gửi lên (S002):</p>
+              <pre>REFLOW12AS002AUTHORITY     ;OP^VM3193023^VM3193023@;AUTHORITY     </pre>
+              <ul style="font-size: 11.5px; color: var(--text-muted); padding-left: 14px; line-height: 1.6;">
+                <li><b>Equipment:</b> <code>REFLOW12A</code></li>
+                <li><b>State:</b> <code>S002</code> | <b>Div:</b> <code>AUTHORITY</code></li>
+                <li><b>Loại thẻ:</b> <code>OP^</code> (Operator) hoặc <code>ME^</code> (Maintenance Engineer)</li>
+                <li><b>Mã thẻ:</b> <code>VM3193023</code></li>
+              </ul>
+            </div>
+            <div>
+              <p style="font-weight: 700; color: #34D399; margin-bottom: 4px;">2. MC Server phản hồi (S003):</p>
+              <pre>XREFL012AS003AUTHORITY     ;OK^[ELIS001S] Validation successfully completed.;AUTHORITY     </pre>
+              <ul style="font-size: 11.5px; color: var(--text-muted); padding-left: 14px; line-height: 1.6;">
+                <li><b>Tên máy chuẩn DB:</b> <code>XREFL012A</code> (Tự động ánh xạ từ <code>MIGHTY.GATEWAY_DEVICES</code>)</li>
+                <li><b>Kết quả:</b> <code>OK^</code> (Thành công) hoặc <code>NG^</code> (Không hợp lệ)</li>
+                <li><b>Mã thông báo:</b> <code>[ELIS001S]</code> (Thành công), <code>[ELIS002F]</code> (Thẻ không tồn tại)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">CÂU LỆNH TRUY VẤN ORACLE DATABASE CHÍNH XÁC</div>
+          <table style="margin-top: 6px;">
+            <tr><th>Loại Thẻ</th><th>Điều Kiện Phân Quyền</th><th>Câu Lệnh SQL Chuẩn Hóa (Bind Variable)</th></tr>
+            <tr>
+              <td><span class="badge badge-green">OP^ (Operator)</span></td>
+              <td>Công nhân thao tác bình thường (EXPAND_FLAG4 = 'N')</td>
+              <td><code>SELECT * FROM ADM_USER_INFO WHERE PLANT = 'ITMVIET' AND USER_ID = :1 AND EXPAND_FLAG4 = 'N'</code></td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-purple">ME^ (Maintenance)</span></td>
+              <td>Kỹ sư bảo trì, cài đặt máy (EXPAND_FLAG4 = 'Y')</td>
+              <td><code>SELECT * FROM ADM_USER_INFO WHERE PLANT = 'ITMVIET' AND USER_ID = :1 AND EXPAND_FLAG4 = 'Y'</code></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 4: BACKEND ARCHITECTURE -->
+      <div id="tab-backend" class="view-panel">
+        <div class="section-header">
+          <div class="section-title">
+            <span>⚙️ Kiến Trúc Chuyên Sâu Backend (NestJS)</span>
+            <span class="badge badge-cyan">Core Engine</span>
+          </div>
+          <div class="section-subtitle">Cấu trúc module, dịch vụ quản lý Socket TCP, xử lý nhị phân và tối ưu hóa hàng đợi.</div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">CẤU TRÚC PHÂN TẦNG DỊCH VỤ (SERVICE LAYERS)</div>
+            <ul style="font-size: 12px; color: #CBD5E1; padding-left: 16px; line-height: 1.8;">
+              <li><b><code>TcpClientManagerService:</code></b> Quản lý vòng đời kết nối TCP Sockets tới 1.000 máy. Áp dụng <code>setNoDelay(true)</code>, <code>setKeepAlive</code>, bộ đệm phân phối lệch pha và Smart Heartbeat.</li>
+              <li><b><code>CommunicationService:</code></b> Xử lý nhận frame nhị phân, giải mã CRC-16, điều hướng tới CommandDispatcher và phát luồng RxJS <code>transactionStream$</code>.</li>
+              <li><b><code>AuthorityService:</code></b> Bóc tách bản tin S002, tra cứu Oracle <code>ADM_USER_INFO</code>, ánh xạ tên máy qua <code>MIGHTY.GATEWAY_DEVICES</code> và sinh gói tin S003.</li>
+              <li><b><code>TransactionRepository:</code></b> Quản lý bộ đệm 5.000 bản ghi RAM và hàng đợi ghi nền định kỳ 500ms vào bảng <code>MC_TRANSACTION_LOG</code>.</li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-title">CẤU HÌNH CỔNG & PROTOCOL</div>
+            <pre>// Cấu hình giao thức nhị phân công nghiệp
+STX: 0x02 (Start of Text)
+Length: 2 Bytes (Big Endian)
+Device ID: 1 Byte
+Server No: 1 Byte
+Command Code: 4 Bytes ASCII (VD: 'M001', 'B101')
+Sub Code: 1 Byte
+Payload: N Bytes Binary
+CRC-16: 2 Bytes (Poly 0xA001)
+ETX: 0x03 (End of Text)</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: FRONTEND ARCHITECTURE -->
+      <div id="tab-frontend" class="view-panel">
+        <div class="section-header">
+          <div class="section-title">
+            <span>💻 Kiến Trúc Chuyên Sâu Frontend (React + Vite)</span>
+            <span class="badge badge-cyan">Client Application</span>
+          </div>
+          <div class="section-subtitle">Quản lý trạng thái tập trung (Context API), giải mã gói tin thời gian thực và đa ngôn ngữ.</div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-title">QUẢN LÝ TRẠNG THÁI (APP CONTEXT)</div>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+              Tập trung toàn bộ trạng thái hệ thống: danh sách máy, nhóm chuyền, lịch sử giao dịch (500 records), danh sách báo động, và phiên làm việc kỹ sư.
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-title">LUỒNG SSE EVENT CONSUMER</div>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+              Hàm <code>subscribeTransactionStream</code> mở kết nối <code>EventSource</code> tới backend, tự động giải mã ASCII/JSON và đưa lên giao diện ngay lập tức (&lt;50ms).
+            </p>
+          </div>
+          <div class="card">
+            <div class="card-title">ĐA NGÔN NGỮ (I18N)</div>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+              Hỗ trợ đầy đủ 4 ngôn ngữ nhà máy thông minh: Tiếng Việt (VI), English (EN), 한국어 (KO), 中文 (ZH).
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 6: COMMAND REFERENCE -->
+      <div id="tab-commands" class="view-panel">
+        <div class="section-header">
+          <div class="section-title">
+            <span>📋 Ma Trận Mã Lệnh Công Nghiệp (Command Reference)</span>
+            <span class="badge badge-cyan">Mxxx / Bxxx / Jxxx</span>
+          </div>
+          <div class="section-subtitle">Danh mục đầy đủ các lệnh giao tiếp giữa MC Server và máy sản xuất.</div>
+        </div>
+
+        <div class="table-container">
+          <table id="commandsTable">
+            <thead>
+              <tr>
+                <th>Mã Lệnh</th>
+                <th>Phân Loại</th>
+                <th>Tên Lệnh</th>
+                <th>Mô Tả Chức Năng</th>
+                <th>Loại Máy Áp Dụng</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="badge badge-cyan">M001</span></td><td>Common</td><td>Heartbeat Ping</td><td>Kiểm tra tình trạng sống/chết của kết nối Socket</td><td>Tất cả máy</td></tr>
+              <tr><td><span class="badge badge-cyan">M002</span></td><td>Common</td><td>Status Inquiry</td><td>Truy vấn trạng thái hoạt động (Run/Idle/Error)</td><td>Tất cả máy</td></tr>
+              <tr><td><span class="badge badge-cyan">M003</span></td><td>Common</td><td>Recipe Upload</td><td>Tải công thức chế tạo từ máy lên MC Server</td><td>Tất cả máy</td></tr>
+              <tr><td><span class="badge badge-cyan">M004</span></td><td>Common</td><td>Recipe Download</td><td>Gửi công thức chế tạo đã kiểm duyệt xuống máy</td><td>Tất cả máy</td></tr>
+              <tr><td><span class="badge badge-cyan">M005</span></td><td>Common</td><td>Alarm Report</td><td>Máy báo cáo mã lỗi/báo động khẩn cấp lên server</td><td>Tất cả máy</td></tr>
+              <tr><td><span class="badge badge-cyan">M007</span></td><td>Common</td><td>Lot Track-In</td><td>Báo cáo bắt đầu sản xuất lô hàng mới (Check MES)</td><td>Tất cả máy</td></tr>
+              <tr><td><span class="badge badge-cyan">M008</span></td><td>Common</td><td>Lot Track-Out</td><td>Báo cáo hoàn thành sản xuất lô hàng</td><td>Tất cả máy</td></tr>
+              <tr><td><span class="badge badge-amber">B101</span></td><td>Bake Oven</td><td>Temp Profile Upload</td><td>Tải biên dạng nhiệt độ nhiều vùng nung</td><td>Lò sấy (Oven/Bake)</td></tr>
+              <tr><td><span class="badge badge-amber">B103</span></td><td>Bake Oven</td><td>Zone Temp Monitor</td><td>Giám sát nhiệt độ từng khoang theo thời gian thực</td><td>Lò sấy (Oven/Bake)</td></tr>
+              <tr><td><span class="badge badge-amber">B104</span></td><td>Bake Oven</td><td>Vacuum Pressure Report</td><td>Báo cáo áp suất chân không buồng nung</td><td>Lò sấy (Oven/Bake)</td></tr>
+              <tr><td><span class="badge badge-purple">J201</span></td><td>Bending</td><td>Angle Program Upload</td><td>Tải chương trình thông số góc uốn</td><td>Máy uốn (Bending)</td></tr>
+              <tr><td><span class="badge badge-purple">J203</span></td><td>Bending</td><td>Bending Force Report</td><td>Báo cáo lực ép uốn phôi kim loại/PCB</td><td>Máy uốn (Bending)</td></tr>
+              <tr><td><span class="badge badge-purple">J204</span></td><td>Bending</td><td>Tooling Life Counter</td><td>Đếm tuổi thọ và số lần dập dao uốn</td><td>Máy uốn (Bending)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 7: BENCHMARK & SECURITY REPORT -->
+      <div id="tab-benchmark" class="view-panel">
+        <div class="section-header">
+          <div class="section-title">
+            <span>🚀 Báo Cáo Chịu Tải 1.000 Thiết Bị & Kiểm Định Bảo Mật</span>
+            <span class="badge badge-green">Passed Stress-Test</span>
+          </div>
+          <div class="section-subtitle">Kết quả kiểm tra thực nghiệm tải đồng thời và các lớp bảo vệ an toàn thông tin đã kích hoạt.</div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">CÁC LỚP BẢO MẬT AN TOÀN THÔNG TIN ĐÃ THIẾT LẬP</div>
+            <table style="margin-top: 6px;">
+              <tr><th>Lớp Bảo Vệ</th><th>Cơ Chế Kỹ Thuật</th><th>Hiệu Quả</th></tr>
+              <tr><td>HTTP Security</td><td><b>Helmet Middleware</b></td><td>Chống Clickjacking, MIME sniffing, XSS</td></tr>
+              <tr><td>Chống DoS / Brute-Force</td><td><b>ThrottlerGuard</b></td><td>Giới hạn 150 request / 60s cho mỗi IP</td></tr>
+              <tr><td>Lọc Dữ Liệu Đầu Vào</td><td><b>ValidationPipe</b></td><td>Tự động loại bỏ thuộc tính lạ ngoài DTO</td></tr>
+              <tr><td>Chống SQL Injection</td><td><b>Oracle Bind Variables</b></td><td>Tham số hóa tuyệt đối (:1, :equipmentId)</td></tr>
+              <tr><td>Bảo Vệ Lỗi DB</td><td><b>Masking Error Messages</b></td><td>Không để lộ chuỗi kết nối và mã lỗi ORA</td></tr>
+            </table>
+          </div>
+
+          <div class="card">
+            <div class="card-title">NĂNG LỰC ĐÁP ỨNG 1.000 THIẾT BỊ ĐỒNG THỜI</div>
+            <table style="margin-top: 6px;">
+              <tr><th>Hạng Mục</th><th>Cấu Hình Trước Đây</th><th>Đã Tối Ưu Hóa (Hiện Tại)</th></tr>
+              <tr><td>Oracle Pool (ITMVMES)</td><td>Max 20 connections</td><td><b>Max 100 connections</b> (PoolMin: 10)</td></tr>
+              <tr><td>Transaction Logging</td><td>Chặn luồng (await DML)</td><td><b>Hàng đợi nền O(1)</b> (Batch 500ms)</td></tr>
+              <tr><td>Bộ đệm RAM</td><td>500 records</td><td><b>5.000 records</b> (Không mất dữ liệu)</td></tr>
+              <tr><td>Vòng lặp Heartbeat</td><td>Ping đồng loạt 1.000 máy</td><td><b>Smart Heartbeat</b> (Chỉ ping máy idle &gt;30s)</td></tr>
+              <tr><td>Khởi động Socket</td><td>Cùng lúc 1.000 socket</td><td><b>Staggered Delay</b> (Tránh tràn file descriptor)</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 8: TROUBLESHOOTING -->
+      <div id="tab-troubleshooting" class="view-panel">
+        <div class="section-header">
+          <div class="section-title">
+            <span>🔧 Sổ Tay Xử Lý Sự Cố (Troubleshooting Matrix)</span>
+            <span class="badge badge-amber">Lỗi & Khắc Phục</span>
+          </div>
+          <div class="section-subtitle">Hướng dẫn chẩn đoán và khắc phục nhanh các sự cố thường gặp trong nhà máy.</div>
+        </div>
+
+        <div class="accordion-item open">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span>1. Máy sản xuất báo OFFLINE hoặc ECONNREFUSED</span>
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+          <div class="accordion-body">
+            <b>Nguyên nhân:</b> Thiết bị ngoài xưởng chưa bật nguồn, chưa bật cổng TCP Server (5010), hoặc bị chặn bởi Firewall nội bộ.<br>
+            <b>Cách xử lý:</b>
+            <ol style="padding-left: 18px; margin-top: 4px;">
+              <li>Kiểm tra ping tới IP máy từ MC Server: <code>ping 192.168.35.xxx</code></li>
+              <li>Kiểm tra cổng thiết bị: <code>Test-NetConnection -ComputerName 192.168.35.xxx -Port 5010</code></li>
+              <li>Trên Web Dashboard, bấm nút <b>Kết Nối Lại</b> để kích hoạt socket mới.</li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span>2. Quẹt thẻ quầy Reflow báo NG: [ELIS002F] Operator not found</span>
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+          <div class="accordion-body">
+            <b>Nguyên nhân:</b> Thẻ nhân viên chưa được đăng ký trong bảng Oracle <code>ADM_USER_INFO</code> của nhà máy <code>ITMVIET</code>, hoặc công nhân quét thẻ đang gắn cờ bảo trì (EXPAND_FLAG4 = 'Y') trong khi máy yêu cầu OP^.<br>
+            <b>Cách xử lý:</b> Liên hệ phòng IT/MES kiểm tra tài khoản trên bảng <code>ADM_USER_INFO</code> với điều kiện <code>EXPAND_FLAG4 = 'N'</code>.
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span>3. Hệ thống chuyển sang FALLBACK_CACHE (Mất kết nối Oracle)</span>
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+          <div class="accordion-body">
+            <b>Nguyên nhân:</b> Đường truyền tới máy chủ Oracle ITMVMES (192.168.35.202:1521) bị gián đoạn. MC Server đã tự động kích hoạt chế độ In-Memory Cache an toàn để thiết bị không bị dừng đột ngột.<br>
+            <b>Cách xử lý:</b> Kiểm tra dịch vụ Oracle Listener trên server 192.168.35.202. Khi mạng khôi phục, MC Server sẽ tự động kết nối lại pool.
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    // Tab switching logic
+    function switchTab(tabId) {
+      document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+
+      const targetPanel = document.getElementById(tabId);
+      if (targetPanel) targetPanel.classList.add('active');
+
+      const activeNav = Array.from(document.querySelectorAll('.nav-item')).find(item => 
+        item.getAttribute('onclick')?.includes(tabId)
+      );
+      if (activeNav) activeNav.classList.add('active');
+    }
+
+    // Accordion toggle
+    function toggleAccordion(header) {
+      const item = header.parentElement;
+      item.classList.toggle('open');
+    }
+
+    // Search filter across content and commands table
+    function filterContent() {
+      const query = document.getElementById('sidebarSearch').value.toLowerCase().trim();
+      const rows = document.querySelectorAll('#commandsTable tbody tr');
+
+      if (query) {
+        if (query.startsWith('m0') || query.startsWith('b1') || query.startsWith('j2') || query.includes('cmd')) {
+          switchTab('tab-commands');
+        } else if (query.includes('s002') || query.includes('s003') || query.includes('auth')) {
+          switchTab('tab-authority');
+        } else if (query.includes('error') || query.includes('lỗi') || query.includes('hỏng')) {
+          switchTab('tab-troubleshooting');
+        }
+      }
+
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        if (text.includes(query)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>
