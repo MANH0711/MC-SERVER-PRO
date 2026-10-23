@@ -551,6 +551,26 @@ export class DieAttachService {
 
       // Nếu kết quả kiểm tra bị chặn (NG) hoặc cảnh báo, tự động ghi nhận vào BIZ_ILRULE_CHECK_HISTORY
       if (!isValid) {
+        // Tìm rule_key chuẩn từ appliedRules (bảng BIZ_ILRULE_INFO)
+        let resolvedRuleKey = 'RK20260121-0001';
+        if (appliedRules && appliedRules.length > 0) {
+          const byId = appliedRules.find((r) => r.ruleId === rtnMsgID);
+          if (byId && byId.ruleKey) {
+            resolvedRuleKey = byId.ruleKey;
+          } else if (rtnMsg.toLowerCase().includes('unit') || rtnMsg.toLowerCase().includes('bcr') || rtnMsg.toLowerCase().includes('pcb')) {
+            const unitRule = appliedRules.find((r) => r.ruleId === 'EIF-IR004');
+            if (unitRule) resolvedRuleKey = unitRule.ruleKey;
+          } else if (rtnMsg.toLowerCase().includes('lot') || rtnMsg.toLowerCase().includes('spin')) {
+            const lotRule = appliedRules.find((r) => r.ruleId === 'EIF-IR001');
+            if (lotRule) resolvedRuleKey = lotRule.ruleKey;
+          } else if (rtnMsg.toLowerCase().includes('run_start') || rtnMsg.toLowerCase().includes('status')) {
+            const equipRule = appliedRules.find((r) => r.ruleId === 'EIF-IR002');
+            if (equipRule) resolvedRuleKey = equipRule.ruleKey;
+          } else {
+            resolvedRuleKey = appliedRules[0].ruleKey;
+          }
+        }
+
         await this.recordInterlockHistory(
           targetPlant,
           item.LOT_NUMBER || '',
@@ -559,14 +579,16 @@ export class DieAttachService {
           item.PCB_ID || '',
           parsed.rawMessage,
           rtnMsg,
-          'Y',
-          rtnMsgID,
-          'EPBV',
+          'N',
+          undefined,
+          resolvedRuleKey,
           {
             recipeId: item.RECIPE || 'ITMRecipe',
             transTime: transTime,
             eifDevice: item.CONFIG || '',
             transCode: 'EPBV',
+            deviceStype: deviceStype,
+            userId: dbEquipmentName,
           }
         );
       }
@@ -586,6 +608,11 @@ export class DieAttachService {
     } catch (err: any) {
       this.logger.error(`[DieAttach SP Error] Lỗi khi gọi P_EQPIF_RULE_INTERLOCK_MAIN: ${err.message}`);
 
+      let fallbackRuleKey = 'RK20260121-0001';
+      if (appliedRules && appliedRules.length > 0) {
+        fallbackRuleKey = appliedRules[0].ruleKey;
+      }
+
       // Đảm bảo lịch sử lỗi luôn được lưu vào Oracle DB kể cả khi SP ném Exception
       await this.recordInterlockHistory(
         targetPlant,
@@ -595,14 +622,16 @@ export class DieAttachService {
         item.PCB_ID || '',
         parsed.rawMessage,
         `Interlock verification error: ${err.message}`,
-        'Y',
-        'EIF-ERR',
-        'EPBV',
+        'N',
+        undefined,
+        fallbackRuleKey,
         {
           recipeId: item.RECIPE || 'ITMRecipe',
           transTime: transTime,
           eifDevice: item.CONFIG || '',
           transCode: 'EPBV',
+          deviceStype: deviceStype,
+          userId: dbEquipmentName,
         }
       );
 
@@ -631,14 +660,16 @@ export class DieAttachService {
     unitId: string,
     rawMsg: string,
     checkMsg: string,
-    alarmStatus: 'Y' | 'N',
-    alarmId: string = 'EIF-000',
-    ruleKey: string = 'EPBV',
+    alarmStatus: 'Y' | 'N' = 'N',
+    alarmId?: string,
+    ruleKey?: string,
     details?: {
       recipeId?: string;
       transTime?: string;
       eifDevice?: string;
       transCode?: string;
+      deviceStype?: string;
+      userId?: string;
     }
   ): Promise<void> {
     try {
@@ -656,12 +687,30 @@ export class DieAttachService {
         targetPlant = 'ITMVIET';
       }
 
+      // transTime chuẩn 14 ký tự YYYYMMDDHHmmss (ví dụ 20261023174143)
+      const tTime = details?.transTime || new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+
+      // 1. Mã ALARM_ID chuẩn theo yêu cầu: ILARM + TRANSTIME rút gọn (YYMMDDHHmmss) -> ví dụ: ILARM261023174143
+      const shortTransTime = tTime.length === 14 ? tTime.slice(2) : tTime;
+      const finalAlarmId = alarmId && alarmId.startsWith('ILARM') ? alarmId : `ILARM${shortTransTime}`;
+
+      // 2. Cột ALARM_STATUS luôn là 'N'
+      const finalAlarmStatus = 'N';
+
+      // 3. USER_ID là ID thiết bị
+      const finalUserId = (details?.userId || equip || 'MC_SERVER').trim();
+
+      // 4. TRANS_KEY_1 là devicestype của lot (ví dụ 'SSDB-5SA', 'S27')
+      const transKey1 = (details?.deviceStype || 'ALL').trim();
+
+      // 5. RULE_KEY lấy từ bảng BIZ_ILRULE_INFO (ví dụ 'RK20260121-0004', 'RK20260121-0001'...)
+      const finalRuleKey = (ruleKey || 'RK20260121-0001').trim();
+
       // Định dạng chuỗi RECEIVE_MSG chuẩn theo hệ thống MES:
       // Mẫu chuẩn: Plant: ITMVIET, Trans Code: EPBV, Lot: 6431V, Oper: 200, Equip: XREFL012A, IDType: PCB, BCR ID: B3726504040042400182325, RecipeID: ON3-ON4-LANE1-R01, TransTime: 20261023174143, EIFDevice:SP4743C-N-A-BW
       let formattedReceiveMsg = (rawMsg || '').trim();
       if (!formattedReceiveMsg.startsWith('Plant:')) {
-        const tCode = details?.transCode || ruleKey || 'EPBV';
-        const tTime = details?.transTime || new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+        const tCode = details?.transCode || 'EPBV';
         const recId = details?.recipeId || 'ITMRecipe';
         const eifDev = details?.eifDevice ? `, EIFDevice:${details.eifDevice}` : '';
         formattedReceiveMsg = `Plant: ${targetPlant}, Trans Code: ${tCode}, Lot: ${lot || ' '}, Oper: ${oper || ' '}, Equip: ${equip || ' '}, IDType: PCB, BCR ID: ${unitId || ' '}, RecipeID: ${recId}, TransTime: ${tTime}${eifDev}`;
@@ -677,11 +726,11 @@ export class DieAttachService {
           alarm_status, user_id, report_date
         ) VALUES (
           :plant, TO_CHAR(systimestamp, 'yyyymmddhh24miss.ff6'), TO_CHAR(sysdate, 'yyyymmddhh24miss'),
-          :ruleKey, NVL(:lot, ' '), 'NET',
+          :ruleKey, NVL(:lot, ' '), NVL(:transKey1, 'ALL'),
           NVL(:oper, ' '), 'DA', NVL(:equip, ' '),
           'PCB', NVL(:unitId, ' '),
           SUBSTR(:receiveMsg, 1, 4000), SUBSTR(:checkMsg, 1, 4000), :alarmId,
-          :alarmStatus, 'MC_SERVER', TO_CHAR(sysdate, 'yyyymmdd')
+          :alarmStatus, SUBSTR(:userId, 1, 20), TO_CHAR(sysdate, 'yyyymmdd')
         )
       `;
 
@@ -689,19 +738,21 @@ export class DieAttachService {
         sql,
         {
           plant: targetPlant,
-          ruleKey: ruleKey || 'EPBV',
+          ruleKey: finalRuleKey,
           lot: lot || ' ',
+          transKey1: transKey1,
           oper: oper || ' ',
           equip: equip || ' ',
           unitId: unitId || ' ',
           receiveMsg: formattedReceiveMsg,
           checkMsg: (checkMsg || ' ').trim(),
-          alarmId: alarmId || 'EIF-000',
-          alarmStatus,
+          alarmId: finalAlarmId,
+          alarmStatus: finalAlarmStatus,
+          userId: finalUserId,
         },
         'ITMVMES'
       );
-      this.logger.log(`[Audit History] Đã lưu lịch sử Interlock (Plant: ${targetPlant}) vào BIZ_ILRULE_CHECK_HISTORY (rows=${rowsAffected}): máy ${equip}, Lot ${lot}, Alarm: ${alarmStatus}`);
+      this.logger.log(`[Audit History] Đã lưu lịch sử Interlock (Plant: ${targetPlant}, RuleKey: ${finalRuleKey}, LotType: ${transKey1}, AlarmId: ${finalAlarmId}, User: ${finalUserId}) vào BIZ_ILRULE_CHECK_HISTORY (rows=${rowsAffected})`);
     } catch (err: any) {
       this.logger.warn(`[Audit History] Không thể ghi BIZ_ILRULE_CHECK_HISTORY: ${err.message}`);
     }
