@@ -142,31 +142,86 @@ export class DieAttachService {
   }
 
   /**
-   * Lấy thông tin bản ghi thiết bị từ cấu hình thật trong MIGHTY.GATEWAY_DEVICES
+   * Lấy thông tin bản ghi thiết bị từ cấu hình thật trong MIGHTY.GATEWAY_DEVICES và MIGHTY.ADM_EQUIPMENT
    */
   async resolveEquipmentRecord(
-    parsedEquipment: string,
+    parsedEquipment?: string,
     socketEquipmentId?: string
   ): Promise<EquipmentRecord | null> {
-    const targetId = (socketEquipmentId && socketEquipmentId.trim())
-      ? socketEquipmentId.trim()
-      : (parsedEquipment || '').trim();
+    const candidateIds = [socketEquipmentId, parsedEquipment]
+      .map((id) => (id || '').trim())
+      .filter((id, index, self) => id.length > 0 && id.toUpperCase() !== 'UNKNOWN' && self.indexOf(id) === index);
 
-    if (!targetId) return null;
+    if (candidateIds.length === 0) return null;
 
     try {
-      // 1. Thử tìm theo ID chính xác trước
-      const direct = await this.equipmentRepo.findById(targetId);
-      if (direct) return direct;
+      // 1. Thử tìm theo ID chính xác trước trong Cache
+      for (const id of candidateIds) {
+        const direct = await this.equipmentRepo.findById(id);
+        if (direct && direct.PLANT) return direct;
+      }
 
-      // 2. Thử tìm trong toàn bộ danh sách (không phân biệt chữ hoa thường)
+      // 2. Thử tìm trong toàn bộ danh sách thiết bị
       const allDevices = await this.equipmentRepo.findAll();
-      const matched = allDevices.find(
-        (d) => d.EQUIPMENT_ID.toUpperCase() === targetId.toUpperCase()
-      );
-      if (matched) return matched;
+      for (const id of candidateIds) {
+        const upper = id.toUpperCase();
+        const matched = allDevices.find(
+          (d) =>
+            d.EQUIPMENT_ID?.toUpperCase() === upper ||
+            String(d.DEVICE_ID || '').toUpperCase() === upper ||
+            d.EQUIPMENT_MAIN?.toUpperCase() === upper
+        );
+        if (matched && matched.PLANT) return matched;
+      }
+
+      // 2.1 Khớp mềm (loại bỏ khoảng trắng và ký tự phân cách)
+      for (const id of candidateIds) {
+        const norm = id.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        if (norm) {
+          const partial = allDevices.find((d) => {
+            const dNorm = (d.EQUIPMENT_ID || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+            const descNorm = (d.DESCRIPTION || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+            return dNorm === norm || dNorm.includes(norm) || norm.includes(dNorm) || descNorm.includes(norm);
+          });
+          if (partial && partial.PLANT) return partial;
+        }
+      }
+
+      // 3. Nếu chưa tìm thấy trong cache và Oracle đang online, truy vấn trực tiếp DB
+      if (!this.oracleService.isUsingFallback()) {
+        for (const id of candidateIds) {
+          const sql = `
+            SELECT PLANT, EQUIPMENT_ID, DESCRIPTION, HOST_ADDRESS, HOST_PORT, 
+                   TO_CHAR(DEVICE_ID) as DEVICE_ID, SERVER_NO, GROUP_NAME, EQUIPMENT_ORDER, 
+                   EQUIPMENT_MAIN, ENABLE, FIELD_01, FIELD_02, FIELD_03, 
+                   INTERLOCK_RECIPE, EQUIPMENT_MODEL, INTERLOCK_PARAM, INTERLOCK_TRACE
+            FROM (
+              SELECT PLANT, EQUIPMENT_ID, DESCRIPTION, HOST_ADDRESS, HOST_PORT, 
+                     DEVICE_ID, SERVER_NO, GROUP_NAME, EQUIPMENT_ORDER, 
+                     EQUIPMENT_MAIN, ENABLE, FIELD_01, FIELD_02, FIELD_03, 
+                     INTERLOCK_RECIPE, EQUIPMENT_MODEL, INTERLOCK_PARAM, INTERLOCK_TRACE,
+                     1 as PRIORITY
+              FROM MIGHTY.GATEWAY_DEVICES 
+              WHERE UPPER(EQUIPMENT_ID) = UPPER(:id) OR UPPER(DEVICE_ID) = UPPER(:id)
+              UNION ALL
+              SELECT PLANT, EQUIPMENT_ID, DESCRIPTION, '127.0.0.1' as HOST_ADDRESS, 5000 as HOST_PORT, 
+                     0 as DEVICE_ID, 1 as SERVER_NO, 'DEFAULT' as GROUP_NAME, 0 as EQUIPMENT_ORDER, 
+                     EQUIPMENT_ID as EQUIPMENT_MAIN, 'Y' as ENABLE, '' as FIELD_01, '' as FIELD_02, '' as FIELD_03, 
+                     'YES' as INTERLOCK_RECIPE, 'DEFAULT' as EQUIPMENT_MODEL, '' as INTERLOCK_PARAM, '' as INTERLOCK_TRACE,
+                     2 as PRIORITY
+              FROM MIGHTY.ADM_EQUIPMENT 
+              WHERE UPPER(EQUIPMENT_ID) = UPPER(:id)
+            )
+            ORDER BY PRIORITY ASC
+          `;
+          const rows = await this.oracleService.executeQuery<EquipmentRecord>(sql, { id }, 'ITMVMES');
+          if (rows && rows.length > 0 && rows[0].PLANT) {
+            return rows[0];
+          }
+        }
+      }
     } catch (err: any) {
-      this.logger.debug(`Lỗi tìm bản ghi thiết bị ${targetId}: ${err.message}`);
+      this.logger.debug(`Lỗi tìm bản ghi thiết bị: ${err.message}`);
     }
 
     return null;
@@ -222,7 +277,7 @@ export class DieAttachService {
     let equipGroup = 'ALL';
     let appliedRules: any[] = [];
 
-    // Xác định đúng Plant theo cấu hình thiết bị
+    // 1. Xác định đúng Plant theo cấu hình thiết bị
     let targetPlant = (plant || '').trim();
     if (!targetPlant) {
       const equipRecord = await this.resolveEquipmentRecord(parsed.equipment, dbEquipmentName);
@@ -230,11 +285,30 @@ export class DieAttachService {
         targetPlant = equipRecord.PLANT.trim();
       }
     }
-    if (!targetPlant) {
-      targetPlant = 'ITMVPSG'; // Fallback an toàn nếu máy không có cấu hình plant
+
+    // 2. Nếu thiết bị chưa có Plant trong cấu hình, tự động truy vấn tìm Plant theo Lot Number từ ASFC_LOT_STATUS
+    if (!targetPlant && item.LOT_NUMBER && !this.oracleService.isUsingFallback()) {
+      try {
+        const lotPlantRows = await this.oracleService.executeQuery<{ PLANT: string }>(
+          `SELECT plant FROM ASFC_LOT_STATUS WHERE lot_number = :lot AND in_active = 'Y' AND ROWNUM = 1`,
+          { lot: item.LOT_NUMBER },
+          'ITMVMES'
+        );
+        if (lotPlantRows && lotPlantRows.length > 0 && lotPlantRows[0].PLANT) {
+          targetPlant = lotPlantRows[0].PLANT.trim();
+          this.logger.log(`🔍 Tự động phát hiện Plant [${targetPlant}] từ bảng Lot cho thiết bị ${dbEquipmentName}`);
+        }
+      } catch (e: any) {
+        this.logger.debug(`Không thể dò Plant từ Lot: ${e.message}`);
+      }
     }
 
-    this.logger.log(`🏭 Kiểm tra Interlock với Plant [${targetPlant}] theo thiết bị ${dbEquipmentName}`);
+    // 3. Fallback an toàn nếu không tìm thấy ở bất cứ đâu
+    if (!targetPlant) {
+      targetPlant = 'ITMVPSG';
+    }
+
+    this.logger.log(`🏭 Kiểm tra Interlock với Plant [${targetPlant}] tương ứng theo thiết bị ${dbEquipmentName}`);
 
     // 1. CÂU LỆNH KIỂM TRA THÔNG TIN LOT (ASFC_LOT_STATUS + ASFC_EQPLOT_STATUS)
     try {
@@ -674,6 +748,9 @@ export class DieAttachService {
       `🔍 Parsing : Equipment=${parsed.equipment} (DB=${dbEquipmentName}, Plant=${devicePlant}), State=${parsed.state}, Div=${parsed.div.trim()}, Checksum=${parsed.checksum}`
     );
 
+    // Thực hiện kiểm tra Interlock Rule trong Oracle DB theo đúng Plant của thiết bị
+    const checkResult = await this.verifyWorkIn(parsed, dbEquipmentName, devicePlant);
+
     // Ghi nhận transaction RX
     const rxRecord: TransactionRecord = {
       transactionId: `RX-WORKIN-${Date.now()}`,
@@ -688,14 +765,11 @@ export class DieAttachService {
         ...parsed.firstItem,
         headerEquipment: parsed.equipment,
         dbEquipmentName,
-        plant: devicePlant,
+        plant: checkResult.plant,
         summary: `Work-In Check: PCB=${item.PCB_ID}, Lot=${item.LOT_NUMBER}`,
       }),
     };
     await this.transactionRepo.logTransaction(rxRecord);
-
-    // Thực hiện kiểm tra Interlock Rule trong Oracle DB theo đúng Plant của thiết bị
-    const checkResult = await this.verifyWorkIn(parsed, dbEquipmentName, devicePlant);
 
     // Tạo phản hồi S051 gửi lại máy EQP
     const responseMessage = this.formatResponse(

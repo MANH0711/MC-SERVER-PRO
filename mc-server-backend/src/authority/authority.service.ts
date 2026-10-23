@@ -179,32 +179,80 @@ export class AuthorityService {
   }
 
   /**
-   * Tìm kiếm bản ghi thiết bị từ cấu hình trong MIGHTY.GATEWAY_DEVICES
+   * Tìm kiếm bản ghi thiết bị từ cấu hình trong MIGHTY.GATEWAY_DEVICES và MIGHTY.ADM_EQUIPMENT
    */
-  async resolveEquipmentRecord(parsedEquipment: string, socketEquipmentId?: string): Promise<EquipmentRecord | null> {
-    const targetId = (socketEquipmentId && socketEquipmentId.trim())
-      ? socketEquipmentId.trim()
-      : (parsedEquipment || '').trim();
+  async resolveEquipmentRecord(
+    parsedEquipment?: string,
+    socketEquipmentId?: string
+  ): Promise<EquipmentRecord | null> {
+    const candidateIds = [socketEquipmentId, parsedEquipment]
+      .map((id) => (id || '').trim())
+      .filter((id, index, self) => id.length > 0 && id.toUpperCase() !== 'UNKNOWN' && self.indexOf(id) === index);
 
-    if (!targetId) return null;
+    if (candidateIds.length === 0) return null;
 
     try {
-      const direct = await this.equipmentRepo.findById(targetId);
-      if (direct) return direct;
+      for (const id of candidateIds) {
+        const direct = await this.equipmentRepo.findById(id);
+        if (direct && direct.PLANT) return direct;
+      }
 
       const allDevices = await this.equipmentRepo.findAll();
-      const exact = allDevices.find(
-        (d) => d.EQUIPMENT_ID.toUpperCase() === targetId.toUpperCase()
-      );
-      if (exact) return exact;
+      for (const id of candidateIds) {
+        const upper = id.toUpperCase();
+        const matched = allDevices.find(
+          (d) =>
+            d.EQUIPMENT_ID?.toUpperCase() === upper ||
+            String(d.DEVICE_ID || '').toUpperCase() === upper ||
+            d.EQUIPMENT_MAIN?.toUpperCase() === upper
+        );
+        if (matched && matched.PLANT) return matched;
+      }
 
-      const normInput = targetId.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-      const partial = allDevices.find((d) => {
-        const dClean = d.EQUIPMENT_ID.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-        const descClean = (d.DESCRIPTION || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-        return dClean.includes(normInput) || normInput.includes(dClean) || descClean.includes(normInput);
-      });
-      if (partial) return partial;
+      for (const id of candidateIds) {
+        const norm = id.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        if (norm) {
+          const partial = allDevices.find((d) => {
+            const dNorm = (d.EQUIPMENT_ID || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+            const descNorm = (d.DESCRIPTION || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+            return dNorm === norm || dNorm.includes(norm) || norm.includes(dNorm) || descNorm.includes(norm);
+          });
+          if (partial && partial.PLANT) return partial;
+        }
+      }
+
+      if (!this.oracleService.isUsingFallback()) {
+        for (const id of candidateIds) {
+          const sql = `
+            SELECT PLANT, EQUIPMENT_ID, DESCRIPTION, HOST_ADDRESS, HOST_PORT, 
+                   TO_CHAR(DEVICE_ID) as DEVICE_ID, SERVER_NO, GROUP_NAME, EQUIPMENT_ORDER, 
+                   EQUIPMENT_MAIN, ENABLE, FIELD_01, FIELD_02, FIELD_03, 
+                   INTERLOCK_RECIPE, EQUIPMENT_MODEL, INTERLOCK_PARAM, INTERLOCK_TRACE
+            FROM (
+              SELECT PLANT, EQUIPMENT_ID, DESCRIPTION, HOST_ADDRESS, HOST_PORT, 
+                     DEVICE_ID, SERVER_NO, GROUP_NAME, EQUIPMENT_ORDER, 
+                     EQUIPMENT_MAIN, ENABLE, FIELD_01, FIELD_02, FIELD_03, 
+                     INTERLOCK_RECIPE, EQUIPMENT_MODEL, INTERLOCK_PARAM, INTERLOCK_TRACE,
+                     1 as PRIORITY
+              FROM MIGHTY.GATEWAY_DEVICES 
+              WHERE UPPER(EQUIPMENT_ID) = UPPER(:id) OR UPPER(DEVICE_ID) = UPPER(:id)
+              UNION ALL
+              SELECT PLANT, EQUIPMENT_ID, DESCRIPTION, '127.0.0.1' as HOST_ADDRESS, 5000 as HOST_PORT, 
+                     0 as DEVICE_ID, 1 as SERVER_NO, 'DEFAULT' as GROUP_NAME, 0 as EQUIPMENT_ORDER, 
+                     EQUIPMENT_ID as EQUIPMENT_MAIN, 'Y' as ENABLE, '' as FIELD_01, '' as FIELD_02, '' as FIELD_03, 
+                     'YES' as INTERLOCK_RECIPE, 'DEFAULT' as EQUIPMENT_MODEL, '' as INTERLOCK_PARAM, '' as INTERLOCK_TRACE,
+                     2 as PRIORITY
+              FROM MIGHTY.ADM_EQUIPMENT 
+              WHERE UPPER(EQUIPMENT_ID) = UPPER(:id)
+            )
+            ORDER BY PRIORITY ASC
+          `;
+          const rows = await this.oracleService.executeQuery<EquipmentRecord>(sql, { id }, 'ITMVMES');
+          if (rows && rows.length > 0 && rows[0].PLANT) {
+            return rows[0];
+          }
+        }
+      }
     } catch (e: any) {
       this.logger.debug(`Lỗi kiểm tra cache thiết bị: ${e.message}`);
     }
