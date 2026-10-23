@@ -225,10 +225,13 @@ export interface ServerConfig {
     level: LogLevel;
     retentionDays: number;
     maskSensitivePayloads: boolean;
+    flushIntervalMs?: number;
   };
   security: {
     sessionTimeoutMinutes: number;
     requireAuditNoteForEquipmentChanges: boolean;
+    maxFailedLoginAttempts?: number;
+    lockoutDurationMinutes?: number;
   };
 }
 

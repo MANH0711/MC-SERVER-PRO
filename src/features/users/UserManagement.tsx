@@ -85,7 +85,7 @@ export const UserManagementView: React.FC = () => {
   };
 
   const filteredUsers = useMemo(() => {
-    return users.filter((u) => {
+    return users.filter((u: SystemUser) => {
       const matchRole = roleFilter === 'ALL' || u.role === roleFilter;
       const matchStatus = statusFilter === 'ALL' || u.status === statusFilter;
       const query = searchQuery.trim().toLowerCase();
@@ -156,7 +156,7 @@ export const UserManagementView: React.FC = () => {
         email: formData.email.trim() || undefined,
       });
     } else {
-      if (users.some((u) => u.username.toLowerCase() === formData.username.trim().toLowerCase())) {
+      if (users.some((u: SystemUser) => u.username.toLowerCase() === formData.username.trim().toLowerCase())) {
         setFormError('Tên đăng nhập này đã tồn tại trong hệ thống');
         return;
       }
@@ -183,7 +183,7 @@ export const UserManagementView: React.FC = () => {
 
   const handleExportCSV = () => {
     const headers = ['UserID', 'Username', 'DisplayName', 'Role', 'Department', 'Shift', 'RFIDBadge', 'Status', 'LastLogin'];
-    const rows = filteredUsers.map((u) => [
+    const rows = filteredUsers.map((u: SystemUser) => [
       u.id,
       `"${u.username}"`,
       `"${u.displayName}"`,
@@ -194,7 +194,7 @@ export const UserManagementView: React.FC = () => {
       u.status,
       `"${u.lastLogin}"`,
     ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e: (string | undefined)[]) => e.join(','))].join('\n');
     const dl = document.createElement('a');
     dl.setAttribute('href', encodeURI(csvContent));
     dl.setAttribute('download', `MC_Server_User_Accounts_${new Date().toISOString().slice(0, 10)}.csv`);

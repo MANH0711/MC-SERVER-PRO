@@ -77,7 +77,10 @@ interface AppContextType {
   clearTransactions: () => void;
   clearLogs: () => void;
   updateConfig: (newConfig: ServerConfig) => void;
+  serverConfig: ServerConfig;
+  updateServerConfig: (newConfig: ServerConfig) => void;
   switchUserRole: (role: UserRole) => void;
+  setUserRole: (role: UserRole) => void;
   addUser: (user: SystemUser) => void;
   updateUser: (id: string, updates: Partial<SystemUser>) => void;
   deleteUser: (id: string) => void;
@@ -598,7 +601,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         clearTransactions,
         clearLogs,
         updateConfig,
+        serverConfig: config,
+        updateServerConfig: updateConfig,
         switchUserRole,
+        setUserRole: switchUserRole,
         addUser,
         updateUser,
         deleteUser,
