@@ -98,7 +98,7 @@ export class DeviceService implements OnModuleInit {
 
   private mapDtoToRecord(d: any): EquipmentRecord {
     return {
-      PLANT: d.PLANT || d.plant || 'ITMVPSG',
+      PLANT: d.PLANT || d.plant || 'ITMVIET',
       HOST_ADDRESS: d.HOST_ADDRESS || d.hostAddress || '127.0.0.1',
       HOST_PORT: Number(d.HOST_PORT || d.hostPort) || 5010,
       DEVICE_ID: String(d.DEVICE_ID !== undefined ? d.DEVICE_ID : d.deviceId !== undefined ? d.deviceId : '0'),

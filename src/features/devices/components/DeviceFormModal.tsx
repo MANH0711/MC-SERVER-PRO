@@ -274,7 +274,7 @@ export const DeviceFormModal: React.FC<DeviceFormModalProps> = ({
                     type="text"
                     value={formPlant}
                     onChange={(e) => setFormPlant(e.target.value)}
-                    placeholder="ITMVPSG"
+                    placeholder="ITMVIET"
                     className="w-full h-8 px-2.5 rounded bg-slate-950 border border-slate-800 text-amber-400 font-mono text-xs focus:outline-none focus:border-blue-500 font-bold"
                   />
                 </div>

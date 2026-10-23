@@ -305,7 +305,7 @@ export class DieAttachService {
 
     // 3. Fallback an toàn nếu không tìm thấy ở bất cứ đâu
     if (!targetPlant) {
-      targetPlant = 'ITMVPSG';
+      targetPlant = 'ITMVIET';
     }
 
     this.logger.log(`🏭 Kiểm tra Interlock với Plant [${targetPlant}] tương ứng theo thiết bị ${dbEquipmentName}`);
@@ -561,7 +561,13 @@ export class DieAttachService {
           rtnMsg,
           'Y',
           rtnMsgID,
-          'EPBV'
+          'EPBV',
+          {
+            recipeId: item.RECIPE || 'ITMRecipe',
+            transTime: transTime,
+            eifDevice: item.CONFIG || '',
+            transCode: 'EPBV',
+          }
         );
       }
 
@@ -591,7 +597,13 @@ export class DieAttachService {
         `Interlock verification error: ${err.message}`,
         'Y',
         'EIF-ERR',
-        'EPBV'
+        'EPBV',
+        {
+          recipeId: item.RECIPE || 'ITMRecipe',
+          transTime: transTime,
+          eifDevice: item.CONFIG || '',
+          transCode: 'EPBV',
+        }
       );
 
       // Báo lỗi thực tế từ hệ thống, không tự động chuyển thành OK
@@ -621,7 +633,13 @@ export class DieAttachService {
     checkMsg: string,
     alarmStatus: 'Y' | 'N',
     alarmId: string = 'EIF-000',
-    ruleKey: string = 'EPBV'
+    ruleKey: string = 'EPBV',
+    details?: {
+      recipeId?: string;
+      transTime?: string;
+      eifDevice?: string;
+      transCode?: string;
+    }
   ): Promise<void> {
     try {
       const odb = this.oracleService.getOracledb();
@@ -635,7 +653,18 @@ export class DieAttachService {
         }
       }
       if (!targetPlant) {
-        targetPlant = 'ITMVPSG';
+        targetPlant = 'ITMVIET';
+      }
+
+      // Định dạng chuỗi RECEIVE_MSG chuẩn theo hệ thống MES:
+      // Mẫu chuẩn: Plant: ITMVIET, Trans Code: EPBV, Lot: 6431V, Oper: 200, Equip: XREFL012A, IDType: PCB, BCR ID: B3726504040042400182325, RecipeID: ON3-ON4-LANE1-R01, TransTime: 20261023174143, EIFDevice:SP4743C-N-A-BW
+      let formattedReceiveMsg = (rawMsg || '').trim();
+      if (!formattedReceiveMsg.startsWith('Plant:')) {
+        const tCode = details?.transCode || ruleKey || 'EPBV';
+        const tTime = details?.transTime || new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+        const recId = details?.recipeId || 'ITMRecipe';
+        const eifDev = details?.eifDevice ? `, EIFDevice:${details.eifDevice}` : '';
+        formattedReceiveMsg = `Plant: ${targetPlant}, Trans Code: ${tCode}, Lot: ${lot || ' '}, Oper: ${oper || ' '}, Equip: ${equip || ' '}, IDType: PCB, BCR ID: ${unitId || ' '}, RecipeID: ${recId}, TransTime: ${tTime}${eifDev}`;
       }
 
       const sql = `
@@ -651,7 +680,7 @@ export class DieAttachService {
           :ruleKey, NVL(:lot, ' '), 'NET',
           NVL(:oper, ' '), 'DA', NVL(:equip, ' '),
           'PCB', NVL(:unitId, ' '),
-          SUBSTR(:receiveMsg, 1, 1000), SUBSTR(:checkMsg, 1, 1000), :alarmId,
+          SUBSTR(:receiveMsg, 1, 4000), SUBSTR(:checkMsg, 1, 4000), :alarmId,
           :alarmStatus, 'MC_SERVER', TO_CHAR(sysdate, 'yyyymmdd')
         )
       `;
@@ -665,7 +694,7 @@ export class DieAttachService {
           oper: oper || ' ',
           equip: equip || ' ',
           unitId: unitId || ' ',
-          receiveMsg: (rawMsg || ' ').trim(),
+          receiveMsg: formattedReceiveMsg,
           checkMsg: (checkMsg || ' ').trim(),
           alarmId: alarmId || 'EIF-000',
           alarmStatus,
@@ -740,7 +769,7 @@ export class DieAttachService {
     const item = parsed.firstItem;
     const equipRecord = await this.resolveEquipmentRecord(parsed.equipment, socketEquipmentId);
     const dbEquipmentName = equipRecord?.EQUIPMENT_ID || await this.resolveDbEquipmentName(parsed.equipment, socketEquipmentId);
-    const devicePlant = (customPlant || '').trim() || equipRecord?.PLANT?.trim() || 'ITMVPSG';
+    const devicePlant = (customPlant || '').trim() || equipRecord?.PLANT?.trim() || 'ITMVIET';
 
     const nowStr = new Date().toISOString();
     this.logger.log(`📥 Receive From EQP : ${parsed.rawMessage.trim()}`);

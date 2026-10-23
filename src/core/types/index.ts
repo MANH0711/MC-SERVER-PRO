@@ -79,7 +79,7 @@ export interface DeviceInfoRecord {
 export interface DeviceModel {
   id: string; // e.g. EQP_SMT_01 or BAKE01 (EQUIPMENT_ID)
   name: string;
-  factory: string; // PLANT e.g. ITMVPSG
+  factory: string; // PLANT e.g. ITMVIET
   line: string;
   station: string;
   groupId?: string; // Group reference, e.g. GRP_SMT_A or NET
@@ -93,7 +93,7 @@ export interface DeviceModel {
   status: DeviceStatus;
 
   // 18-Column Industrial Device Master Schema
-  plant?: string;             // PLANT (e.g. 'ITMVPSG')
+  plant?: string;             // PLANT (e.g. 'ITMVIET')
   hostAddress?: string;       // HOST_ADDRESS (e.g. '127.0.0.1')
   hostPort?: number;          // HOST_PORT (e.g. 5010)
   deviceId?: string | number; // DEVICE_ID (e.g. '0')

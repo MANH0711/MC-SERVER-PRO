@@ -115,7 +115,7 @@ export const DeviceCloneModal: React.FC<DeviceCloneModalProps> = ({
             <div className="grid grid-cols-3 gap-2 text-[10px] font-mono bg-slate-950/60 p-2 rounded border border-slate-800/60 text-slate-400">
               <div>
                 <span className="text-slate-500 block">PLANT / GROUP:</span>
-                <span className="text-amber-400 font-semibold">{sourceDevice.plant || sourceDevice.factory || 'ITMVPSG'} / {sourceDevice.groupName || sourceDevice.groupId || 'NET'}</span>
+                <span className="text-amber-400 font-semibold">{sourceDevice.plant || sourceDevice.factory || 'ITMVIET'} / {sourceDevice.groupName || sourceDevice.groupId || 'NET'}</span>
               </div>
               <div>
                 <span className="text-slate-500 block">TCP PROTOCOL:</span>

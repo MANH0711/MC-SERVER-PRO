@@ -52,7 +52,7 @@ export const DeviceDeleteModal: React.FC<DeviceDeleteModalProps> = ({
   if (!isOpen || !device) return null;
 
   const deviceId = device.equipmentId || device.id;
-  const plant = device.plant || device.factory || 'ITMVPSG';
+  const plant = device.plant || device.factory || 'ITMVIET';
   const group = device.groupName || device.groupId || 'NET';
   const model = device.equipmentModel || device.model || 'IBS_BAKE';
   const hostAddr = device.hostAddress || device.ipAddress || '127.0.0.1';

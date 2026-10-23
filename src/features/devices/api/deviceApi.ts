@@ -37,7 +37,7 @@ export interface DeviceDto {
  */
 export function dtoToDevice(dto: any): DeviceModel {
   const rec: Partial<DeviceInfoRecord> = {
-    PLANT: dto.PLANT || dto.plant || 'ITMVPSG',
+    PLANT: dto.PLANT || dto.plant || 'ITMVIET',
     HOST_ADDRESS: dto.HOST_ADDRESS || dto.hostAddress || '127.0.0.1',
     HOST_PORT: Number(dto.HOST_PORT || dto.hostPort) || 5010,
     DEVICE_ID: dto.DEVICE_ID !== undefined ? dto.DEVICE_ID : dto.deviceId !== undefined ? dto.deviceId : '0',

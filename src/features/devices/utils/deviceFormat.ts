@@ -28,7 +28,7 @@ export type DeviceInfoColumnName = (typeof DEVICE_INFO_COLUMNS)[number];
  */
 export function deviceToRecord(dev: DeviceModel): DeviceInfoRecord {
   return {
-    PLANT: dev.plant || dev.factory || 'ITMVPSG',
+    PLANT: dev.plant || dev.factory || 'ITMVIET',
     HOST_ADDRESS: dev.hostAddress || dev.ipAddress || '127.0.0.1',
     HOST_PORT: dev.hostPort || dev.port || 5010,
     DEVICE_ID: dev.deviceId !== undefined ? dev.deviceId : '0',
@@ -60,7 +60,7 @@ export function recordToDevice(
   const hostAddr = (rec.HOST_ADDRESS || existing?.ipAddress || '127.0.0.1').trim();
   const hostPort = Number(rec.HOST_PORT || existing?.port || 5010);
   const group = (rec.GROUP_NAME || existing?.groupId || 'NET').trim();
-  const plant = (rec.PLANT || existing?.factory || 'ITMVPSG').trim();
+  const plant = (rec.PLANT || existing?.factory || 'ITMVIET').trim();
   const model = (rec.EQUIPMENT_MODEL || existing?.model || equipId).trim();
   const isEnabled = (rec.ENABLE || (existing?.enabled ? 'YES' : 'NO')).trim().toUpperCase() === 'YES';
 

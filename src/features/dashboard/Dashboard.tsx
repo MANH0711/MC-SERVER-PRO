@@ -879,7 +879,7 @@ export const DashboardView: React.FC = () => {
                       {/* Card Footer: Quick Actions */}
                       <div className="pt-1 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400">
                         <span className="text-[9px] font-mono text-slate-500">
-                          {dev.plant || 'ITMVPSG'} · S{dev.serverNo ?? 15}:D{dev.deviceId ?? 0}
+                          {dev.plant || 'ITMVIET'} · S{dev.serverNo ?? 15}:D{dev.deviceId ?? 0}
                         </span>
 
                         {/* Action buttons on card */}

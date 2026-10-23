@@ -103,7 +103,7 @@ export const DeviceManagementView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingDevice, setEditingDevice] = useState<DeviceModel | null>(null);
 
-  const [formPlant, setFormPlant] = useState('ITMVPSG');
+  const [formPlant, setFormPlant] = useState('ITMVIET');
   const [formId, setFormId] = useState('');
   const [formName, setFormName] = useState('');
   const [formGroup, setFormGroup] = useState<string>('NET');
@@ -175,7 +175,7 @@ export const DeviceManagementView: React.FC = () => {
   // Handlers for Add / Edit Modal
   const handleOpenAdd = () => {
     setEditingDevice(null);
-    setFormPlant('ITMVPSG');
+    setFormPlant('ITMVIET');
     setFormId(`EQP_0${devices.length + 1}`);
     setFormName('');
     setFormGroup(distinctDbGroups[0] || 'NET');
@@ -206,7 +206,7 @@ export const DeviceManagementView: React.FC = () => {
 
   const handleOpenEdit = (dev: DeviceModel) => {
     setEditingDevice(dev);
-    setFormPlant(dev.plant || dev.factory || 'ITMVPSG');
+    setFormPlant(dev.plant || dev.factory || 'ITMVIET');
     setFormId(dev.equipmentId || dev.id);
     setFormName(dev.description || dev.name);
     setFormGroup(dev.groupName || dev.groupId || 'UNASSIGNED');
@@ -238,7 +238,7 @@ export const DeviceManagementView: React.FC = () => {
   const handleApplyTemplateToFullModal = (templateDevId: string) => {
     const src = devices.find((d) => d.id === templateDevId);
     if (!src) return;
-    setFormPlant(src.plant || src.factory || 'ITMVPSG');
+    setFormPlant(src.plant || src.factory || 'ITMVIET');
     setFormGroup(src.groupName || src.groupId || 'UNASSIGNED');
     setFormModel(src.equipmentModel || src.model || 'IBS_BAKE');
     setFormPort(src.hostPort || src.port || 5010);
@@ -271,7 +271,7 @@ export const DeviceManagementView: React.FC = () => {
 
     const assignedGroup = formGroup === 'UNASSIGNED' ? 'NET' : formGroup;
     const isDevEnabled = formEnable === 'YES';
-    const cleanPlant = formPlant.trim() || 'ITMVPSG';
+    const cleanPlant = formPlant.trim() || 'ITMVIET';
     const cleanId = formId.trim().toUpperCase();
     const cleanModel = (formEquipmentModel || formModel).trim() || 'IBS_BAKE';
     const cleanName = formDescription.trim() || formName.trim() || `${cleanId} - ${cleanModel}`;
@@ -370,7 +370,7 @@ export const DeviceManagementView: React.FC = () => {
     }
 
     const src = cloneSourceDevice;
-    const cleanPlant = src.plant || src.factory || 'ITMVPSG';
+    const cleanPlant = src.plant || src.factory || 'ITMVIET';
     const cleanModel = src.equipmentModel || src.model || 'IBS_BAKE';
     const cleanGroup = src.groupName || src.groupId || 'NET';
     const cleanName = cloneNewName.trim() || `${cleanId} - ${cleanModel}`;
@@ -432,7 +432,7 @@ export const DeviceManagementView: React.FC = () => {
     if (!cloneSourceDevice) return;
     const src = cloneSourceDevice;
     setEditingDevice(null);
-    setFormPlant(src.plant || src.factory || 'ITMVPSG');
+    setFormPlant(src.plant || src.factory || 'ITMVIET');
     setFormId(cloneNewId.trim().toUpperCase());
     setFormName(cloneNewName.trim() || `${cloneNewId.trim().toUpperCase()} - ${src.equipmentModel || src.model}`);
     setFormGroup(src.groupName || src.groupId || 'UNASSIGNED');
@@ -561,8 +561,8 @@ export const DeviceManagementView: React.FC = () => {
   const handleLoadSample = () => {
     const sample = [
       'PLANT\tHOST_ADDRESS\tHOST_PORT\tDEVICE_ID\tSERVER_NO\tEQUIPMENT_ID\tGROUP_NAME\tEQUIPMENT_ORDER\tEQUIPMENT_MAIN\tDESCRIPTION\tENABLE\tFIELD_01\tFIELD_02\tFIELD_03\tINTERLOCK_RECIPE\tEQUIPMENT_MODEL\tINTERLOCK_PARAM\tINTERLOCK_TRACE',
-      'ITMVPSG\t127.0.0.1\t5010\t0\t15\tBAKE01\tNET\t20110\t\t\tYES\t\t\tITMVIET\tYES\tIBS_BAKE\t\t',
-      'ITMVPSG\t127.0.0.1\t5010\t0\t15\tBENDINGJ1\tNET\t20110\t\t\tYES\t\t\tITMVIET\tYES\tIBS_BENDINGJS\t\t',
+      'ITMVIET\t127.0.0.1\t5010\t0\t15\tBAKE01\tNET\t20110\t\t\tYES\t\t\tITMVIET\tYES\tIBS_BAKE\t\t',
+      'ITMVIET\t127.0.0.1\t5010\t0\t15\tBENDINGJ1\tNET\t20110\t\t\tYES\t\t\tITMVIET\tYES\tIBS_BENDINGJS\t\t',
     ].join('\n');
     handleImportTextChange(sample);
   };

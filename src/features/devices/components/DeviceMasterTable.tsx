@@ -65,7 +65,7 @@ export const DeviceMasterTable: React.FC<DeviceMasterTableProps> = ({
       </thead>
       <tbody className="divide-y divide-slate-800/50">
         {devices.map((dev) => {
-          const plantVal = dev.plant || dev.factory || 'ITMVPSG';
+          const plantVal = dev.plant || dev.factory || 'ITMVIET';
           const hostAddr = dev.hostAddress || dev.ipAddress;
           const hostPort = dev.hostPort || dev.port;
           const devId = dev.deviceId !== undefined ? dev.deviceId : '0';
