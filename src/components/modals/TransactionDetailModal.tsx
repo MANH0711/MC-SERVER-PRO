@@ -129,7 +129,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-[#0A0F1D] border border-cyan-500/40 rounded-2xl shadow-[0_0_60px_rgba(6,182,212,0.18)] max-w-4xl w-full max-h-[94vh] flex flex-col overflow-hidden text-slate-100 font-sans border-t-2 border-t-cyan-400">
+      <div className="bg-[#0A0F1D] border border-cyan-500/40 rounded-2xl shadow-[0_0_60px_rgba(6,182,212,0.18)] max-w-4xl w-full h-[85vh] max-h-[820px] min-h-[560px] flex flex-col overflow-hidden text-slate-100 font-sans border-t-2 border-t-cyan-400">
         
         {/* ─── 1. MODAL HEADER ─── */}
         <div className="px-4 py-3 bg-[#0D1527] border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
@@ -383,11 +383,11 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
         </div>
 
         {/* ─── 4. TAB CONTENTS ─── */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 font-mono text-xs">
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col p-4 font-mono text-xs">
           
           {/* TAB 1: OVERVIEW & PROPERTIES */}
           {activeTab === 'overview' && (
-            <div className="space-y-4">
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
               {/* Protocol Metrics KPI Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
@@ -511,8 +511,8 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
 
           {/* TAB 2: JSON PAYLOAD */}
           {activeTab === 'json' && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
+            <div className="h-full flex flex-col min-h-0 space-y-2">
+              <div className="flex items-center justify-between text-xs shrink-0">
                 <span className="text-slate-400 font-semibold flex items-center gap-1.5">
                   <FileCode className="w-3.5 h-3.5 text-cyan-400" />
                   Định Dạng Cấu Trúc JSON Phân Cấp
@@ -526,8 +526,8 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                 </button>
               </div>
 
-              <div className="relative rounded-xl bg-slate-950/95 border border-slate-800/90 overflow-hidden shadow-inner">
-                <pre className="p-3.5 text-emerald-300 overflow-x-auto text-xs leading-relaxed max-h-[50vh] font-mono selection:bg-cyan-500/30">
+              <div className="flex-1 min-h-0 relative rounded-xl bg-slate-950/95 border border-slate-800/90 overflow-hidden shadow-inner flex flex-col">
+                <pre className="flex-1 min-h-0 p-3.5 text-emerald-300 overflow-auto text-xs leading-relaxed font-mono selection:bg-cyan-500/30">
                   {JSON.stringify(payload, null, 2)}
                 </pre>
               </div>
@@ -536,8 +536,8 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
 
           {/* TAB 3: HEX DUMP */}
           {activeTab === 'hexdump' && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
+            <div className="h-full flex flex-col min-h-0 space-y-2">
+              <div className="flex items-center justify-between text-xs shrink-0">
                 <span className="text-slate-400 font-semibold flex items-center gap-1.5">
                   <Binary className="w-3.5 h-3.5 text-cyan-400" />
                   Hex Dump 16 Bytes & Ký Tự ASCII Tương Ứng
@@ -551,13 +551,13 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                 </button>
               </div>
 
-              <div className="rounded-xl bg-slate-950/95 border border-slate-800/90 overflow-hidden shadow-inner">
-                <div className="px-3 py-1.5 bg-[#0C1322] border-b border-slate-800 grid grid-cols-12 text-[10px] uppercase font-bold text-slate-400">
+              <div className="flex-1 min-h-0 rounded-xl bg-slate-950/95 border border-slate-800/90 overflow-hidden shadow-inner flex flex-col">
+                <div className="px-3 py-1.5 bg-[#0C1322] border-b border-slate-800 grid grid-cols-12 text-[10px] uppercase font-bold text-slate-400 shrink-0">
                   <span className="col-span-2">Offset</span>
                   <span className="col-span-7">Hexadecimal Bytes (16 Bytes / Dòng)</span>
                   <span className="col-span-3 text-right">ASCII Decode</span>
                 </div>
-                <div className="p-3 overflow-x-auto text-[11px] leading-relaxed max-h-[50vh] font-mono space-y-1">
+                <div className="flex-1 min-h-0 p-3 overflow-y-auto text-[11px] leading-relaxed font-mono space-y-1">
                   {formatOffsetHex(transaction.rawHex).map((row, idx) => (
                     <div key={idx} className="grid grid-cols-12 gap-2 hover:bg-slate-900/60 py-0.5 rounded px-1 transition-colors">
                       <span className="col-span-2 text-slate-500 font-bold select-none">{row.offset}</span>
@@ -574,8 +574,8 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
 
           {/* TAB 4: RAW ASCII & FRAME BOUNDARIES */}
           {activeTab === 'raw' && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs">
+            <div className="h-full flex flex-col min-h-0 space-y-3">
+              <div className="flex items-center justify-between text-xs shrink-0">
                 <span className="text-slate-400 font-semibold flex items-center gap-1.5">
                   <Hash className="w-3.5 h-3.5 text-cyan-400" />
                   Khung Truyền Nhận ASCII Thô (Kèm Phân Định STX/ETX)
@@ -590,7 +590,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
               </div>
 
               {/* Physical Boundary Markers */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs shrink-0">
                 <div className="p-2 rounded-lg bg-slate-950 border border-slate-800">
                   <span className="text-[10px] text-slate-500 block">KÝ TỰ BẮT ĐẦU (STX)</span>
                   <span className="font-bold text-emerald-400 font-mono">0x02 [STX]</span>
@@ -610,7 +610,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
               </div>
 
               {/* Full ASCII Box */}
-              <div className="rounded-xl bg-slate-950/95 border border-slate-800/90 p-3.5 font-mono text-xs text-cyan-300 break-all select-all leading-relaxed shadow-inner max-h-[45vh] overflow-y-auto">
+              <div className="flex-1 min-h-0 rounded-xl bg-slate-950/95 border border-slate-800/90 p-3.5 font-mono text-xs text-cyan-300 break-all select-all leading-relaxed shadow-inner overflow-y-auto">
                 {transaction.rawAscii}
               </div>
             </div>
