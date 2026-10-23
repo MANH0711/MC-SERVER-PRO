@@ -14,8 +14,7 @@ import {
   Server,
   CloudLightning,
   User,
-  Sun,
-  Moon,
+  Clock,
   ChevronDown,
   Check,
   Users,
@@ -52,8 +51,6 @@ export const TopBar: React.FC = () => {
     switchUserRole,
     users,
     switchActiveUser,
-    theme,
-    setTheme,
     setActiveView,
   } = useApp();
 
@@ -170,9 +167,9 @@ export const TopBar: React.FC = () => {
         {/* Company Logo Badge */}
         <div className="h-8 px-2.5 rounded-lg bg-white/95 border border-blue-500/30 flex items-center justify-center shrink-0 shadow-sm hover:opacity-95 transition-opacity">
           <img
-            src="/logo.png"
-            alt="Company Logo"
-            className="h-4.5 w-auto object-contain"
+            src="/assets/images/ItmLogo.png"
+            alt="ITM Semiconductor Logo"
+            className="h-5 w-auto object-contain"
           />
         </div>
 
@@ -270,11 +267,11 @@ export const TopBar: React.FC = () => {
         {/* Real Equipment Socket Connection Badge */}
         <button
           onClick={() => setActiveView('communication')}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900/90 border border-slate-800 hover:border-cyan-500/50 text-xs font-mono text-slate-300 transition-colors shadow-xs"
+          className="h-8 flex items-center gap-1.5 px-2.5 rounded-lg bg-slate-900/90 border border-slate-800/90 hover:border-cyan-500/50 text-xs font-mono text-slate-300 transition-colors shadow-xs shrink-0"
           title="Xem chi tiết kết nối TCP Socket với máy ngoài xưởng"
         >
-          <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="text-[11px]">EQP:</span>
+          <Cpu className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+          <span className="text-[11px] text-slate-400 font-semibold">EQP:</span>
           <span
             className={`font-bold text-[11px] ${
               apiStatus.activeSockets > 0 ? 'text-cyan-300' : 'text-slate-400'
@@ -283,30 +280,30 @@ export const TopBar: React.FC = () => {
             {apiStatus.activeSockets} Socket
           </span>
           {apiStatus.activeSockets > 0 && (
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
           )}
         </button>
 
         {/* Alarm Ticker Bell */}
         <button
           onClick={() => setActiveView('alarmCenter')}
-          className="relative p-1.5 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 transition-colors"
+          className="h-8 w-8 relative rounded-lg bg-slate-900/90 border border-slate-800/90 hover:border-slate-700 hover:bg-slate-800/80 text-slate-400 hover:text-slate-100 transition-colors shadow-xs flex items-center justify-center shrink-0"
           title={`${unacknowledgedAlarms.length} ${t('topbar.unackAlarmsCount')}`}
         >
-          <Bell className="w-4 h-4" />
+          <Bell className="w-3.5 h-3.5" />
           {unacknowledgedAlarms.length > 0 && (
-            <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500 animate-ping" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.9)] animate-pulse" />
           )}
         </button>
 
         {/* 1. 4-LANGUAGE SWITCHER */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             onClick={() => {
               setLangMenuOpen(!langMenuOpen);
               setRoleMenuOpen(false);
             }}
-            className="h-8 flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800/90 border border-slate-700/80 text-slate-200 text-xs hover:border-slate-500 transition-colors whitespace-nowrap"
+            className="h-8 flex items-center gap-1.5 px-2.5 rounded-lg bg-slate-900/90 border border-slate-800/90 text-slate-200 text-xs hover:border-slate-700 transition-colors whitespace-nowrap shadow-xs"
             title={t('topbar.langDropdownTitle')}
           >
             <Globe className="w-3.5 h-3.5 text-blue-400 shrink-0" />
@@ -361,27 +358,14 @@ export const TopBar: React.FC = () => {
           )}
         </div>
 
-        {/* Theme Toggle */}
-        <button
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="p-1.5 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
-          title={t('topbar.themeToggle')}
-        >
-          {theme === 'dark' ? (
-            <Sun className="w-3.5 h-3.5 text-amber-400" />
-          ) : (
-            <Moon className="w-3.5 h-3.5 text-blue-400" />
-          )}
-        </button>
-
         {/* 2. USER PROFILE & RBAC ROLE SWITCHER */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             onClick={() => {
               setRoleMenuOpen(!roleMenuOpen);
               setLangMenuOpen(false);
             }}
-            className="h-8 flex items-center gap-2 px-2.5 py-1 rounded bg-slate-800/90 border border-slate-700/80 text-slate-200 text-xs hover:border-slate-500 transition-colors whitespace-nowrap"
+            className="h-8 flex items-center gap-2 px-2.5 rounded-lg bg-slate-900/90 border border-slate-800/90 text-slate-200 text-xs hover:border-slate-700 transition-colors whitespace-nowrap shadow-xs"
             title={t('topbar.userDropdownTitle')}
           >
             {/* User Avatar Circle with Online indicator */}
@@ -535,13 +519,18 @@ export const TopBar: React.FC = () => {
           )}
         </div>
 
-        {/* Real-time Clock with Milliseconds */}
-        <div className="hidden xl:flex flex-col text-right pl-3 border-l border-slate-800/80 font-mono">
+        {/* Real-time Clock */}
+        <div
+          className="hidden xl:flex h-8 items-center gap-2 px-2.5 rounded-lg bg-slate-900/90 border border-slate-800/90 font-mono text-xs shadow-xs shrink-0"
+          title="Thời gian hệ thống thời gian thực"
+        >
+          <Clock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
           <span className="text-xs text-slate-100 font-bold tracking-wider tabular-nums">
             {formatTimeOnly(currentTime)}
           </span>
-          <span className="text-[9px] text-slate-500">
-            {currentTime.toISOString().split('T')[0]} (UTC+7)
+          <span className="text-slate-600">·</span>
+          <span className="text-[10px] text-slate-400 font-medium">
+            {currentTime.toISOString().split('T')[0]}
           </span>
         </div>
       </div>

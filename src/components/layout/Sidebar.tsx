@@ -60,7 +60,7 @@ export const Sidebar: React.FC = () => {
             <img
               src="/assets/images/logomini.png"
               alt="ITM Logo"
-              className="w-full h-full object-contain scale-[1.35] transition-transform duration-200 group-hover:scale-[1.45]"
+              className="w-full h-full object-contain scale-[1.7] transition-transform duration-200 group-hover:scale-[1.45]"
             />
           </div>
           {!collapsed && (
