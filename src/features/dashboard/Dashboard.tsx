@@ -84,10 +84,26 @@ export const DashboardView: React.FC = () => {
   // Selected station for the detail box at the bottom of the matrix
   const [selectedStationId, setSelectedStationId] = useState<string>(devices[0]?.id || 'EQP_SMT_01');
 
-  // Dynamic Groups derived directly from the real GROUP_NAME column in DB
+  // Search term for devices panel (ID / IP)
+  const [deviceSearchTerm, setDeviceSearchTerm] = useState<string>('');
+
+  // Filtered devices based on ID / IP / Name / Model search query
+  const filteredDevices = React.useMemo(() => {
+    const q = deviceSearchTerm.trim().toLowerCase();
+    if (!q) return devices;
+    return devices.filter((dev) => {
+      const idMatch = (dev.equipmentId || dev.id || '').toLowerCase().includes(q);
+      const nameMatch = (dev.name || '').toLowerCase().includes(q);
+      const ipMatch = (dev.hostAddress || dev.ipAddress || '').toLowerCase().includes(q);
+      const modelMatch = (dev.equipmentModel || dev.model || '').toLowerCase().includes(q);
+      return idMatch || nameMatch || ipMatch || modelMatch;
+    });
+  }, [devices, deviceSearchTerm]);
+
+  // Dynamic Groups derived directly from the real GROUP_NAME column in DB (filtered by search)
   const dynamicGroups = React.useMemo(() => {
     const map = new Map<string, DeviceModel[]>();
-    devices.forEach((dev) => {
+    filteredDevices.forEach((dev) => {
       const gName = (dev.groupName && dev.groupName.trim()) ? dev.groupName.trim() : 'UNASSIGNED';
       if (!map.has(gName)) {
         map.set(gName, []);
@@ -102,7 +118,7 @@ export const DashboardView: React.FC = () => {
         name: groupName,
         devices: groupDevs,
       }));
-  }, [devices]);
+  }, [filteredDevices]);
 
   // Tree View State: which groups are expanded (default all groups to true)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
@@ -267,9 +283,6 @@ export const DashboardView: React.FC = () => {
 
   // Selected station object
   const activeDevice = devices.find((d) => d.id === selectedStationId) || devices[0] || null;
-
-  // Devices list directly
-  const filteredDevices: DeviceModel[] = devices;
 
   // Counts
   const total = devices.length;
@@ -641,7 +654,7 @@ export const DashboardView: React.FC = () => {
                 {t('dashboard.equipmentMatrix.title')}
               </h3>
               <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-slate-800 text-cyan-400 font-bold shrink-0">
-                {devices.length}
+                {deviceSearchTerm ? `${filteredDevices.length}/${devices.length}` : devices.length}
               </span>
             </div>
 
@@ -706,37 +719,62 @@ export const DashboardView: React.FC = () => {
           </div>
 
           {/* ========================================================================= */}
-          {/* BATCH CONTROLS TOOLBAR: START ALL, STOP ALL, RESET ALL                    */}
+          {/* BATCH CONTROLS & SEARCH: INLINE SEARCH + COMPACT START / STOP / RESET ALL */}
           {/* ========================================================================= */}
-          <div className="px-2 py-1.5 bg-[#090E1B] border-b border-slate-800/80 flex items-center gap-1.5 shrink-0">
+          <div className="px-2 py-1.5 bg-[#090E1B] border-b border-slate-800/80 flex items-center gap-1 shrink-0">
+            {/* Inline Search Input for Machine ID & IP */}
+            <div className="relative flex-1 min-w-[70px]">
+              <Search className="w-3 h-3 text-slate-500 absolute left-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={deviceSearchTerm}
+                onChange={(e) => setDeviceSearchTerm(e.target.value)}
+                placeholder="Tìm ID / IP..."
+                className="w-full pl-5 pr-4 py-0.5 rounded bg-slate-950 border border-slate-800 hover:border-slate-700 focus:border-cyan-500 focus:outline-none text-[10px] font-mono text-slate-200 placeholder-slate-600 transition-colors"
+                title="Tìm kiếm thiết bị theo ID máy hoặc IP"
+              />
+              {deviceSearchTerm && (
+                <button
+                  onClick={() => setDeviceSearchTerm('')}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-0.5"
+                  title="Xóa tìm kiếm"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Compact Start All Button */}
             <button
               onClick={handleStartAll}
               disabled={isBatchProcessing || devices.length === 0}
-              className="flex-1 py-1 px-1.5 rounded bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-[10px] font-mono font-bold tracking-tight transition-all flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95"
+              className="py-1 px-1.5 rounded bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-[9.5px] font-mono font-bold tracking-tight transition-all flex items-center justify-center gap-1 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95"
               title="Start All: Kết nối tất cả thiết bị qua TCP Socket"
             >
               <Play className="w-2.5 h-2.5 shrink-0 fill-current" />
-              <span>Start All</span>
+              <span>Start</span>
             </button>
 
+            {/* Compact Stop All Button */}
             <button
               onClick={handleStopAll}
               disabled={isBatchProcessing || devices.length === 0}
-              className="flex-1 py-1 px-1.5 rounded bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-[10px] font-mono font-bold tracking-tight transition-all flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95"
+              className="py-1 px-1.5 rounded bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-[9.5px] font-mono font-bold tracking-tight transition-all flex items-center justify-center gap-1 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95"
               title="Stop All: Dừng và ngắt kết nối toàn bộ thiết bị"
             >
               <Power className="w-2.5 h-2.5 shrink-0" />
-              <span>Stop All</span>
+              <span>Stop</span>
             </button>
 
+            {/* Compact Reset All Button */}
             <button
               onClick={handleResetAll}
               disabled={isBatchProcessing || devices.length === 0}
-              className="flex-1 py-1 px-1.5 rounded bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/40 text-[10px] font-mono font-bold tracking-tight transition-all flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95"
+              className="py-1 px-1.5 rounded bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/40 text-[9.5px] font-mono font-bold tracking-tight transition-all flex items-center justify-center gap-1 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95"
               title="Reset All: Khởi động lại (Reset) toàn bộ socket thiết bị"
             >
               <RotateCcw className={`w-2.5 h-2.5 shrink-0 ${isBatchProcessing ? 'animate-spin' : ''}`} />
-              <span>Reset All</span>
+              <span>Reset</span>
             </button>
           </div>
 
@@ -744,15 +782,15 @@ export const DashboardView: React.FC = () => {
             {/* BODY: DANH SÁCH THIẾT BỊ (HIỂN THỊ CHÍNH LÀ EQUIP_ID)                     */}
             {/* ========================================================================= */}
             <div className="flex-1 overflow-y-auto p-2 space-y-2">
-              {devices.length === 0 ? (
+              {filteredDevices.length === 0 ? (
                 <div className="text-center py-8 text-xs text-slate-500 italic">
-                  Chưa có thiết bị nào được kết nối.
+                  {deviceSearchTerm ? 'Không tìm thấy thiết bị nào khớp với từ khóa tìm kiếm.' : 'Chưa có thiết bị nào được kết nối.'}
                 </div>
               ) : deviceViewMode === 'cards' ? (
                 /* =================================================================== */
                 /* 1. CHẾ ĐỘ THẺ THIẾT BỊ: HIỂN THỊ CHÍNH LÀ EQUIP_ID                 */
                 /* =================================================================== */
-                devices.map((dev) => {
+                filteredDevices.map((dev) => {
                   const isSelected = dev.id === selectedStationId;
                   const statusCfg = getStatusBadge(dev.status);
                   const pingMs = pingLatencies[dev.id];
@@ -890,37 +928,9 @@ export const DashboardView: React.FC = () => {
                 /* 2. CHẾ ĐỘ CÂY PHÂN CẤP: LẤY GROUP THỰC TẾ TRONG CỘT GROUP TRONG DB */
                 /* =================================================================== */
                 <div className="space-y-2">
-                  {/* Nút bấm Đóng / Mở rộng tất cả Group */}
-                  <div className="flex items-center justify-between px-2 py-1 bg-slate-900/90 rounded border border-slate-800/80 text-[10px] font-mono text-slate-400">
-                    <div className="flex items-center gap-1.5">
-                      <Folder className="w-3.5 h-3.5 text-blue-400" />
-                      <span className="font-semibold text-slate-200">
-                        {dynamicGroups.length} Nhóm từ DB
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={toggleExpandAllGroups}
-                      className="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 hover:border-cyan-500 hover:text-cyan-300 text-slate-300 flex items-center gap-1 transition-all active:scale-95 shadow-xs font-semibold"
-                      title={isAllGroupsExpanded ? "Thu gọn (đóng) tất cả các nhóm" : "Mở rộng tất cả các nhóm"}
-                    >
-                      {isAllGroupsExpanded ? (
-                        <>
-                          <ChevronUp className="w-3 h-3 text-cyan-400" />
-                          <span>Đóng tất cả</span>
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="w-3 h-3 text-cyan-400" />
-                          <span>Mở tất cả</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
                   {dynamicGroups.length === 0 ? (
                     <div className="text-center py-6 text-xs text-slate-500 italic">
-                      Chưa có thiết bị hoặc nhóm nào trong cơ sở dữ liệu.
+                      {deviceSearchTerm ? 'Không có nhóm nào chứa thiết bị phù hợp.' : 'Chưa có thiết bị hoặc nhóm nào trong cơ sở dữ liệu.'}
                     </div>
                   ) : (
                     dynamicGroups.map((group) => {
@@ -1113,11 +1123,11 @@ export const DashboardView: React.FC = () => {
                 <div className="px-2.5 pb-2.5 pt-1 space-y-2 border-t border-slate-800/50">
                   {activeDevice ? (
                     <div className="space-y-2">
-                      {/* Telemetry Grid: Thông số chuẩn 18 Cột (SOCKET, MODEL, SRV/DEV, PLANT) */}
+                      {/* Telemetry Grid: Thông số chuẩn (SOCKET, MODEL) */}
                       <div className="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
                         {/* Socket Address with Copy button */}
                         <div
-                          className="px-2 py-1 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden group/item"
+                          className="px-2 py-1.5 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden group/item"
                           title={`Địa chỉ TCP Socket: ${activeDevice.ipAddress}:${activeDevice.port}`}
                         >
                           <span className="text-slate-500 text-[9px] shrink-0 font-medium">SOCKET</span>
@@ -1137,34 +1147,12 @@ export const DashboardView: React.FC = () => {
 
                         {/* Model */}
                         <div
-                          className="px-2 py-1 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden"
+                          className="px-2 py-1.5 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden"
                           title={`MODEL: ${activeDevice.equipmentModel || activeDevice.model}`}
                         >
                           <span className="text-slate-500 text-[9px] shrink-0 font-medium">MODEL</span>
                           <span className="text-emerald-400 font-semibold truncate">
                             {activeDevice.equipmentModel || activeDevice.model || 'IBS_SEMI'}
-                          </span>
-                        </div>
-
-                        {/* Server No & Device ID */}
-                        <div
-                          className="px-2 py-1 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden"
-                          title={`SERVER_NO: ${activeDevice.serverNo ?? 15} | DEVICE_ID: ${activeDevice.deviceId ?? 0}`}
-                        >
-                          <span className="text-slate-500 text-[9px] shrink-0 font-medium">SRV/DEV</span>
-                          <span className="text-purple-400 font-bold truncate">
-                            S{activeDevice.serverNo ?? 15} : D{activeDevice.deviceId ?? 0}
-                          </span>
-                        </div>
-
-                        {/* Plant & Group */}
-                        <div
-                          className="px-2 py-1 rounded bg-slate-950/90 border border-slate-800/70 flex items-center justify-between gap-1 overflow-hidden"
-                          title={`PLANT: ${activeDevice.plant || 'ITMVPSG'} | GROUP: ${activeDevice.groupName || 'SMT'}`}
-                        >
-                          <span className="text-slate-500 text-[9px] shrink-0 font-medium">PLANT</span>
-                          <span className="text-cyan-400 font-semibold truncate">
-                            {activeDevice.plant || 'ITMVPSG'} · {activeDevice.groupName || 'SMT'}
                           </span>
                         </div>
                       </div>
@@ -1279,29 +1267,33 @@ export const DashboardView: React.FC = () => {
               </span>
             </div>
 
-            {/* Stream Control Action Toolbar: Pause & Clear (Không bộ lọc) */}
+            {/* Stream Control Action Toolbar: Pause & Clear (Đặc trưng & Nổi bật) */}
             <div className="flex items-center gap-1.5 text-xs">
-              {/* Pause / Resume Button */}
+              {/* Pause / Resume Button - Nổi bật & Đặc trưng màu Vàng Hổ Phách Cảnh báo */}
               <button
                 onClick={() => setIsStreamPaused(!isStreamPaused)}
-                className={`p-1 px-2.5 rounded border transition-colors flex items-center gap-1 text-[11px] font-mono ${
+                className={`py-1 px-2.5 rounded border transition-all flex items-center gap-1.5 text-[11px] font-mono font-bold shadow-xs active:scale-95 ${
                   isStreamPaused
-                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
-                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:text-white'
+                    ? 'bg-amber-500 text-slate-950 border-amber-300 shadow-[0_0_14px_rgba(245,158,11,0.5)] animate-pulse'
+                    : 'bg-amber-500/15 text-amber-300 border-amber-500/50 hover:bg-amber-500/30 hover:border-amber-400 hover:text-amber-200 shadow-[0_0_8px_rgba(245,158,11,0.15)]'
                 }`}
                 title={isStreamPaused ? t('dashboard.liveStream.resume') : t('dashboard.liveStream.pause')}
               >
-                {isStreamPaused ? <Play className="w-3 h-3 text-amber-400" /> : <Pause className="w-3 h-3 text-slate-400" />}
-                <span>{isStreamPaused ? 'Resume' : 'Pause'}</span>
+                {isStreamPaused ? (
+                  <Play className="w-3 h-3 text-slate-950 fill-current" />
+                ) : (
+                  <Pause className="w-3 h-3 text-amber-400" />
+                )}
+                <span>{isStreamPaused ? (t('dashboard.liveStream.resume') || 'Resume') : (t('dashboard.liveStream.pause') || 'Pause')}</span>
               </button>
 
-              {/* Clear Stream */}
+              {/* Clear Stream - Nổi bật & Đặc trưng màu Đỏ Rose Cảnh báo Xóa */}
               <button
                 onClick={clearTransactions}
-                className="p-1 px-2 rounded bg-slate-950 border border-slate-800 text-slate-400 hover:text-red-400 transition-colors flex items-center gap-1 text-[11px] font-mono"
+                className="py-1 px-2.5 rounded bg-rose-500/15 border border-rose-500/50 text-rose-300 hover:bg-rose-600 hover:text-white hover:border-rose-400 hover:shadow-[0_0_12px_rgba(244,63,94,0.4)] shadow-[0_0_8px_rgba(244,63,94,0.15)] transition-all flex items-center gap-1.5 text-[11px] font-mono font-bold active:scale-95"
                 title={t('dashboard.liveStream.clear')}
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-3 h-3 text-rose-400" />
                 <span>{t('dashboard.liveStream.clear')}</span>
               </button>
             </div>
