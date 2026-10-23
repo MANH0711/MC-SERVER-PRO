@@ -96,6 +96,15 @@ export const DeviceManagementView: React.FC = () => {
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Quick Clone Device Modal State
+  const [isCloneModalOpen, setIsCloneModalOpen] = useState<boolean>(false);
+  const [cloneSourceDevice, setCloneSourceDevice] = useState<DeviceModel | null>(null);
+  const [cloneNewId, setCloneNewId] = useState<string>('');
+  const [cloneNewIp, setCloneNewIp] = useState<string>('');
+  const [cloneNewPort, setCloneNewPort] = useState<number | string>(5010);
+  const [cloneNewName, setCloneNewName] = useState<string>('');
+  const [cloneError, setCloneError] = useState<string>('');
+
   // Form State (18 Fields Schema + Protocol)
   const [formPlant, setFormPlant] = useState('ITMVPSG');
   const [formId, setFormId] = useState('');
@@ -215,6 +224,202 @@ export const DeviceManagementView: React.FC = () => {
     setFormChecksum(dev.checksumAlgorithm);
     setFormError('');
     setIsModalOpen(true);
+  };
+
+  // Helper: Gợi ý mã máy tiếp theo dựa trên máy nguồn (ví dụ BAKE01 -> BAKE02)
+  const getSuggestedNextId = (sourceId: string): string => {
+    const match = sourceId.match(/^(.*?)(\d+)$/);
+    if (match) {
+      const prefix = match[1];
+      const numStr = match[2];
+      let nextNum = parseInt(numStr, 10) + 1;
+      let candidate = `${prefix}${String(nextNum).padStart(numStr.length, '0')}`;
+      while (devices.some((d) => d.id.toUpperCase() === candidate.toUpperCase())) {
+        nextNum++;
+        candidate = `${prefix}${String(nextNum).padStart(numStr.length, '0')}`;
+      }
+      return candidate;
+    }
+    let fallback = `${sourceId}_COPY`;
+    let count = 1;
+    while (devices.some((d) => d.id.toUpperCase() === fallback.toUpperCase())) {
+      count++;
+      fallback = `${sourceId}_COPY${count}`;
+    }
+    return fallback;
+  };
+
+  // Helper: Gợi ý IP tiếp theo trong cùng subnet
+  const getSuggestedNextIp = (sourceIp: string): string => {
+    const parts = (sourceIp || '').trim().split('.');
+    if (parts.length === 4) {
+      const lastOctet = parseInt(parts[3], 10);
+      if (!isNaN(lastOctet)) {
+        let candidateOctet = lastOctet + 1;
+        let candidateIp = `${parts[0]}.${parts[1]}.${parts[2]}.${candidateOctet}`;
+        while (devices.some((d) => (d.hostAddress || d.ipAddress) === candidateIp) && candidateOctet < 254) {
+          candidateOctet++;
+          candidateIp = `${parts[0]}.${parts[1]}.${parts[2]}.${candidateOctet}`;
+        }
+        return candidateIp;
+      }
+    }
+    return '';
+  };
+
+  // Mở Modal Sao Chép Nhanh Cấu Hình Thiết Bị
+  const handleOpenClone = (dev: DeviceModel) => {
+    setCloneSourceDevice(dev);
+    const suggestedId = getSuggestedNextId(dev.equipmentId || dev.id);
+    const suggestedIp = getSuggestedNextIp(dev.hostAddress || dev.ipAddress);
+    setCloneNewId(suggestedId);
+    setCloneNewIp(suggestedIp);
+    setCloneNewPort(dev.hostPort || dev.port || 5010);
+    const devModel = dev.equipmentModel || dev.model || 'IBS_BAKE';
+    setCloneNewName(`${suggestedId} - ${devModel}`);
+    setCloneError('');
+    setIsCloneModalOpen(true);
+  };
+
+  // Xác nhận tạo thiết bị mới từ cấu hình sao chép
+  const handleConfirmClone = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!cloneSourceDevice) return;
+    const cleanId = cloneNewId.trim().toUpperCase();
+    const cleanIp = cloneNewIp.trim();
+    if (!cleanId) {
+      setCloneError(t('device.cloneModal.errIdRequired'));
+      return;
+    }
+    if (!cleanIp) {
+      setCloneError(t('device.cloneModal.errIpRequired'));
+      return;
+    }
+    if (devices.some((d) => d.id.toUpperCase() === cleanId)) {
+      setCloneError(t('device.cloneModal.errIdExists'));
+      return;
+    }
+
+    const src = cloneSourceDevice;
+    const cleanPlant = src.plant || src.factory || 'ITMVPSG';
+    const cleanModel = src.equipmentModel || src.model || 'IBS_BAKE';
+    const cleanGroup = src.groupName || src.groupId || 'NET';
+    const cleanName = cloneNewName.trim() || `${cleanId} - ${cleanModel}`;
+    const isDevEnabled = (src.enable || (src.enabled ? 'YES' : 'NO')) === 'YES';
+    const portNum = Number(cloneNewPort) || src.hostPort || src.port || 5010;
+
+    const clonedDev: DeviceModel = {
+      id: cleanId,
+      name: cleanName,
+      groupId: cleanGroup,
+      factory: cleanPlant,
+      line: cleanGroup,
+      station: cleanId,
+      model: cleanModel,
+      ipAddress: cleanIp,
+      port: portNum,
+      role: src.role || 'CLIENT',
+      protocolVersion: src.protocolVersion || 'v2.0-Extended20014',
+      frameBoundary: src.frameBoundary || '20014_EXTENDED',
+      checksumAlgorithm: src.checksumAlgorithm || 'LRC_MOD256',
+      status: isDevEnabled ? 'Ready' : 'Disconnected',
+      enabled: isDevEnabled,
+
+      plant: cleanPlant,
+      hostAddress: cleanIp,
+      hostPort: portNum,
+      deviceId: src.deviceId !== undefined ? src.deviceId : '0',
+      serverNo: src.serverNo !== undefined ? src.serverNo : '15',
+      equipmentId: cleanId,
+      groupName: cleanGroup,
+      equipmentOrder: src.equipmentOrder !== undefined ? src.equipmentOrder : 20110,
+      equipmentMain: src.equipmentMain || '',
+      description: cleanName,
+      enable: src.enable || 'YES',
+      field01: src.field01 || '',
+      field02: src.field02 || '',
+      field03: src.field03 || 'ITMVIET',
+      interlockRecipe: src.interlockRecipe || 'YES',
+      equipmentModel: cleanModel,
+      interlockParam: src.interlockParam || '',
+      interlockTrace: src.interlockTrace || '',
+
+      lastConnectedAt: new Date().toISOString(),
+      totalRequests: 0,
+      totalResponses: 0,
+      errorCount: 0,
+      reconnectCount: 0,
+      avgResponseTimeMs: 12.0,
+      uptimeSeconds: 0,
+      consecutiveTimeouts: 0,
+    } as DeviceModel;
+
+    addDevice(clonedDev);
+    showToast(`${t('device.cloneModal.successToast')} ${clonedDev.id}`);
+    setIsCloneModalOpen(false);
+  };
+
+  // Chuyển sang chỉnh sửa toàn bộ 18 cột từ cấu hình đã sao chép
+  const handleSwitchToFullEditFromClone = () => {
+    if (!cloneSourceDevice) return;
+    const src = cloneSourceDevice;
+    setEditingDevice(null);
+    setFormPlant(src.plant || src.factory || 'ITMVPSG');
+    setFormId(cloneNewId.trim().toUpperCase());
+    setFormName(cloneNewName.trim() || `${cloneNewId.trim().toUpperCase()} - ${src.equipmentModel || src.model}`);
+    setFormGroup(src.groupName || src.groupId || 'UNASSIGNED');
+    setFormStation(cloneNewId.trim().toUpperCase());
+    setFormModel(src.equipmentModel || src.model || 'IBS_BAKE');
+    setFormIp(cloneNewIp.trim());
+    setFormPort(Number(cloneNewPort) || src.hostPort || src.port || 5010);
+    setFormDeviceId(src.deviceId !== undefined ? src.deviceId : '0');
+    setFormServerNo(src.serverNo !== undefined ? src.serverNo : '15');
+    setFormEquipmentOrder(src.equipmentOrder !== undefined ? src.equipmentOrder : 20110);
+    setFormEquipmentMain(src.equipmentMain || '');
+    setFormDescription(src.description || '');
+    setFormEnable((src.enable || (src.enabled ? 'YES' : 'NO')) as 'YES' | 'NO');
+    setFormField01(src.field01 || '');
+    setFormField02(src.field02 || '');
+    setFormField03(src.field03 || 'ITMVIET');
+    setFormInterlockRecipe(src.interlockRecipe || 'YES');
+    setFormEquipmentModel(src.equipmentModel || src.model || 'IBS_BAKE');
+    setFormInterlockParam(src.interlockParam || '');
+    setFormInterlockTrace(src.interlockTrace || '');
+    setFormRole(src.role);
+    setFormProtocol(src.protocolVersion);
+    setFormBoundary(src.frameBoundary);
+    setFormChecksum(src.checksumAlgorithm);
+    setFormError('');
+    setIsCloneModalOpen(false);
+    setIsModalOpen(true);
+  };
+
+  // Đổ cấu hình từ máy mẫu vào form modal đầy đủ
+  const handleApplyTemplateToFullModal = (templateDevId: string) => {
+    const src = devices.find((d) => d.id === templateDevId);
+    if (!src) return;
+    setFormPlant(src.plant || src.factory || 'ITMVPSG');
+    setFormGroup(src.groupName || src.groupId || 'UNASSIGNED');
+    setFormModel(src.equipmentModel || src.model || 'IBS_BAKE');
+    setFormPort(src.hostPort || src.port || 5010);
+    setFormDeviceId(src.deviceId !== undefined ? src.deviceId : '0');
+    setFormServerNo(src.serverNo !== undefined ? src.serverNo : '15');
+    setFormEquipmentOrder(src.equipmentOrder !== undefined ? src.equipmentOrder : 20110);
+    setFormEquipmentMain(src.equipmentMain || '');
+    setFormDescription(src.description || '');
+    setFormEnable((src.enable || (src.enabled ? 'YES' : 'NO')) as 'YES' | 'NO');
+    setFormField01(src.field01 || '');
+    setFormField02(src.field02 || '');
+    setFormField03(src.field03 || 'ITMVIET');
+    setFormInterlockRecipe(src.interlockRecipe || 'YES');
+    setFormEquipmentModel(src.equipmentModel || src.model || 'IBS_BAKE');
+    setFormInterlockParam(src.interlockParam || '');
+    setFormInterlockTrace(src.interlockTrace || '');
+    setFormRole(src.role);
+    setFormProtocol(src.protocolVersion);
+    setFormBoundary(src.frameBoundary);
+    setFormChecksum(src.checksumAlgorithm);
+    showToast(`${t('device.cloneModal.selectTemplatePrompt')} ${src.id}`);
   };
 
   // Save Device
@@ -739,6 +944,13 @@ export const DeviceManagementView: React.FC = () => {
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
+                            onClick={() => handleOpenClone(dev)}
+                            className="p-1 rounded text-slate-400 hover:text-cyan-400 hover:bg-cyan-950/60 transition-colors"
+                            title={t('device.actions.clone')}
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                          <button
                             onClick={() => {
                               if (confirm(`${t('device.toasts.deleteConfirm')} ${dev.id}?`)) {
                                 deleteDevice(dev.id);
@@ -860,6 +1072,13 @@ export const DeviceManagementView: React.FC = () => {
                             title={t('device.actions.edit')}
                           >
                             <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleOpenClone(dev)}
+                            className="p-1 rounded text-slate-400 hover:text-cyan-400 hover:bg-cyan-950/60 transition-colors"
+                            title={t('device.actions.clone')}
+                          >
+                            <Copy className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => {
@@ -1007,6 +1226,206 @@ export const DeviceManagementView: React.FC = () => {
 
 
       {/* ========================================================================= */}
+      {/* QUICK CLONE / COPY DEVICE MODAL (SAO CHÉP CẤU HÌNH & ĐĂNG KÝ THIẾT BỊ MỚI)  */}
+      {/* ========================================================================= */}
+      {isCloneModalOpen && cloneSourceDevice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-[#0A0F1D] border border-cyan-500/50 rounded-xl shadow-2xl max-w-xl w-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 text-xs font-sans">
+            
+            {/* Modal Header */}
+            <div className="px-4 py-3 bg-slate-950/95 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-1.5 rounded-md bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shrink-0">
+                  <Copy className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+                      {t('device.cloneModal.title')}
+                    </h3>
+                    <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">
+                      {cloneSourceDevice.equipmentId || cloneSourceDevice.id}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                    {t('device.cloneModal.subtitle')}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsCloneModalOpen(false)}
+                className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Error Message */}
+            {cloneError && (
+              <div className="mx-4 mt-3 p-2 rounded-md bg-red-950/60 border border-red-500/50 text-red-300 text-xs flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping" />
+                <span>{cloneError}</span>
+              </div>
+            )}
+
+            {/* Modal Body */}
+            <form onSubmit={handleConfirmClone} className="p-4 space-y-3.5">
+              
+              {/* Template Source Summary Card */}
+              <div className="rounded-lg bg-slate-900/80 border border-slate-800 p-3 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-300">
+                  <span className="flex items-center gap-1.5 text-cyan-400">
+                    <Server className="w-3.5 h-3.5" />
+                    <span>{t('device.cloneModal.sourceDevice')}: <strong>{cloneSourceDevice.equipmentId || cloneSourceDevice.id}</strong></span>
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded">
+                    {cloneSourceDevice.equipmentModel || cloneSourceDevice.model || 'IBS_BAKE'}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-2 text-[10px] font-mono bg-slate-950/60 p-2 rounded border border-slate-800/60 text-slate-400">
+                  <div>
+                    <span className="text-slate-500 block">PLANT / GROUP:</span>
+                    <span className="text-amber-400 font-semibold">{cloneSourceDevice.plant || cloneSourceDevice.factory || 'ITMVPSG'} / {cloneSourceDevice.groupName || cloneSourceDevice.groupId || 'NET'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">TCP PROTOCOL:</span>
+                    <span className="text-purple-300">{cloneSourceDevice.protocolVersion || 'v2.0'} ({cloneSourceDevice.checksumAlgorithm || 'LRC'})</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block">RECIPE / INTERLOCK:</span>
+                    <span className="text-emerald-400">{cloneSourceDevice.interlockRecipe || 'YES'} (SRV:{cloneSourceDevice.serverNo ?? 15})</span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-cyan-300/90 italic flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-cyan-400 shrink-0" />
+                  <span>{t('device.cloneModal.cloneNotice')}</span>
+                </p>
+              </div>
+
+              {/* Input Fields Card (Chỉ cần nhập ID và IP khác) */}
+              <div className="rounded-lg bg-slate-900/60 border border-cyan-500/30 p-3.5 space-y-3 shadow-inner">
+                
+                {/* 1. MÃ THIẾT BỊ MỚI (NEW EQUIPMENT ID) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-1">
+                      <span>{t('device.cloneModal.newIdLabel')}</span>
+                      <span className="text-rose-400">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = getSuggestedNextId(cloneSourceDevice.equipmentId || cloneSourceDevice.id);
+                        setCloneNewId(next);
+                        setCloneNewName(`${next} - ${cloneSourceDevice.equipmentModel || cloneSourceDevice.model || 'IBS_BAKE'}`);
+                      }}
+                      className="text-[10px] text-cyan-400 hover:text-cyan-200 underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Zap className="w-2.5 h-2.5" />
+                      <span>{t('device.cloneModal.autoNextId')}</span>
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    value={cloneNewId}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase();
+                      setCloneNewId(val);
+                      setCloneNewName(`${val} - ${cloneSourceDevice.equipmentModel || cloneSourceDevice.model || 'IBS_BAKE'}`);
+                    }}
+                    placeholder={t('device.cloneModal.newIdPlaceholder')}
+                    className="w-full bg-slate-950 border border-cyan-500/60 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 rounded-md px-3 py-1.5 text-xs font-mono font-bold text-cyan-200 placeholder:text-slate-600 transition-colors uppercase"
+                  />
+                </div>
+
+                {/* 2. ĐỊA CHỈ IP MỚI & PORT (NEW IP & PORT) */}
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div className="col-span-2">
+                    <label className="block text-[11px] font-bold text-cyan-300 uppercase tracking-wider mb-1">
+                      <span>{t('device.cloneModal.newIpLabel')}</span>
+                      <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={cloneNewIp}
+                      onChange={(e) => setCloneNewIp(e.target.value)}
+                      placeholder={t('device.cloneModal.newIpPlaceholder')}
+                      className="w-full bg-slate-950 border border-cyan-500/60 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 rounded-md px-3 py-1.5 text-xs font-mono font-bold text-slate-100 placeholder:text-slate-600 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                      <span>{t('device.cloneModal.newPortLabel')}</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={cloneNewPort}
+                      onChange={(e) => setCloneNewPort(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 focus:border-cyan-400 rounded-md px-2.5 py-1.5 text-xs font-mono text-slate-200"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. TÊN / MÔ TẢ (TÙY CHỌN) */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                    <span>{t('device.cloneModal.newNameLabel')}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={cloneNewName}
+                    onChange={(e) => setCloneNewName(e.target.value)}
+                    placeholder={t('device.cloneModal.newNamePlaceholder')}
+                    className="w-full bg-slate-950/80 border border-slate-800 focus:border-slate-600 rounded-md px-2.5 py-1.5 text-xs text-slate-300 placeholder:text-slate-600"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={handleSwitchToFullEditFromClone}
+                  className="px-2.5 py-1.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-[11px] font-medium flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer"
+                  title="Mở toàn bộ 18 cột để tinh chỉnh trước khi lưu"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{t('device.cloneModal.openFullModalBtn')}</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsCloneModalOpen(false)}
+                    className="px-3 py-1.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-sans cursor-pointer"
+                  >
+                    {t('device.modal.cancel')}
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 rounded bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-cyan-900/30 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{t('device.cloneModal.confirmBtn')}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+
+
+      {/* ========================================================================= */}
       {/* ADD / EDIT DEVICE MODAL (TRỰC QUAN - KHÔNG PHÂN TAB - ĐỔI NGÔN NGỮ TRỰC TIẾP) */}
       {/* ========================================================================= */}
       {isModalOpen && (
@@ -1082,6 +1501,33 @@ export const DeviceManagementView: React.FC = () => {
             {/* Form Body - Single Unified View, No Tabs, Visual Cards */}
             <form onSubmit={handleSave} className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <div className="flex-1 overflow-y-auto p-4 space-y-3 pr-2">
+
+                {/* Sao chép cấu hình từ máy mẫu có sẵn */}
+                {!editingDevice && devices.length > 0 && (
+                  <div className="rounded-lg bg-cyan-950/40 border border-cyan-500/40 p-2.5 flex items-center justify-between gap-3 text-xs flex-wrap">
+                    <div className="flex items-center gap-2 text-cyan-300 font-semibold">
+                      <Copy className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span>{t('device.cloneModal.selectTemplatePrompt')}</span>
+                    </div>
+                    <select
+                      defaultValue=""
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          handleApplyTemplateToFullModal(e.target.value);
+                          e.target.value = '';
+                        }
+                      }}
+                      className="bg-slate-950 border border-cyan-600/60 rounded px-2.5 py-1 text-xs text-cyan-200 font-mono focus:border-cyan-400 cursor-pointer"
+                    >
+                      <option value="" disabled>-- Chọn máy mẫu để sao chép 18 thông số --</option>
+                      {devices.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.id} ({d.model || 'IBS_BAKE'} - {d.groupName || d.groupId || 'NET'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 
                 {/* ------------------------------------------------------------- */}
                 {/* Card 1: Định Danh & Thông Tin Trạm (Plant & Master Identity) */}
