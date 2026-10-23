@@ -28,6 +28,7 @@ import {
   DeviceCloneModal,
   DeviceImportModal,
   DeviceFormModal,
+  DeviceDeleteModal,
 } from './components';
 
 export const DeviceManagementView: React.FC = () => {
@@ -87,6 +88,10 @@ export const DeviceManagementView: React.FC = () => {
   const [cloneNewPort, setCloneNewPort] = useState<number | string>(5010);
   const [cloneNewName, setCloneNewName] = useState<string>('');
   const [cloneError, setCloneError] = useState<string>('');
+
+  // Delete Confirmation Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [deleteTargetDevice, setDeleteTargetDevice] = useState<DeviceModel | null>(null);
 
   // Batch Import Modal State
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
@@ -457,12 +462,17 @@ export const DeviceManagementView: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // Actions
-  const handleDelete = (id: string) => {
-    if (window.confirm(`${t('device.deleteConfirm')} (${id})?`)) {
-      deleteDevice(id);
-      showToast(`${t('device.toasts.deleted')} ${id}`);
-    }
+  // Delete Handlers (High-Aesthetic Confirmation Dialog)
+  const handleOpenDelete = (dev: DeviceModel) => {
+    setDeleteTargetDevice(dev);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = (id: string) => {
+    deleteDevice(id);
+    showToast(`${t('device.toasts.deleted')} ${id}`);
+    setIsDeleteModalOpen(false);
+    setDeleteTargetDevice(null);
   };
 
   const handlePingTest = async (dev: DeviceModel) => {
@@ -652,7 +662,7 @@ export const DeviceManagementView: React.FC = () => {
               onReconnect={handleReconnect}
               onEdit={handleOpenEdit}
               onClone={handleOpenClone}
-              onDelete={handleDelete}
+              onDelete={handleOpenDelete}
               getStatusBadge={getStatusBadge}
             />
           ) : (
@@ -663,7 +673,7 @@ export const DeviceManagementView: React.FC = () => {
               onReconnect={handleReconnect}
               onEdit={handleOpenEdit}
               onClone={handleOpenClone}
-              onDelete={handleDelete}
+              onDelete={handleOpenDelete}
               getStatusBadge={getStatusBadge}
               formatNumber={formatNumber}
             />
@@ -773,6 +783,18 @@ export const DeviceManagementView: React.FC = () => {
         onTextChange={handleImportTextChange}
         onLoadSample={handleLoadSample}
         onConfirm={handleConfirmImport}
+      />
+
+      {/* Modern High-Aesthetic Delete Device Confirmation Modal */}
+      <DeviceDeleteModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeleteTargetDevice(null);
+        }}
+        device={deleteTargetDevice}
+        onConfirmDelete={handleConfirmDelete}
+        getStatusBadge={getStatusBadge}
       />
     </div>
   );

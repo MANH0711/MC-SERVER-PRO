@@ -21,7 +21,7 @@ interface DeviceStandardTableProps {
   onReconnect: (id: string) => void;
   onEdit: (dev: DeviceModel) => void;
   onClone: (dev: DeviceModel) => void;
-  onDelete: (id: string) => void;
+  onDelete: (dev: DeviceModel) => void;
   getStatusBadge: (status: DeviceStatus) => string;
   formatNumber: (n: number) => string;
 }
@@ -148,7 +148,7 @@ export const DeviceStandardTable: React.FC<DeviceStandardTableProps> = ({
                     <Copy className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={() => onDelete(dev.id)}
+                    onClick={() => onDelete(dev)}
                     className="p-1 rounded text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors cursor-pointer"
                     title={t('device.actions.delete')}
                   >
