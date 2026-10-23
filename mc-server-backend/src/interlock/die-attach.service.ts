@@ -440,6 +440,23 @@ export class DieAttachService {
       const rtnMsg = out.RtnMsg || 'Interlock verification successful.';
 
       const isValid = rtnYN.toUpperCase() === 'OK';
+
+      // Nếu kết quả kiểm tra bị chặn (NG) hoặc cảnh báo, tự động ghi nhận vào BIZ_ILRULE_CHECK_HISTORY
+      if (!isValid) {
+        await this.recordInterlockHistory(
+          plant,
+          item.LOT_NUMBER || '',
+          dbEquipmentName,
+          operation,
+          item.PCB_ID || '',
+          parsed.rawMessage,
+          rtnMsg,
+          'Y',
+          rtnMsgID,
+          'EPBV'
+        );
+      }
+
       return {
         isValid,
         operation,
@@ -454,6 +471,20 @@ export class DieAttachService {
     } catch (err: any) {
       this.logger.error(`[DieAttach SP Error] Lỗi khi gọi P_EQPIF_RULE_INTERLOCK_MAIN: ${err.message}`);
 
+      // Đảm bảo lịch sử lỗi luôn được lưu vào Oracle DB kể cả khi SP ném Exception
+      await this.recordInterlockHistory(
+        plant,
+        item.LOT_NUMBER || '',
+        dbEquipmentName,
+        operation,
+        item.PCB_ID || '',
+        parsed.rawMessage,
+        `Interlock verification error: ${err.message}`,
+        'Y',
+        'EIF-ERR',
+        'EPBV'
+      );
+
       // Báo lỗi thực tế từ hệ thống, không tự động chuyển thành OK
       return {
         isValid: false,
@@ -463,6 +494,66 @@ export class DieAttachService {
         rtnMsgID: 'EIF-ERR',
         rtnMsg: `Interlock verification error: ${err.message}`,
       };
+    }
+  }
+
+  /**
+   * Đảm bảo lịch sử kiểm tra Interlock luôn được lưu vào BIZ_ILRULE_CHECK_HISTORY trong Oracle
+   * kể cả khi Stored Procedure của Oracle bị lỗi hoặc không tự ghi lại.
+   */
+  async recordInterlockHistory(
+    plant: string,
+    lot: string,
+    equip: string,
+    oper: string,
+    unitId: string,
+    rawMsg: string,
+    checkMsg: string,
+    alarmStatus: 'Y' | 'N',
+    alarmId: string = 'EIF-000',
+    ruleKey: string = 'EPBV'
+  ): Promise<void> {
+    try {
+      const odb = this.oracleService.getOracledb();
+      if (!odb || this.oracleService.isUsingFallback()) return;
+
+      const sql = `
+        INSERT INTO MIGHTY.BIZ_ILRULE_CHECK_HISTORY (
+          plant, sys_trans_time, trans_time,
+          rule_key, trans_lot, trans_key_1,
+          trans_key_2, trans_key_3, trans_key_4,
+          trans_unit_type, trans_unit,
+          receive_msg, check_msg, alarm_id,
+          alarm_status, user_id, report_date
+        ) VALUES (
+          :plant, TO_CHAR(systimestamp, 'yyyymmddhh24miss.ff6'), TO_CHAR(sysdate, 'yyyymmddhh24miss'),
+          :ruleKey, NVL(:lot, ' '), 'NET',
+          NVL(:oper, ' '), 'DA', NVL(:equip, ' '),
+          'PCB', NVL(:unitId, ' '),
+          SUBSTR(:receiveMsg, 1, 1000), SUBSTR(:checkMsg, 1, 1000), :alarmId,
+          :alarmStatus, 'MC_SERVER', TO_CHAR(sysdate, 'yyyymmdd')
+        )
+      `;
+
+      await this.oracleService.executeProcedure(
+        sql,
+        {
+          plant: plant || 'ITMVPSG',
+          ruleKey: ruleKey || 'EPBV',
+          lot: lot || ' ',
+          oper: oper || ' ',
+          equip: equip || ' ',
+          unitId: unitId || ' ',
+          receiveMsg: (rawMsg || ' ').trim(),
+          checkMsg: (checkMsg || ' ').trim(),
+          alarmId: alarmId || 'EIF-000',
+          alarmStatus,
+        },
+        'ITMVMES'
+      );
+      this.logger.log(`[Audit History] Đã lưu lịch sử Interlock vào BIZ_ILRULE_CHECK_HISTORY: máy ${equip}, Lot ${lot}, Alarm: ${alarmStatus}`);
+    } catch (err: any) {
+      this.logger.warn(`[Audit History] Không thể ghi BIZ_ILRULE_CHECK_HISTORY: ${err.message}`);
     }
   }
 
