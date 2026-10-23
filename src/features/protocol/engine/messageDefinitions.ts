@@ -1,0 +1,241 @@
+/**
+ * MC Server Industrial Message Definitions
+ * Catalog of all supported message codes, parameters, sample payloads, and responses.
+ */
+
+import { MessageCodeDefinition } from '@/core/types';
+
+export const MESSAGE_DEFINITIONS: Record<string, MessageCodeDefinition> = {
+  M001: {
+    code: 'M001',
+    name: 'Device Ready & State Heartbeat',
+    category: 'SYSTEM',
+    description: 'Equipment periodic keep-alive and readiness state handshake.',
+    direction: 'EQ_TO_SRV',
+    responseCode: 'M002',
+    fields: [
+      { name: 'status', type: 'string', required: true, description: 'IDLE | RUN | DOWN | PAUSE' },
+      { name: 'temperature', type: 'number', required: false, description: 'Station internal chamber temperature (°C)' },
+      { name: 'pressure', type: 'number', required: false, description: 'Pneumatic line pressure (bar)' },
+      { name: 'uptime', type: 'number', required: false, description: 'Device uptime in seconds' },
+    ],
+    samplePayload: {
+      status: 'IDLE',
+      temperature: 24.8,
+      pressure: 6.2,
+      uptime: 14250,
+    },
+  },
+  M002: {
+    code: 'M002',
+    name: 'Server Heartbeat Acknowledgement',
+    category: 'SYSTEM',
+    description: 'MC Server response acknowledging device heartbeat and sync timestamp.',
+    direction: 'SRV_TO_EQ',
+    fields: [
+      { name: 'ack', type: 'string', required: true, description: 'PASS | FAIL' },
+      { name: 'serverTime', type: 'string', required: true, description: 'ISO 8601 synchronized server timestamp' },
+      { name: 'interlockEngaged', type: 'boolean', required: true, description: 'Safety interlock status' },
+    ],
+    samplePayload: {
+      ack: 'PASS',
+      serverTime: '2026-10-20T06:45:00.120Z',
+      interlockEngaged: false,
+    },
+  },
+  S000: {
+    code: 'S000',
+    name: 'Material / Carrier Inquiry',
+    category: 'MATERIAL',
+    description: 'Equipment queries MES for incoming Lot/PCB carrier dispatch instruction.',
+    direction: 'EQ_TO_SRV',
+    responseCode: 'S001',
+    fields: [
+      { name: 'stationId', type: 'string', required: true, description: 'Equipment station ID' },
+      { name: 'carrierSlot', type: 'number', required: true, description: 'Feeder or conveyor slot number' },
+      { name: 'bufferStatus', type: 'string', required: true, description: 'EMPTY | HALF | FULL' },
+    ],
+    samplePayload: {
+      stationId: 'ST_SMT_P1',
+      carrierSlot: 1,
+      bufferStatus: 'EMPTY',
+    },
+  },
+  S001: {
+    code: 'S001',
+    name: 'Carrier Dispatch Authorization',
+    category: 'MATERIAL',
+    description: 'MES authorizes conveyor entry with designated carrier and Lot ID.',
+    direction: 'SRV_TO_EQ',
+    fields: [
+      { name: 'lotId', type: 'string', required: true, description: 'Assigned production Lot ID' },
+      { name: 'carrierId', type: 'string', required: true, description: 'Barcode on magazine / carrier' },
+      { name: 'quantity', type: 'number', required: true, description: 'Quantity of PCBs in carrier' },
+      { name: 'dispatchAction', type: 'string', required: true, description: 'LOAD | BYPASS | HOLD' },
+    ],
+    samplePayload: {
+      lotId: 'LOT_20261020_084',
+      carrierId: 'MAG_SMT_4021',
+      quantity: 50,
+      dispatchAction: 'LOAD',
+    },
+  },
+  S002: {
+    code: 'S002',
+    name: 'Recipe & Parameter Validation Request',
+    category: 'RECIPE',
+    description: 'Equipment requests MES validation for selected program/recipe before starting run.',
+    direction: 'EQ_TO_SRV',
+    responseCode: 'S003',
+    fields: [
+      { name: 'recipeId', type: 'string', required: true, description: 'Recipe filename or ID' },
+      { name: 'lotId', type: 'string', required: true, description: 'Current production Lot ID' },
+      { name: 'parameters', type: 'object', required: true, description: 'Array or map of process setpoints' },
+    ],
+    samplePayload: {
+      recipeId: 'RCP_MAIN_BOARD_V4',
+      lotId: 'LOT_20261020_084',
+      parameters: {
+        solderTemp: 245.0,
+        conveyorSpeedMmPerSec: 18.5,
+        nitrogenPpm: 450,
+      },
+    },
+  },
+  S003: {
+    code: 'S003',
+    name: 'Recipe Validation Result',
+    category: 'RECIPE',
+    description: 'MES confirms recipe validity and tolerance bounds.',
+    direction: 'SRV_TO_EQ',
+    fields: [
+      { name: 'result', type: 'string', required: true, description: 'PASS | NG' },
+      { name: 'recipeVersion', type: 'string', required: true, description: 'Approved revision hash' },
+      { name: 'allowedTolerances', type: 'object', required: false, description: 'Acceptable delta bounds' },
+      { name: 'errorCode', type: 'string', required: false, description: 'Error code if NG' },
+    ],
+    samplePayload: {
+      result: 'PASS',
+      recipeVersion: 'REV_2.4.1',
+      allowedTolerances: {
+        solderTempMax: 252.0,
+        solderTempMin: 238.0,
+        speedMax: 20.0,
+        speedMin: 16.0,
+      },
+    },
+  },
+  S005: {
+    code: 'S005',
+    name: 'Station Move-In Handshake',
+    category: 'MOVE_IN',
+    description: 'Equipment scanned PCB barcode at entrance stopper, requests permission to process.',
+    direction: 'EQ_TO_SRV',
+    responseCode: 'S006',
+    fields: [
+      { name: 'pcbBarcode', type: 'string', required: true, description: '2D DataMatrix serial on PCB' },
+      { name: 'lotId', type: 'string', required: true, description: 'Associated Lot number' },
+      { name: 'carrierId', type: 'string', required: false, description: 'Parent carrier serial' },
+      { name: 'posInCarrier', type: 'number', required: false, description: 'Index within carrier (1..N)' },
+    ],
+    samplePayload: {
+      pcbBarcode: 'PCB_BRD_994827104',
+      lotId: 'LOT_20261020_084',
+      carrierId: 'MAG_SMT_4021',
+      posInCarrier: 12,
+    },
+  },
+  S006: {
+    code: 'S006',
+    name: 'Station Move-In Permission',
+    category: 'MOVE_IN',
+    description: 'Server validates MES routing and sends permission to clamp PCB and begin processing.',
+    direction: 'SRV_TO_EQ',
+    fields: [
+      { name: 'permission', type: 'string', required: true, description: 'PASS | REJECT | REROUTE' },
+      { name: 'pcbBarcode', type: 'string', required: true, description: 'Confirmed PCB Barcode' },
+      { name: 'previousStepStatus', type: 'string', required: true, description: 'SPI_3D: PASS' },
+      { name: 'action', type: 'string', required: true, description: 'CLAMP_AND_START | BYPASS_CONVEYOR' },
+    ],
+    samplePayload: {
+      permission: 'PASS',
+      pcbBarcode: 'PCB_BRD_994827104',
+      previousStepStatus: 'SPI_3D: PASS',
+      action: 'CLAMP_AND_START',
+    },
+  },
+  S030: {
+    code: 'S030',
+    name: 'Station Move-Out & Inspection Result',
+    category: 'MOVE_OUT',
+    description: 'Equipment reports completed cycle, defect map, component placement count, and test values.',
+    direction: 'EQ_TO_SRV',
+    responseCode: 'S031',
+    fields: [
+      { name: 'pcbBarcode', type: 'string', required: true, description: 'Processed PCB barcode' },
+      { name: 'overallJudgement', type: 'string', required: true, description: 'PASS | FAIL | REWORK' },
+      { name: 'cycleTimeSeconds', type: 'number', required: true, description: 'Cycle time in seconds' },
+      { name: 'defectCount', type: 'number', required: true, description: 'Detected defects count' },
+      { name: 'defects', type: 'array', required: false, description: 'List of defect codes and coordinates' },
+    ],
+    samplePayload: {
+      pcbBarcode: 'PCB_BRD_994827104',
+      overallJudgement: 'PASS',
+      cycleTimeSeconds: 14.2,
+      defectCount: 0,
+      defects: [],
+    },
+  },
+  S031: {
+    code: 'S031',
+    name: 'Station Move-Out Acknowledged',
+    category: 'MOVE_OUT',
+    description: 'MES acknowledges inspection data saved, instructs conveyor release to downstream buffer.',
+    direction: 'SRV_TO_EQ',
+    fields: [
+      { name: 'ack', type: 'string', required: true, description: 'PASS' },
+      { name: 'nextDestinationStation', type: 'string', required: true, description: 'ST_AOI_3D_01' },
+      { name: 'releaseAction', type: 'string', required: true, description: 'UNCLAMP_AND_CONVEY' },
+    ],
+    samplePayload: {
+      ack: 'PASS',
+      nextDestinationStation: 'ST_AOI_3D_01',
+      releaseAction: 'UNCLAMP_AND_CONVEY',
+    },
+  },
+  S040: {
+    code: 'S040',
+    name: 'Equipment Machine Alarm Event',
+    category: 'ALARM',
+    description: 'Equipment alerts MC Server and MES of interlock trip, mechanical jam, or sensor fault.',
+    direction: 'EQ_TO_SRV',
+    responseCode: 'S041',
+    fields: [
+      { name: 'alarmCode', type: 'string', required: true, description: 'Machine native error code' },
+      { name: 'severity', type: 'string', required: true, description: 'WARNING | ERROR | CRITICAL' },
+      { name: 'description', type: 'string', required: true, description: 'Human readable alarm description' },
+      { name: 'feederIndex', type: 'number', required: false, description: 'Feeder slot index if applicable' },
+    ],
+    samplePayload: {
+      alarmCode: 'ALM_E034_FEEDER_JAM',
+      severity: 'ERROR',
+      description: 'Component pick miss exceeded threshold on Feeder 14 (0402 Cap)',
+      feederIndex: 14,
+    },
+  },
+  S041: {
+    code: 'S041',
+    name: 'Alarm Recorded Acknowledgement',
+    category: 'ALARM',
+    description: 'Server confirms alarm was logged, broadcasted to maintenance paging, and state locked.',
+    direction: 'SRV_TO_EQ',
+    fields: [
+      { name: 'recorded', type: 'boolean', required: true, description: 'True if committed to MES log' },
+      { name: 'serverAction', type: 'string', required: true, description: 'NOTIFY_LINE_LEADER | HALT_DISPATCH' },
+    ],
+    samplePayload: {
+      recorded: true,
+      serverAction: 'NOTIFY_LINE_LEADER',
+    },
+  },
+};

@@ -1,5 +1,5 @@
 /**
- * Re-export TransactionDetailModal from communication-monitor module
+ * Re-export TransactionDetailModal from communication feature
  */
-export * from '../../views/communication-monitor/components/TransactionDetailModal';
-export { TransactionDetailModal as default } from '../../views/communication-monitor/components/TransactionDetailModal';
+export * from '@/features/communication';
+export { TransactionDetailModal as default } from '@/features/communication';

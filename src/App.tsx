@@ -1,17 +1,13 @@
 /**
  * MC Server Industrial Enterprise Edition
- * Main Application Entry Component with Layout & Master View Orchestrator
+ * Main Application Entry Component with Layout & Master Feature Orchestrator
  */
 
 import React from 'react';
-import { LanguageProvider } from './i18n/LanguageContext';
-import { AppProvider } from './context/AppContext';
-import { Sidebar } from './components/Sidebar';
-import { TopBar } from './components/TopBar';
-import { StatusBar } from './components/StatusBar';
-
-// File cha quản lý & điều hướng tập trung toàn bộ các Form nghiệp vụ
-import ViewsManager from './views';
+import { LanguageProvider } from '@/core/i18n';
+import { AppProvider } from '@/core/context';
+import { Sidebar, TopBar, StatusBar } from '@/components/layout';
+import FeaturesManager from '@/features';
 
 const MainLayout: React.FC = () => {
   return (
@@ -24,9 +20,9 @@ const MainLayout: React.FC = () => {
         {/* Top Control Header */}
         <TopBar />
 
-        {/* Dynamic Viewport: Rendered by ViewsManager (File Cha index.tsx) */}
+        {/* Dynamic Viewport: Rendered by FeaturesManager */}
         <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-          <ViewsManager />
+          <FeaturesManager />
         </main>
 
         {/* Bottom Industrial Status Bar */}
