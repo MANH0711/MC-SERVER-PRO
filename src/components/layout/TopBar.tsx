@@ -170,8 +170,8 @@ export const TopBar: React.FC = () => {
         {/* Company Logo Badge */}
         <div className="h-8 px-2.5 rounded-lg bg-white/95 border border-blue-500/30 flex items-center justify-center shrink-0 shadow-sm hover:opacity-95 transition-opacity">
           <img
-            src="/assets/images/ItmLogo.png"
-            alt="ITM Semiconductor Logo"
+            src="/logo.png"
+            alt="Company Logo"
             className="h-4.5 w-auto object-contain"
           />
         </div>
