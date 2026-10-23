@@ -56,11 +56,11 @@ export const Sidebar: React.FC = () => {
       {/* Brand Header with Company Logo */}
       <div className="h-14 flex items-center px-3 border-b border-slate-800/80 justify-between bg-slate-950/40">
         <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-white/95 p-0.5 border border-blue-500/30 flex items-center justify-center shrink-0 shadow-sm overflow-hidden group">
+          <div className="w-8 h-8 rounded-lg bg-white/95 p-0 border border-blue-500/30 flex items-center justify-center shrink-0 shadow-sm overflow-hidden group">
             <img
               src="/assets/images/logomini.png"
               alt="ITM Logo"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain scale-[1.35] transition-transform duration-200 group-hover:scale-[1.45]"
             />
           </div>
           {!collapsed && (
