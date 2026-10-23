@@ -56,11 +56,11 @@ export const Sidebar: React.FC = () => {
       {/* Brand Header with Company Logo */}
       <div className="h-14 flex items-center px-3 border-b border-slate-800/80 justify-between bg-slate-950/40">
         <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
-          <div className="h-8 px-2 rounded-lg bg-white/95 border border-blue-500/30 flex items-center justify-center shrink-0 shadow-sm overflow-hidden group">
+          <div className="w-8 h-8 rounded-lg bg-white/95 p-0.5 border border-blue-500/30 flex items-center justify-center shrink-0 shadow-sm overflow-hidden group">
             <img
-              src="/logo.png"
-              alt="Company Logo"
-              className="h-4.5 w-auto max-w-[90px] object-contain"
+              src="/assets/images/logomini.png"
+              alt="ITM Logo"
+              className="w-full h-full object-contain"
             />
           </div>
           {!collapsed && (
@@ -145,7 +145,7 @@ export const Sidebar: React.FC = () => {
             <div className="pt-1.5 border-t border-slate-800/60 flex items-center justify-between gap-1.5">
               <span className="text-[9px] font-mono text-slate-400 truncate">ITM Semiconductor</span>
               <img
-                src="/logo.png"
+                src="/assets/images/ItmLogo.png"
                 alt="ITM Semiconductor Logo"
                 className="h-3.5 w-auto object-contain bg-white/95 px-1.5 py-0.5 rounded shadow-2xs"
               />
