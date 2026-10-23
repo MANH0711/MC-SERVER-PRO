@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 
 export interface SimulateWorkInDto {
   equipmentId?: string;
+  plant?: string;
   lotNumber?: string;
   config?: string;
   recipe?: string;
@@ -54,7 +55,7 @@ export class InterlockController {
       rawStr = `${eqp} S050${div};${jsonPayload};${div}`;
     }
 
-    const result = await this.dieAttachService.processWorkInMessage(rawStr, body.equipmentId);
+    const result = await this.dieAttachService.processWorkInMessage(rawStr, body.equipmentId, body.plant);
     if (!result) {
       return { error: 'Không thể phân tích hoặc xử lý bản tin Work-In' };
     }

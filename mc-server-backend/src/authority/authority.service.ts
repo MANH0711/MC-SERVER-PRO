@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OracleService } from '../database/oracle.service';
 import { TransactionRepository, TransactionRecord } from '../database/transaction.repository';
-import { EquipmentRepository } from '../database/equipment.repository';
+import { EquipmentRepository, EquipmentRecord } from '../database/equipment.repository';
 import { Subject, Observable } from 'rxjs';
 
 export interface AuthorityParseResult {
@@ -179,9 +179,47 @@ export class AuthorityService {
   }
 
   /**
+   * Tìm kiếm bản ghi thiết bị từ cấu hình trong MIGHTY.GATEWAY_DEVICES
+   */
+  async resolveEquipmentRecord(parsedEquipment: string, socketEquipmentId?: string): Promise<EquipmentRecord | null> {
+    const targetId = (socketEquipmentId && socketEquipmentId.trim())
+      ? socketEquipmentId.trim()
+      : (parsedEquipment || '').trim();
+
+    if (!targetId) return null;
+
+    try {
+      const direct = await this.equipmentRepo.findById(targetId);
+      if (direct) return direct;
+
+      const allDevices = await this.equipmentRepo.findAll();
+      const exact = allDevices.find(
+        (d) => d.EQUIPMENT_ID.toUpperCase() === targetId.toUpperCase()
+      );
+      if (exact) return exact;
+
+      const normInput = targetId.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      const partial = allDevices.find((d) => {
+        const dClean = d.EQUIPMENT_ID.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        const descClean = (d.DESCRIPTION || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        return dClean.includes(normInput) || normInput.includes(dClean) || descClean.includes(normInput);
+      });
+      if (partial) return partial;
+    } catch (e: any) {
+      this.logger.debug(`Lỗi kiểm tra cache thiết bị: ${e.message}`);
+    }
+
+    return null;
+  }
+
+  /**
    * Tra cứu và chuyển đổi tên máy sang đúng tên máy chính thức trên Database (GATEWAY_DEVICES / ADM_EQUIPMENT)
    */
   async resolveDbEquipmentName(parsedEquipment: string, socketEquipmentId?: string): Promise<string> {
+    const equipRecord = await this.resolveEquipmentRecord(parsedEquipment, socketEquipmentId);
+    if (equipRecord && equipRecord.EQUIPMENT_ID) {
+      return equipRecord.EQUIPMENT_ID;
+    }
     // 1. Ưu tiên cao nhất: Tên máy từ Socket kết nối thật (được định nghĩa trong GATEWAY_DEVICES)
     if (socketEquipmentId && socketEquipmentId.trim()) {
       return socketEquipmentId.trim();
@@ -264,13 +302,17 @@ export class AuthorityService {
       return null;
     }
 
-    // Xác định đúng tên máy hiện tại trên DB
-    const dbEquipmentName = await this.resolveDbEquipmentName(parsed.equipment, socketEquipmentId);
+    // Xác định đúng tên máy và Plant hiện tại trên DB
+    const equipRecord = await this.resolveEquipmentRecord(parsed.equipment, socketEquipmentId);
+    const dbEquipmentName = equipRecord?.EQUIPMENT_ID || await this.resolveDbEquipmentName(parsed.equipment, socketEquipmentId);
+    const devicePlant = equipRecord?.PLANT?.trim() || 'ITMVIET';
 
     const nowStr = new Date().toISOString();
     // In log theo đúng chuẩn của hệ thống EQP
     this.logger.log(`📥 Receive From EQP : ${parsed.rawMessage.trim()}`);
-    this.logger.log(`🔍 Parsing : Equipment=${parsed.equipment}, State=${parsed.state}, Div=${parsed.div.trim()}, Checksum=${parsed.checksum}`);
+    this.logger.log(
+      `🔍 Parsing : Equipment=${parsed.equipment} (DB=${dbEquipmentName}, Plant=${devicePlant}), State=${parsed.state}, Div=${parsed.div.trim()}, Checksum=${parsed.checksum}`
+    );
 
     // Ghi nhận transaction RX
     const rxRecord: TransactionRecord = {
@@ -285,13 +327,14 @@ export class AuthorityService {
       payloadJson: JSON.stringify({
         ...parsed,
         dbEquipmentName,
+        plant: devicePlant,
         summary: `Check ${parsed.userType}^${parsed.userId}`,
       }),
     };
     await this.transactionRepo.logTransaction(rxRecord);
 
-    // Kiểm tra DB quyền hạn người dùng
-    const dbResult = await this.validateUserInDb(parsed.userType, parsed.userId);
+    // Kiểm tra DB quyền hạn người dùng theo đúng Plant của thiết bị
+    const dbResult = await this.validateUserInDb(parsed.userType, parsed.userId, devicePlant);
 
     // Tạo phản hồi S003 với đúng tên máy hiện tại trên DB
     const responseMessage = this.formatResponse(

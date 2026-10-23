@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OracleService } from '../database/oracle.service';
 import { TransactionRepository, TransactionRecord } from '../database/transaction.repository';
-import { EquipmentRepository } from '../database/equipment.repository';
+import { EquipmentRepository, EquipmentRecord } from '../database/equipment.repository';
 import { Subject, Observable } from 'rxjs';
 
 export interface WorkInItem {
@@ -35,6 +35,7 @@ export interface WorkInCheckResult {
   isValid: boolean;
   equipment: string;
   dbEquipmentName: string;
+  plant?: string;
   lotNumber: string;
   pcbId: string;
   config: string;
@@ -141,30 +142,48 @@ export class DieAttachService {
   }
 
   /**
+   * Lấy thông tin bản ghi thiết bị từ cấu hình thật trong MIGHTY.GATEWAY_DEVICES
+   */
+  async resolveEquipmentRecord(
+    parsedEquipment: string,
+    socketEquipmentId?: string
+  ): Promise<EquipmentRecord | null> {
+    const targetId = (socketEquipmentId && socketEquipmentId.trim())
+      ? socketEquipmentId.trim()
+      : (parsedEquipment || '').trim();
+
+    if (!targetId) return null;
+
+    try {
+      // 1. Thử tìm theo ID chính xác trước
+      const direct = await this.equipmentRepo.findById(targetId);
+      if (direct) return direct;
+
+      // 2. Thử tìm trong toàn bộ danh sách (không phân biệt chữ hoa thường)
+      const allDevices = await this.equipmentRepo.findAll();
+      const matched = allDevices.find(
+        (d) => d.EQUIPMENT_ID.toUpperCase() === targetId.toUpperCase()
+      );
+      if (matched) return matched;
+    } catch (err: any) {
+      this.logger.debug(`Lỗi tìm bản ghi thiết bị ${targetId}: ${err.message}`);
+    }
+
+    return null;
+  }
+
+  /**
    * Ánh xạ tên thiết bị sang tên máy thực tế trong Database (ưu tiên ID từ kết nối Socket như cũ)
    */
   async resolveDbEquipmentName(parsedEquipment: string, socketEquipmentId?: string): Promise<string> {
+    const equipRecord = await this.resolveEquipmentRecord(parsedEquipment, socketEquipmentId);
+    if (equipRecord && equipRecord.EQUIPMENT_ID) {
+      return equipRecord.EQUIPMENT_ID;
+    }
     if (socketEquipmentId && socketEquipmentId.trim()) {
       return socketEquipmentId.trim();
     }
-
-    const cleanInput = (parsedEquipment || '').trim();
-    if (!cleanInput) return 'UNKNOWN';
-
-    // Tra cứu trong Cache thiết bị thật (MIGHTY.GATEWAY_DEVICES)
-    try {
-      const allDevices = await this.equipmentRepo.findAll();
-      const exact = allDevices.find(
-        (d) => d.EQUIPMENT_ID.toUpperCase() === cleanInput.toUpperCase()
-      );
-      if (exact) {
-        return exact.EQUIPMENT_ID;
-      }
-    } catch (e: any) {
-      this.logger.debug(`Lỗi kiểm tra cache thiết bị: ${e.message}`);
-    }
-
-    return cleanInput;
+    return (parsedEquipment || '').trim() || 'UNKNOWN';
   }
 
   /**
@@ -173,9 +192,10 @@ export class DieAttachService {
   async verifyWorkIn(
     parsed: WorkInParseResult,
     dbEquipmentName: string,
-    plant = 'ITMVIET'
+    plant?: string
   ): Promise<{
     isValid: boolean;
+    plant: string;
     operation: string;
     deviceStype?: string;
     equipGroup?: string;
@@ -202,6 +222,20 @@ export class DieAttachService {
     let equipGroup = 'ALL';
     let appliedRules: any[] = [];
 
+    // Xác định đúng Plant theo cấu hình thiết bị
+    let targetPlant = (plant || '').trim();
+    if (!targetPlant) {
+      const equipRecord = await this.resolveEquipmentRecord(parsed.equipment, dbEquipmentName);
+      if (equipRecord && equipRecord.PLANT && equipRecord.PLANT.trim()) {
+        targetPlant = equipRecord.PLANT.trim();
+      }
+    }
+    if (!targetPlant) {
+      targetPlant = 'ITMVPSG'; // Fallback an toàn nếu máy không có cấu hình plant
+    }
+
+    this.logger.log(`🏭 Kiểm tra Interlock với Plant [${targetPlant}] theo thiết bị ${dbEquipmentName}`);
+
     // 1. CÂU LỆNH KIỂM TRA THÔNG TIN LOT (ASFC_LOT_STATUS + ASFC_EQPLOT_STATUS)
     try {
       const sqlLot = `
@@ -222,7 +256,7 @@ export class DieAttachService {
         OPERATION: string;
         CURRENT_EQUIP: string;
         IN_HOLD: string;
-      }>(sqlLot, { plant, lot: item.LOT_NUMBER }, 'ITMVMES');
+      }>(sqlLot, { plant: targetPlant, lot: item.LOT_NUMBER }, 'ITMVMES');
 
       if (lotRows && lotRows.length > 0) {
         operation = lotRows[0].OPERATION || '4000';
@@ -258,7 +292,7 @@ export class DieAttachService {
         EQUIP_GROUP: string;
         EQUIP_OPER_ORDER: string;
         OPER_GROUP: string;
-      }>(sqlEquip, { plant, oper: operation, equip: dbEquipmentName }, 'ITMVMES');
+      }>(sqlEquip, { plant: targetPlant, oper: operation, equip: dbEquipmentName }, 'ITMVMES');
 
       if (equipRows && equipRows.length > 0 && equipRows[0].EQUIP_GROUP) {
         equipGroup = equipRows[0].EQUIP_GROUP;
@@ -332,7 +366,7 @@ export class DieAttachService {
       }>(
         matchSql,
         {
-          plant,
+          plant: targetPlant,
           deviceStype,
           operation,
           equipGroup,
@@ -398,7 +432,7 @@ export class DieAttachService {
     const STRING = odb?.STRING || 2001;
 
     const binds = {
-      ArgPlant: plant,
+      ArgPlant: targetPlant,
       ArgTrans: 'EPBV', // Transaction Code chuẩn cho Barcode Verification / Work-In (EPBV)
       ArgLot: item.LOT_NUMBER || '',
       ArgEIFDevice: item.CONFIG || '',
@@ -444,7 +478,7 @@ export class DieAttachService {
       // Nếu kết quả kiểm tra bị chặn (NG) hoặc cảnh báo, tự động ghi nhận vào BIZ_ILRULE_CHECK_HISTORY
       if (!isValid) {
         await this.recordInterlockHistory(
-          plant,
+          targetPlant,
           item.LOT_NUMBER || '',
           dbEquipmentName,
           operation,
@@ -459,6 +493,7 @@ export class DieAttachService {
 
       return {
         isValid,
+        plant: targetPlant,
         operation,
         deviceStype,
         equipGroup,
@@ -473,7 +508,7 @@ export class DieAttachService {
 
       // Đảm bảo lịch sử lỗi luôn được lưu vào Oracle DB kể cả khi SP ném Exception
       await this.recordInterlockHistory(
-        plant,
+        targetPlant,
         item.LOT_NUMBER || '',
         dbEquipmentName,
         operation,
@@ -488,6 +523,7 @@ export class DieAttachService {
       // Báo lỗi thực tế từ hệ thống, không tự động chuyển thành OK
       return {
         isValid: false,
+        plant: targetPlant,
         operation,
         rtnYN: 'NG',
         rtnPause: 'N',
@@ -517,6 +553,17 @@ export class DieAttachService {
       const odb = this.oracleService.getOracledb();
       if (!odb || this.oracleService.isUsingFallback()) return;
 
+      let targetPlant = (plant || '').trim();
+      if (!targetPlant && equip) {
+        const equipRecord = await this.resolveEquipmentRecord(equip);
+        if (equipRecord && equipRecord.PLANT && equipRecord.PLANT.trim()) {
+          targetPlant = equipRecord.PLANT.trim();
+        }
+      }
+      if (!targetPlant) {
+        targetPlant = 'ITMVPSG';
+      }
+
       const sql = `
         INSERT INTO MIGHTY.BIZ_ILRULE_CHECK_HISTORY (
           plant, sys_trans_time, trans_time,
@@ -538,7 +585,7 @@ export class DieAttachService {
       await this.oracleService.executeProcedure(
         sql,
         {
-          plant: plant || 'ITMVPSG',
+          plant: targetPlant,
           ruleKey: ruleKey || 'EPBV',
           lot: lot || ' ',
           oper: oper || ' ',
@@ -551,7 +598,7 @@ export class DieAttachService {
         },
         'ITMVMES'
       );
-      this.logger.log(`[Audit History] Đã lưu lịch sử Interlock vào BIZ_ILRULE_CHECK_HISTORY: máy ${equip}, Lot ${lot}, Alarm: ${alarmStatus}`);
+      this.logger.log(`[Audit History] Đã lưu lịch sử Interlock (Plant: ${targetPlant}) vào BIZ_ILRULE_CHECK_HISTORY: máy ${equip}, Lot ${lot}, Alarm: ${alarmStatus}`);
     } catch (err: any) {
       this.logger.warn(`[Audit History] Không thể ghi BIZ_ILRULE_CHECK_HISTORY: ${err.message}`);
     }
@@ -605,7 +652,11 @@ export class DieAttachService {
   /**
    * Xử lý trọn gói bản tin Work-In nhận từ socket hoặc REST test
    */
-  async processWorkInMessage(rawStr: string, socketEquipmentId?: string): Promise<WorkInCheckResult | null> {
+  async processWorkInMessage(
+    rawStr: string,
+    socketEquipmentId?: string,
+    customPlant?: string
+  ): Promise<WorkInCheckResult | null> {
     const parsed = this.parseWorkInMessage(rawStr);
     if (!parsed) {
       this.logger.warn(`Không thể phân tích bản tin Work-In: ${rawStr}`);
@@ -613,12 +664,14 @@ export class DieAttachService {
     }
 
     const item = parsed.firstItem;
-    const dbEquipmentName = await this.resolveDbEquipmentName(parsed.equipment, socketEquipmentId);
+    const equipRecord = await this.resolveEquipmentRecord(parsed.equipment, socketEquipmentId);
+    const dbEquipmentName = equipRecord?.EQUIPMENT_ID || await this.resolveDbEquipmentName(parsed.equipment, socketEquipmentId);
+    const devicePlant = (customPlant || '').trim() || equipRecord?.PLANT?.trim() || 'ITMVPSG';
 
     const nowStr = new Date().toISOString();
     this.logger.log(`📥 Receive From EQP : ${parsed.rawMessage.trim()}`);
     this.logger.log(
-      `🔍 Parsing : Equipment=${parsed.equipment} , State=${parsed.state}, Div=${parsed.div.trim()}, Checksum=${parsed.checksum}`
+      `🔍 Parsing : Equipment=${parsed.equipment} (DB=${dbEquipmentName}, Plant=${devicePlant}), State=${parsed.state}, Div=${parsed.div.trim()}, Checksum=${parsed.checksum}`
     );
 
     // Ghi nhận transaction RX
@@ -635,13 +688,14 @@ export class DieAttachService {
         ...parsed.firstItem,
         headerEquipment: parsed.equipment,
         dbEquipmentName,
+        plant: devicePlant,
         summary: `Work-In Check: PCB=${item.PCB_ID}, Lot=${item.LOT_NUMBER}`,
       }),
     };
     await this.transactionRepo.logTransaction(rxRecord);
 
-    // Thực hiện kiểm tra Interlock Rule trong Oracle DB
-    const checkResult = await this.verifyWorkIn(parsed, dbEquipmentName);
+    // Thực hiện kiểm tra Interlock Rule trong Oracle DB theo đúng Plant của thiết bị
+    const checkResult = await this.verifyWorkIn(parsed, dbEquipmentName, devicePlant);
 
     // Tạo phản hồi S051 gửi lại máy EQP
     const responseMessage = this.formatResponse(
@@ -672,6 +726,7 @@ export class DieAttachService {
         workInMsg: checkResult.rtnMsg,
         rtnMsgID: checkResult.rtnMsgID,
         operation: checkResult.operation,
+        plant: checkResult.plant,
         responseMessage,
         summary: checkResult.isValid ? `Work-In OK: ${item.PCB_ID}` : `Work-In NG: ${checkResult.rtnMsg}`,
       }),
@@ -683,6 +738,7 @@ export class DieAttachService {
       isValid: checkResult.isValid,
       equipment: parsed.equipment,
       dbEquipmentName,
+      plant: checkResult.plant,
       lotNumber: item.LOT_NUMBER,
       pcbId: item.PCB_ID,
       config: item.CONFIG,
