@@ -656,7 +656,7 @@ export class DieAttachService {
         )
       `;
 
-      await this.oracleService.executeProcedure(
+      const rowsAffected = await this.oracleService.executeDml(
         sql,
         {
           plant: targetPlant,
@@ -672,7 +672,7 @@ export class DieAttachService {
         },
         'ITMVMES'
       );
-      this.logger.log(`[Audit History] Đã lưu lịch sử Interlock (Plant: ${targetPlant}) vào BIZ_ILRULE_CHECK_HISTORY: máy ${equip}, Lot ${lot}, Alarm: ${alarmStatus}`);
+      this.logger.log(`[Audit History] Đã lưu lịch sử Interlock (Plant: ${targetPlant}) vào BIZ_ILRULE_CHECK_HISTORY (rows=${rowsAffected}): máy ${equip}, Lot ${lot}, Alarm: ${alarmStatus}`);
     } catch (err: any) {
       this.logger.warn(`[Audit History] Không thể ghi BIZ_ILRULE_CHECK_HISTORY: ${err.message}`);
     }
