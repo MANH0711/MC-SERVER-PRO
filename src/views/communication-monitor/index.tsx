@@ -27,7 +27,7 @@ import {
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useApp } from '../../context/AppContext';
 import { CommunicationTransaction } from '../../types';
-import { TransactionDetailModal } from '../modals/TransactionDetailModal';
+import { TransactionDetailModal } from '../../components/modals/TransactionDetailModal';
 
 export const CommunicationMonitorView: React.FC = () => {
   const { t, formatNumber } = useTranslation();

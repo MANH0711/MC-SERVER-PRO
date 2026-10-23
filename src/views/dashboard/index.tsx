@@ -56,7 +56,7 @@ import {
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useApp } from '../../context/AppContext';
 import { DeviceStatus, CommunicationTransaction, DeviceModel, DeviceGroup } from '../../types';
-import { TransactionDetailModal } from '../modals/TransactionDetailModal';
+import { TransactionDetailModal } from '../../components/modals/TransactionDetailModal';
 
 interface ContextMenuState {
   visible: boolean;
