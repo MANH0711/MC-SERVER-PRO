@@ -86,7 +86,14 @@ export class TcpClientManagerService implements OnModuleInit, OnModuleDestroy {
       }
     });
 
+    // Giới hạn kích thước gói tin tối đa 64KB để chống tràn bộ đệm (Buffer Overflow / DoS)
+    const MAX_SAFE_CHUNK_SIZE = 65536;
+
     socket.on('data', async (chunk: Buffer) => {
+      if (chunk.length > MAX_SAFE_CHUNK_SIZE) {
+        this.logger.warn(`🚨 [Bảo Mật TCP] Phát hiện gói tin vượt ngưỡng kích thước (${chunk.length} bytes) từ máy [${equipmentId}]. Từ chối xử lý để chống tràn bộ đệm.`);
+        return;
+      }
       this.lastActivityTimes.set(equipmentId, Date.now());
       try {
         const responseBuffer = await this.commService.handleIncomingRawBuffer(equipmentId, chunk);

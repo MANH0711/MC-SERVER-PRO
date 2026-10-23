@@ -50,8 +50,19 @@ async function bootstrap() {
       contentSecurityPolicy: false,
       crossOriginEmbedderPolicy: false,
       crossOriginResourcePolicy: { policy: 'cross-origin' },
+      hidePoweredBy: true,
+      noSniff: true,
+      xssFilter: true,
     })
   );
+
+  // Kích hoạt bộ lọc ngoại lệ bảo mật toàn cục (chống rò rỉ stack trace & mật khẩu DB)
+  try {
+    const { GlobalSecurityExceptionFilter } = require('./common/security-exception.filter');
+    app.useGlobalFilters(new GlobalSecurityExceptionFilter());
+  } catch (filtErr: any) {
+    logger.warn(`Không thể khởi tạo GlobalSecurityExceptionFilter: ${filtErr.message}`);
+  }
 
   // Kích hoạt ValidationPipe toàn cục để validate và lọc các payload đầu vào độc hại
   try {
