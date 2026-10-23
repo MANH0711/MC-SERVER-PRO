@@ -166,10 +166,14 @@ export const TopBar: React.FC = () => {
       {/* ========================================================================= */}
       {/* LEFT: BRAND, INDUSTRIAL LINE BREADCRUMBS & LIVE BACKEND API STATUS        */}
       {/* ========================================================================= */}
-      <div className="flex items-center gap-3.5">
-        {/* Main Station Icon */}
-        <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 shadow-inner">
-          <Server className="w-4 h-4 text-cyan-400" />
+      <div className="flex items-center gap-3">
+        {/* Company Logo Badge */}
+        <div className="h-8 px-2.5 rounded-lg bg-white/95 border border-blue-500/30 flex items-center justify-center shrink-0 shadow-sm hover:opacity-95 transition-opacity">
+          <img
+            src="/assets/images/ItmLogo.png"
+            alt="ITM Semiconductor Logo"
+            className="h-4.5 w-auto object-contain"
+          />
         </div>
 
         {/* Factory Hierarchy */}

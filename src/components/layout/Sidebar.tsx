@@ -53,26 +53,35 @@ export const Sidebar: React.FC = () => {
         collapsed ? 'w-16' : 'w-60'
       }`}
     >
-      {/* Brand Header */}
-      <div className="h-14 flex items-center px-3.5 border-b border-slate-800/80 justify-between bg-slate-950/40">
-        <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="w-8 h-8 rounded bg-blue-600/20 border border-blue-500/40 flex items-center justify-center shrink-0 text-blue-400">
-            <Radio className="w-4 h-4 animate-pulse" />
+      {/* Brand Header with Company Logo */}
+      <div className="h-14 flex items-center px-3 border-b border-slate-800/80 justify-between bg-slate-950/40">
+        <div className="flex items-center gap-2.5 overflow-hidden min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-white/95 p-1 border border-blue-500/30 flex items-center justify-center shrink-0 shadow-sm overflow-hidden group">
+            <img
+              src="/assets/images/logo.svg"
+              alt="ITM Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
           {!collapsed && (
-            <div className="leading-tight truncate">
-              <span className="font-extrabold tracking-tight text-slate-100 text-xs block">
-                MC SERVER
-              </span>
-              <span className="text-[9px] text-blue-400 font-mono tracking-wider block font-bold">
-                ENTERPRISE
+            <div className="leading-tight truncate flex flex-col justify-center min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold tracking-tight text-slate-100 text-xs truncate">
+                  ITM MC-SERVER
+                </span>
+                <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-blue-500/20 text-blue-400 font-bold border border-blue-500/30">
+                  PRO
+                </span>
+              </div>
+              <span className="text-[9px] text-slate-400 font-mono tracking-wider block font-semibold truncate">
+                ITM SEMICONDUCTOR
               </span>
             </div>
           )}
         </div>
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 transition-colors"
+          className="p-1 rounded text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 transition-colors shrink-0"
           title={collapsed ? t('sidebar.expandSidebar') : t('sidebar.collapseSidebar')}
         >
           {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
@@ -122,15 +131,25 @@ export const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* Footer Info */}
+      {/* Footer Info & Company Branding */}
       <div className="p-2.5 border-t border-slate-800/80 text-[10px] text-slate-500 bg-slate-950/40">
         {!collapsed ? (
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-slate-400 font-medium">v2.4.0-ENT</span>
-            <span className="flex items-center gap-1.5 text-emerald-400 font-semibold font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)] animate-pulse"></span>
-              {t('sidebar.coreActive')}
-            </span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-slate-400 font-medium">v2.4.0-ENT</span>
+              <span className="flex items-center gap-1.5 text-emerald-400 font-semibold font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)] animate-pulse"></span>
+                {t('sidebar.coreActive')}
+              </span>
+            </div>
+            <div className="pt-1.5 border-t border-slate-800/60 flex items-center justify-between gap-1.5">
+              <span className="text-[9px] font-mono text-slate-400 truncate">ITM Semiconductor</span>
+              <img
+                src="/assets/images/ItmLogo.png"
+                alt="ITM Semiconductor Logo"
+                className="h-3.5 w-auto object-contain bg-white/95 px-1.5 py-0.5 rounded shadow-2xs"
+              />
+            </div>
           </div>
         ) : (
           <div className="flex justify-center">
