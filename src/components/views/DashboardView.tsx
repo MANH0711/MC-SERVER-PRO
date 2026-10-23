@@ -56,6 +56,7 @@ import {
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useApp } from '../../context/AppContext';
 import { DeviceStatus, CommunicationTransaction, DeviceModel, DeviceGroup } from '../../types';
+import { TransactionDetailModal } from '../modals/TransactionDetailModal';
 
 interface ContextMenuState {
   visible: boolean;
@@ -1614,116 +1615,12 @@ export const DashboardView: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* 5. PACKET INSPECTOR MODAL                                                  */}
+      {/* 5. PACKET INSPECTOR MODAL (THÔNG TIN LOG GIAO DỊCH TRỰC QUAN CAO CẤP)     */}
       {/* ========================================================================= */}
-      {selectedTx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
-          <div className="bg-[#0B1120] border border-slate-700 rounded-lg shadow-2xl max-w-2xl w-full p-4 space-y-3 font-mono text-xs animate-in zoom-in-95 duration-100">
-            {/* Inspector Modal Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-cyan-400 text-sm">{selectedTx.messageCode}</span>
-                <span className="text-slate-600">·</span>
-                <span className="font-semibold text-slate-200">{selectedTx.equipmentId}</span>
-                <span className="text-slate-600">·</span>
-                <span className="text-slate-400 text-[11px]">{selectedTx.correlationId}</span>
-              </div>
-              <button
-                onClick={() => setSelectedTx(null)}
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Quick Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
-              <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                <span className="text-slate-500 block text-[10px]">DIRECTION</span>
-                <span className="font-bold text-slate-200">{selectedTx.direction}</span>
-              </div>
-              <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                <span className="text-slate-500 block text-[10px]">CHECKSUM</span>
-                <span className="font-bold text-emerald-400">
-                  {selectedTx.checksum} ({selectedTx.checksumStatus})
-                </span>
-              </div>
-              <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                <span className="text-slate-500 block text-[10px]">LATENCY</span>
-                <span className="font-bold text-slate-200">{selectedTx.responseTimeMs} ms</span>
-              </div>
-              <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                <span className="text-slate-500 block text-[10px]">STATUS</span>
-                <span className="font-bold text-blue-400">{selectedTx.status}</span>
-              </div>
-            </div>
-
-            {/* ASCII Frame */}
-            <div>
-              <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                <span>Raw ASCII Frame (STX...ETX)</span>
-              </div>
-              <div className="p-2 rounded bg-slate-950 border border-slate-800 text-cyan-300 break-all select-all text-[11px]">
-                {selectedTx.rawAscii}
-              </div>
-            </div>
-
-            {/* Hex Dump */}
-            <div>
-              <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                <span>Binary Hex Dump</span>
-                <button
-                  onClick={() => handleCopy(selectedTx.rawHex, true)}
-                  className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white"
-                >
-                  {copiedHex ? (
-                    <Check className="w-3 h-3 text-emerald-400" />
-                  ) : (
-                    <Copy className="w-3 h-3 text-slate-400" />
-                  )}
-                  <span>{copiedHex ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
-              <div className="p-2 rounded bg-slate-950 border border-slate-800 text-slate-300 break-all select-all text-[10px] leading-relaxed max-h-24 overflow-y-auto">
-                {selectedTx.rawHex}
-              </div>
-            </div>
-
-            {/* Decoded JSON Payload */}
-            <div>
-              <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                <span>Decoded JSON Payload</span>
-                <button
-                  onClick={() =>
-                    handleCopy(JSON.stringify(selectedTx.payloadJson, null, 2), false)
-                  }
-                  className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white"
-                >
-                  {copiedJson ? (
-                    <Check className="w-3 h-3 text-emerald-400" />
-                  ) : (
-                    <Copy className="w-3 h-3 text-slate-400" />
-                  )}
-                  <span>{copiedJson ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
-              <pre className="p-2.5 rounded bg-slate-950 border border-slate-800 text-emerald-400 text-[11px] overflow-x-auto max-h-36">
-                {JSON.stringify(selectedTx.payloadJson, null, 2)}
-              </pre>
-            </div>
-
-            {/* Close action */}
-            <div className="flex justify-end pt-2 border-t border-slate-800">
-              <button
-                onClick={() => setSelectedTx(null)}
-                className="px-3 py-1.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-sans"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <TransactionDetailModal
+        transaction={selectedTx}
+        onClose={() => setSelectedTx(null)}
+      />
     </div>
   );
 };

@@ -22,16 +22,19 @@ import {
   RefreshCw,
   Send,
   ShieldCheck,
+  Maximize2,
 } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useApp } from '../../context/AppContext';
 import { CommunicationTransaction } from '../../types';
+import { TransactionDetailModal } from '../modals/TransactionDetailModal';
 
 export const CommunicationMonitorView: React.FC = () => {
   const { t, formatNumber } = useTranslation();
   const { transactions, devices, clearTransactions } = useApp();
 
   const [selectedTx, setSelectedTx] = useState<CommunicationTransaction | null>(null);
+  const [modalTx, setModalTx] = useState<CommunicationTransaction | null>(null);
   const [filterEquip, setFilterEquip] = useState<string>('ALL');
   const [filterCode, setFilterCode] = useState<string>('ALL');
   const [searchPayload, setSearchPayload] = useState<string>('');
@@ -262,11 +265,13 @@ export const CommunicationMonitorView: React.FC = () => {
                     <tr
                       key={tx.id}
                       onClick={() => setSelectedTx(tx)}
+                      onDoubleClick={() => setModalTx(tx)}
                       className={`cursor-pointer transition-colors ${
                         isSelected
                           ? 'bg-blue-600/20 text-white border-l-2 border-blue-500'
                           : 'hover:bg-slate-800/40 text-slate-300'
                       }`}
+                      title="Nhấp để xem khung bên phải · Nhấp đúp để mở Modal chi tiết toàn diện"
                     >
                       <td className="py-1.5 px-2 text-slate-400 text-[10px] tabular-nums">
                         {tx.timestamp.split('T')[1]?.slice(0, 11) || tx.timestamp}
@@ -357,6 +362,14 @@ export const CommunicationMonitorView: React.FC = () => {
                   >
                     {copiedJson ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                     <span>{copiedJson ? 'Copied' : 'JSON'}</span>
+                  </button>
+                  <button
+                    onClick={() => setModalTx(activeTx)}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/60 text-[10px] text-cyan-300 hover:text-white hover:bg-cyan-900 transition-colors shadow-xs ml-0.5"
+                    title="Mở Modal xem chi tiết toàn diện (Interlock, JSON, Hex offset)"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                    <span>Mở Modal</span>
                   </button>
                 </div>
               </div>
@@ -683,6 +696,12 @@ export const CommunicationMonitorView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ─── Chi Tiết Giao Dịch Modal Toàn Diện ─── */}
+      <TransactionDetailModal
+        transaction={modalTx}
+        onClose={() => setModalTx(null)}
+      />
     </div>
   );
 };
