@@ -97,8 +97,16 @@ export class OracleService implements OnModuleInit, OnModuleDestroy {
       return (result.rows as T[]) || [];
     } catch (error: any) {
       this.logger.error(`Lỗi thực thi Oracle SQL trên [${targetTns}]: ${error.message}`);
-      if (error.message.includes('NJS-510') || error.message.includes('timed out') || error.message.includes('ORA-')) {
-        this.logger.warn(`⚠️ Máy chủ Oracle [${targetTns}] không thể kết nối. Tự động chuyển toàn bộ hệ thống sang In-Memory Cache.`);
+      if (
+        error.message.includes('NJS-510') ||
+        error.message.includes('timed out') ||
+        error.message.includes('ORA-12541') ||
+        error.message.includes('ORA-12170') ||
+        error.message.includes('ORA-12514') ||
+        error.message.includes('ORA-03113') ||
+        error.message.includes('ORA-03114')
+      ) {
+        this.logger.warn(`⚠️ Máy chủ Oracle [${targetTns}] mất kết nối mạng. Tự động chuyển sang In-Memory Cache.`);
         this.isFallbackMode = true;
       }
       throw error;

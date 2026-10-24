@@ -205,8 +205,8 @@ export class DieAttachService {
               WHERE UPPER(EQUIPMENT_ID) = UPPER(:id) OR UPPER(DEVICE_ID) = UPPER(:id)
               UNION ALL
               SELECT PLANT, EQUIPMENT_ID, DESCRIPTION, '127.0.0.1' as HOST_ADDRESS, 5000 as HOST_PORT, 
-                     0 as DEVICE_ID, 1 as SERVER_NO, 'DEFAULT' as GROUP_NAME, 0 as EQUIPMENT_ORDER, 
-                     EQUIPMENT_ID as EQUIPMENT_MAIN, 'Y' as ENABLE, '' as FIELD_01, '' as FIELD_02, '' as FIELD_03, 
+                     '0' as DEVICE_ID, 1 as SERVER_NO, 'DEFAULT' as GROUP_NAME, 0 as EQUIPMENT_ORDER, 
+                     EQUIPMENT_ID as EQUIPMENT_MAIN, 'YES' as ENABLE, '' as FIELD_01, '' as FIELD_02, '' as FIELD_03, 
                      'YES' as INTERLOCK_RECIPE, 'DEFAULT' as EQUIPMENT_MODEL, '' as INTERLOCK_PARAM, '' as INTERLOCK_TRACE,
                      2 as PRIORITY
               FROM MIGHTY.ADM_EQUIPMENT 
@@ -542,12 +542,15 @@ export class DieAttachService {
       }>(plsql, binds, 'ITMVMES');
 
       const out = result.outBinds || ({} as any);
-      const rtnYN = out.RtnYN || 'OK';
+      const isFallback = this.oracleService.isUsingFallback();
+      const rtnYN = out.RtnYN || (isFallback ? 'NG' : 'NG');
       const rtnPause = out.RtnPause || 'N';
-      const rtnMsgID = out.RtnMsgID || 'EIF-COM01';
-      const rtnMsg = out.RtnMsg || 'Interlock verification successful.';
+      const rtnMsgID = out.RtnMsgID || (isFallback ? 'EIF-OFFLINE' : 'EIF-COM02');
+      const rtnMsg = out.RtnMsg || (isFallback
+        ? 'Oracle database is offline. Fail-safe: Work-In rejected.'
+        : 'Interlock verification failed: No response from MES procedure.');
 
-      const isValid = rtnYN.toUpperCase() === 'OK';
+      const isValid = (rtnYN || '').toUpperCase() === 'OK';
 
       // Nếu kết quả kiểm tra bị chặn (NG) hoặc cảnh báo, tự động ghi nhận vào BIZ_ILRULE_CHECK_HISTORY
       if (!isValid) {
