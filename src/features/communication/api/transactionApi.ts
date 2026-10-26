@@ -10,6 +10,7 @@ export interface BackendTransactionRecord {
   transactionId: string;
   timestamp: string;
   equipmentId: string;
+  equipmentModel?: string;
   commandCode: string;
   direction: 'TX' | 'RX';
   rawHex: string;
@@ -45,6 +46,7 @@ export function backendTxToFrontend(tx: BackendTransactionRecord): Communication
     id: tx.transactionId,
     correlationId: tx.transactionId,
     equipmentId: tx.equipmentId || 'UNKNOWN',
+    equipmentModel: tx.equipmentModel,
     messageCode: tx.commandCode || 'DATA',
     direction: tx.direction === 'TX' ? 'OUTBOUND' : 'INBOUND',
     rawHex: tx.rawHex || '',

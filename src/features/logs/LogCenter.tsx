@@ -32,6 +32,7 @@ import {
 import { useTranslation } from '@/core/i18n';
 import { useApp } from '@/core/context';
 import { LogCategory, LogLevel, LogEntry } from '@/core/types';
+import { copyToClipboard } from '@/core/utils/clipboard';
 
 export const LogCenterView: React.FC = () => {
   const { t } = useTranslation();
@@ -115,8 +116,9 @@ export const LogCenterView: React.FC = () => {
   }, [logs.length, autoScroll]);
 
   // Copy helper
-  const handleCopy = (text: string, isTx: boolean = false) => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = async (text: string, isTx: boolean = false) => {
+    const success = await copyToClipboard(text);
+    if (!success) return;
     if (isTx) {
       setCopiedTxId(text);
       setTimeout(() => setCopiedTxId(null), 1800);

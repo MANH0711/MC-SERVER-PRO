@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Copy,
   Check,
   Maximize2,
 } from 'lucide-react';
 import { CommunicationTransaction } from '@/core/types';
+import { cleanPayloadForDisplay } from '@/core/utils/payloadUtils';
 
 interface TransactionInspectorProps {
   activeTx: CommunicationTransaction | null;
@@ -25,6 +26,10 @@ export const TransactionInspector: React.FC<TransactionInspectorProps> = ({
   formatOffsetHex,
   t,
 }) => {
+  const displayPayload = useMemo(() => {
+    return activeTx?.payloadJson ? cleanPayloadForDisplay(activeTx.payloadJson) : null;
+  }, [activeTx?.payloadJson]);
+
   return (
     <div className="lg:col-span-6 rounded-lg bg-[#0C1220]/95 border border-slate-800/90 flex flex-col min-h-0 overflow-hidden shadow-xs">
       {activeTx ? (
@@ -36,6 +41,14 @@ export const TransactionInspector: React.FC<TransactionInspectorProps> = ({
                 <span className="font-mono font-bold text-xs text-blue-400">{activeTx.messageCode}</span>
                 <span className="text-slate-600">·</span>
                 <span className="text-xs text-slate-200 font-mono font-semibold">{activeTx.equipmentId}</span>
+                {activeTx.equipmentModel && (
+                  <>
+                    <span className="text-slate-600">·</span>
+                    <span className="text-[10px] text-amber-300 font-mono px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/20 font-medium">
+                      {activeTx.equipmentModel}
+                    </span>
+                  </>
+                )}
                 <span className="text-slate-600">·</span>
                 <span className="text-[10px] text-slate-400 font-mono">{activeTx.correlationId}</span>
               </div>
@@ -47,21 +60,21 @@ export const TransactionInspector: React.FC<TransactionInspectorProps> = ({
             <div className="flex items-center gap-1">
               <button
                 onClick={() => onCopy(activeTx.rawHex, true)}
-                className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] text-slate-300 hover:text-white transition-colors"
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] text-slate-300 hover:text-white transition-colors cursor-pointer"
               >
                 {copiedHex ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                 <span>{copiedHex ? 'Copied' : 'Hex'}</span>
               </button>
               <button
-                onClick={() => onCopy(JSON.stringify(activeTx.payloadJson, null, 2), false)}
-                className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] text-slate-300 hover:text-white transition-colors"
+                onClick={() => onCopy(JSON.stringify(displayPayload, null, 2), false)}
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] text-slate-300 hover:text-white transition-colors cursor-pointer"
               >
                 {copiedJson ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                 <span>{copiedJson ? 'Copied' : 'JSON'}</span>
               </button>
               <button
                 onClick={() => onOpenModal(activeTx)}
-                className="flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/60 text-[10px] text-cyan-300 hover:text-white hover:bg-cyan-900 transition-colors shadow-xs ml-0.5"
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/60 text-[10px] text-cyan-300 hover:text-white hover:bg-cyan-900 transition-colors shadow-xs ml-0.5 cursor-pointer"
                 title="Mở Modal xem chi tiết toàn diện (Interlock, JSON, Hex offset)"
               >
                 <Maximize2 className="w-3 h-3" />
@@ -122,8 +135,8 @@ export const TransactionInspector: React.FC<TransactionInspectorProps> = ({
               <div className="text-[10px] text-slate-400 uppercase font-semibold">
                 {t('communication.inspector.decodedPayload')}
               </div>
-              <pre className="p-2 rounded bg-slate-900/80 border border-slate-800/80 text-emerald-400 overflow-x-auto text-[10px] leading-relaxed max-h-48">
-                {JSON.stringify(activeTx.payloadJson, null, 2)}
+              <pre className="p-2 rounded bg-slate-900/80 border border-slate-800/80 text-emerald-400 overflow-x-auto text-[10px] leading-relaxed max-h-48 cursor-text select-text selection:bg-cyan-500/30 selection:text-white">
+                {JSON.stringify(displayPayload, null, 2)}
               </pre>
             </div>
           </div>

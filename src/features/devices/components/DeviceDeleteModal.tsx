@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/core/i18n';
 import { DeviceModel, DeviceStatus } from '@/core/types';
+import { copyToClipboard } from '@/core/utils/clipboard';
 
 export interface DeviceDeleteModalProps {
   isOpen: boolean;
@@ -60,8 +61,8 @@ export const DeviceDeleteModal: React.FC<DeviceDeleteModalProps> = ({
   const description = device.description || device.name || 'Không có mô tả';
   const status = device.status || 'Disconnected';
 
-  const handleCopyId = () => {
-    navigator.clipboard.writeText(deviceId);
+  const handleCopyId = async () => {
+    await copyToClipboard(deviceId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

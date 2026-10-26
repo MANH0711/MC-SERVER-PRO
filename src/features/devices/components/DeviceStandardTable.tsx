@@ -3,16 +3,19 @@
  * High-density operational monitoring summary
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Zap,
   RefreshCw,
   Edit2,
   Copy,
+  CopyPlus,
+  Check,
   Trash2,
 } from 'lucide-react';
 import { useTranslation } from '@/core/i18n';
 import { DeviceModel, DeviceStatus } from '@/core/types';
+import { copyToClipboard } from '@/core/utils/clipboard';
 
 interface DeviceStandardTableProps {
   devices: DeviceModel[];
@@ -38,6 +41,13 @@ export const DeviceStandardTable: React.FC<DeviceStandardTableProps> = ({
   formatNumber,
 }) => {
   const { t } = useTranslation();
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyId = async (id: string) => {
+    await copyToClipboard(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1500);
+  };
 
   return (
     <table className="w-full text-left font-mono text-xs">
@@ -141,11 +151,22 @@ export const DeviceStandardTable: React.FC<DeviceStandardTableProps> = ({
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
+                    onClick={() => handleCopyId(dev.id)}
+                    className="p-1 rounded text-slate-400 hover:text-emerald-400 hover:bg-emerald-950/50 transition-colors cursor-pointer"
+                    title="Sao chép Mã máy (Ctrl+C để dán)"
+                  >
+                    {copiedId === dev.id ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                  <button
                     onClick={() => onClone(dev)}
                     className="p-1 rounded text-slate-400 hover:text-cyan-400 hover:bg-cyan-950/60 transition-colors cursor-pointer"
                     title={t('device.actions.clone')}
                   >
-                    <Copy className="w-3.5 h-3.5" />
+                    <CopyPlus className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => onDelete(dev)}

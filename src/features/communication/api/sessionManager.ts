@@ -10,10 +10,10 @@ import {
   LogEntry,
   ServerConfig,
 } from '@/core/types';
-import { IndustrialFrameParser } from '@/features/protocol';
-import { encodeFrame } from '@/features/protocol';
-import { IndustrialBusinessEngine } from '@/features/mes';
-import { MesAdapter } from '@/features/mes';
+import { IndustrialFrameParser } from '@/features/protocol/engine/frameParser';
+import { encodeFrame } from '@/features/protocol/engine/frameEncoder';
+import { IndustrialBusinessEngine } from '@/features/mes/api/businessEngine';
+import { MesAdapter } from '@/features/mes/api/mesAdapter';
 
 export type TransactionListener = (tx: CommunicationTransaction) => void;
 export type DeviceUpdateListener = (device: DeviceModel) => void;
@@ -263,6 +263,7 @@ export class SessionManager {
         id: `TX_IN_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
         correlationId: frame.txId || `TX_${Date.now()}`,
         equipmentId: frame.equipmentId,
+        equipmentModel: dev?.model || dev?.equipmentModel,
         messageCode: frame.messageCode,
         direction: 'INBOUND',
         rawHex: frame.rawHex,

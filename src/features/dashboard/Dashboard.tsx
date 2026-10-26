@@ -52,11 +52,37 @@ import {
   Filter,
   ExternalLink,
   Terminal,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useTranslation } from '@/core/i18n';
 import { useApp } from '@/core/context';
 import { DeviceStatus, CommunicationTransaction, DeviceModel, DeviceGroup } from '@/core/types';
-import { TransactionDetailModal } from '@/features/communication';
+import { TransactionDetailModal } from '@/features/communication/components/TransactionDetailModal';
+
+/**
+ * CẤU HÌNH ĐỘ RỘNG MẶC ĐỊNH TỪNG CỘT BẢNG DASHBOARD (Pixel)
+ */
+export interface DashboardColumnWidthConfig {
+  time: number;       // Cột Thời Gian (px)
+  direction: number;  // Cột Chiều IN/OUT (px)
+  machineId: number;  // Cột Mã Máy (px)
+  model: number;      // Cột Model Máy (px)
+  command: number;    // Cột Lệnh / Message Code (px)
+  result: number;     // Cột RESULT OK/NG/TO (px)
+  summary: number;    // Cột Nội Dung Tóm Tắt (px)
+  latency: number;    // Cột Độ trễ / Checksum (px)
+}
+
+export const DEFAULT_DASHBOARD_COLUMN_WIDTHS: DashboardColumnWidthConfig = {
+  time: 85,       // Cột Thời gian (px)
+  direction: 45,  // Cột Chiều IN/OUT (px)
+  machineId: 100, // Cột Mã Thiết Bị (px)
+  model: 95,      // Cột Model Máy (px)
+  command: 70,    // Cột Message Code / Lệnh (px)
+  result: 55,     // Cột RESULT OK/NG/TO (px)
+  summary: 240,   // Cột Nội Dung Tóm Tắt (px)
+  latency: 65,    // Cột Độ trễ / Checksum (px)
+};
 
 interface ContextMenuState {
   visible: boolean;
@@ -163,10 +189,121 @@ export const DashboardView: React.FC = () => {
     showToast(targetState ? 'Đã mở rộng tất cả các nhóm' : 'Đã thu gọn tất cả các nhóm');
   };
 
+  // Device model map for fast lookup
+  const deviceModelMap = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    devices?.forEach((d) => {
+      const m = d.model || d.equipmentModel;
+      if (m) {
+        if (d.id) map[d.id] = m;
+        if (d.equipmentId) map[d.equipmentId] = m;
+        if (d.name) map[d.name] = m;
+      }
+    });
+    return map;
+  }, [devices]);
+
   // Stream controls
   const [isStreamPaused, setIsStreamPaused] = useState<boolean>(false);
   const [streamBuffer, setStreamBuffer] = useState<CommunicationTransaction[]>([]);
   const [selectedTx, setSelectedTx] = useState<CommunicationTransaction | null>(null);
+
+  // Dashboard Live Stream Column Widths (Pixel configurable)
+  const [liveColWidths, setLiveColWidths] = useState<DashboardColumnWidthConfig>(() => {
+    try {
+      const saved = localStorage.getItem('mcserver_dashboard_live_col_widths_v3');
+      if (saved) {
+        return { ...DEFAULT_DASHBOARD_COLUMN_WIDTHS, ...JSON.parse(saved) };
+      }
+    } catch {}
+    return DEFAULT_DASHBOARD_COLUMN_WIDTHS;
+  });
+  const [showColWidthModal, setShowColWidthModal] = useState<boolean>(false);
+  const [tempColWidths, setTempColWidths] = useState<DashboardColumnWidthConfig>(liveColWidths);
+
+  const totalLiveTableWidth = React.useMemo(() => {
+    return (
+      (liveColWidths.time || 85) +
+      (liveColWidths.direction || 45) +
+      (liveColWidths.machineId || 100) +
+      (liveColWidths.model || 95) +
+      (liveColWidths.command || 70) +
+      (liveColWidths.result || 55) +
+      (liveColWidths.summary || 240) +
+      (liveColWidths.latency || 65)
+    );
+  }, [liveColWidths]);
+
+  const handleSaveLiveWidths = () => {
+    setLiveColWidths(tempColWidths);
+    try {
+      localStorage.setItem('mcserver_dashboard_live_col_widths_v3', JSON.stringify(tempColWidths));
+    } catch {}
+    setShowColWidthModal(false);
+    showToast('Đã lưu cấu hình độ rộng cột');
+  };
+
+  const handleResetLiveWidths = () => {
+    setTempColWidths(DEFAULT_DASHBOARD_COLUMN_WIDTHS);
+    setLiveColWidths(DEFAULT_DASHBOARD_COLUMN_WIDTHS);
+    try {
+      localStorage.removeItem('mcserver_dashboard_live_col_widths_v3');
+      localStorage.removeItem('mcserver_dashboard_live_col_widths_v2');
+      localStorage.removeItem('mcserver_dashboard_live_col_widths');
+    } catch {}
+    setShowColWidthModal(false);
+    showToast('Đã khôi phục kích thước cột mặc định');
+  };
+
+  // Kéo dãn độ rộng cột bảng Dashboard bằng con trỏ chuột (Mouse drag column resizing)
+  const liveResizingRef = useRef<{
+    colKey: keyof DashboardColumnWidthConfig;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+
+  const startLiveResizing = (e: React.MouseEvent, colKey: keyof DashboardColumnWidthConfig) => {
+    e.preventDefault();
+    e.stopPropagation();
+    liveResizingRef.current = {
+      colKey,
+      startX: e.clientX,
+      startWidth: liveColWidths[colKey] || DEFAULT_DASHBOARD_COLUMN_WIDTHS[colKey] || 45,
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      if (!liveResizingRef.current) return;
+      const { colKey, startX, startWidth } = liveResizingRef.current;
+      const deltaX = moveEvent.clientX - startX;
+      const newWidth = Math.max(30, Math.round(startWidth + deltaX));
+      setLiveColWidths((prev) => ({
+        ...prev,
+        [colKey]: newWidth,
+      }));
+    };
+
+    const onMouseUp = () => {
+      if (liveResizingRef.current) {
+        setLiveColWidths((latest) => {
+          try {
+            localStorage.setItem('mcserver_dashboard_live_col_widths_v3', JSON.stringify(latest));
+          } catch {}
+          return latest;
+        });
+      }
+      liveResizingRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
 
   // Inspector copy states
   const [copiedHex, setCopiedHex] = useState<boolean>(false);
@@ -1267,8 +1404,21 @@ export const DashboardView: React.FC = () => {
               </span>
             </div>
 
-            {/* Stream Control Action Toolbar: Pause & Clear (Đặc trưng & Nổi bật) */}
+            {/* Stream Control Action Toolbar: Chỉnh cột (px), Pause & Clear */}
             <div className="flex items-center gap-1.5 text-xs">
+              {/* Chỉnh cột (px) Button */}
+              <button
+                onClick={() => {
+                  setTempColWidths(liveColWidths);
+                  setShowColWidthModal(true);
+                }}
+                className="py-1 px-2.5 rounded bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 hover:bg-cyan-900 hover:text-white hover:border-cyan-400 transition-all flex items-center gap-1.5 text-[11px] font-mono font-bold shadow-xs active:scale-95 cursor-pointer"
+                title="Nhập số pixel (px) để điều chỉnh độ rộng từng cột trên bảng luồng giao dịch này"
+              >
+                <SlidersHorizontal className="w-3 h-3 text-cyan-400" />
+                <span>Chỉnh cột (px)</span>
+              </button>
+
               {/* Pause / Resume Button - Nổi bật & Đặc trưng màu Vàng Hổ Phách Cảnh báo */}
               <button
                 onClick={() => setIsStreamPaused(!isStreamPaused)}
@@ -1290,7 +1440,7 @@ export const DashboardView: React.FC = () => {
               {/* Clear Stream - Nổi bật & Đặc trưng màu Đỏ Rose Cảnh báo Xóa */}
               <button
                 onClick={clearTransactions}
-                className="py-1 px-2.5 rounded bg-rose-500/15 border border-rose-500/50 text-rose-300 hover:bg-rose-600 hover:text-white hover:border-rose-400 hover:shadow-[0_0_12px_rgba(244,63,94,0.4)] shadow-[0_0_8px_rgba(244,63,94,0.15)] transition-all flex items-center gap-1.5 text-[11px] font-mono font-bold active:scale-95"
+                className="py-1 px-2.5 rounded bg-rose-500/15 border border-rose-500/50 text-rose-300 hover:bg-rose-600 hover:text-white hover:border-rose-400 hover:shadow-[0_0_12px_rgba(244,63,94,0.4)] shadow-[0_0_8px_rgba(244,63,94,0.15)] transition-all flex items-center gap-1.5 text-[11px] font-mono font-bold active:scale-95 cursor-pointer"
                 title={t('dashboard.liveStream.clear')}
               >
                 <Trash2 className="w-3 h-3 text-rose-400" />
@@ -1299,110 +1449,198 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
 
-          {/* Table Column Headers - Ngắn gọn, chuẩn xác */}
-          <div className="px-3 py-1.5 bg-slate-950/90 border-b border-slate-800/80 grid grid-cols-12 text-[10px] font-mono uppercase tracking-wider text-slate-400 shrink-0 gap-1 items-center">
-            <span className="col-span-2">{t('dashboard.liveStream.colTime')}</span>
-            <span className="col-span-1 text-center">{t('dashboard.liveStream.colDirection')}</span>
-            <span className="col-span-2">{t('dashboard.liveStream.colMachineId')}</span>
-            <span className="col-span-1">{t('dashboard.liveStream.colCommand')}</span>
-            <span className="col-span-1 text-center font-bold text-slate-200 tracking-wider">RESULT</span>
-            <span className="col-span-4">{t('dashboard.liveStream.colSummary')}</span>
-            <span className="col-span-1 text-right">{t('dashboard.liveStream.colLatency')}</span>
-          </div>
-
-          {/* Table Stream Rows */}
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-800/40 font-mono text-xs">
-            {streamBuffer.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 text-xs italic space-y-2">
-                <Activity className="w-6 h-6 mx-auto text-slate-600 animate-pulse" />
-                <p>{t('dashboard.liveStream.waitingPackets')}</p>
-              </div>
-            ) : (
-              streamBuffer.slice(0, 100).map((tx) => {
-                let codeColor = 'text-cyan-400 bg-cyan-950/60 border-cyan-800/50';
-                if (tx.messageCode === 'M001') codeColor = 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50';
-                if (tx.messageCode === 'S005' || tx.messageCode === 'S006') codeColor = 'text-purple-400 bg-purple-950/60 border-purple-800/50';
-                if (tx.messageCode === 'S000' || tx.messageCode === 'S002') codeColor = 'text-amber-400 bg-amber-950/60 border-amber-800/50';
-                if (tx.messageCode.startsWith('E')) codeColor = 'text-red-400 bg-red-950/60 border-red-800/50';
-
-                return (
-                  <div
-                    key={tx.id}
-                    onClick={() => setSelectedTx(tx)}
-                    className={`px-3 py-1.5 hover:bg-slate-800/50 cursor-pointer transition-colors grid grid-cols-12 items-center text-[11px] gap-1 group select-none ${
-                      selectedTx?.id === tx.id ? 'bg-blue-600/20 border-l-2 border-blue-500' : ''
-                    }`}
-                    title={`${formatFullDateTime(tx.timestamp)} · ${tx.direction} · ${tx.equipmentId} · ${tx.messageCode}\nNhấp để xem chi tiết Hex Dump & JSON`}
-                  >
-                    {/* Thời gian: Đầy đủ NGÀY THÁNG NĂM & GIỜ PHÚT GIÂY */}
-                    <span className="col-span-2 text-slate-300 font-mono text-[10px] tabular-nums whitespace-nowrap truncate font-medium">
-                      {formatFullDateTime(tx.timestamp)}
-                    </span>
-
-                    {/* Chiều: IN / OUT */}
-                    <span className="col-span-1 flex justify-center">
-                      {tx.direction === 'INBOUND' ? (
-                        <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 text-[9px] font-bold border border-emerald-500/30">
-                          IN
-                        </span>
-                      ) : (
-                        <span className="px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-400 text-[9px] font-bold border border-blue-500/30">
-                          OUT
-                        </span>
-                      )}
-                    </span>
-
-                    {/* Mã máy: ID */}
-                    <span className="col-span-2 font-mono font-bold text-xs text-slate-100 truncate group-hover:text-cyan-300">
-                      {tx.equipmentId}
-                    </span>
-
-                    {/* Message Code */}
-                    <span className="col-span-1">
-                      <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold border ${codeColor}`}>
-                        {tx.messageCode}
-                      </span>
-                    </span>
-
-                    {/* Cột RESULT Nổi Bật Màu Sắc */}
-                    <span className="col-span-1 flex justify-center">
-                      {tx.status === 'SUCCESS' ? (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/60 shadow-[0_0_8px_rgba(16,185,129,0.35)]">
-                          OK
-                        </span>
-                      ) : tx.status === 'TIMEOUT' ? (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black bg-amber-500/20 text-amber-400 border border-amber-500/60 shadow-[0_0_8px_rgba(245,158,11,0.35)]">
-                          TO
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black bg-rose-500/25 text-rose-400 border border-rose-500/70 shadow-[0_0_8px_rgba(244,63,94,0.4)]">
-                          NG
-                        </span>
-                      )}
-                    </span>
-
-                    {/* Nội dung tóm tắt ngắn gọn */}
-                    <span
-                      className="col-span-4 text-slate-400 truncate text-[10px] font-mono group-hover:text-slate-200"
-                      title={JSON.stringify(tx.payloadJson)}
+          {/* Table Container with exact Pixel Widths and Horizontal Scroll */}
+          <div className="flex-1 overflow-auto font-mono text-xs">
+            <table
+              className="w-full text-left font-mono text-[11px] table-fixed"
+              style={{ minWidth: `${totalLiveTableWidth}px` }}
+            >
+              <colgroup>
+                <col style={{ width: `${liveColWidths.time}px` }} />
+                <col style={{ width: `${liveColWidths.direction}px` }} />
+                <col style={{ width: `${liveColWidths.machineId}px` }} />
+                <col style={{ width: `${liveColWidths.model}px` }} />
+                <col style={{ width: `${liveColWidths.command}px` }} />
+                <col style={{ width: `${liveColWidths.result}px` }} />
+                <col style={{ width: `${liveColWidths.summary}px` }} />
+                <col style={{ width: `${liveColWidths.latency}px` }} />
+              </colgroup>
+              <thead className="sticky top-0 bg-slate-950 text-slate-400 text-[10px] uppercase border-b border-slate-800/80 z-10 select-none">
+                <tr>
+                  <th className="py-1.5 px-2 truncate relative group" title="Thời gian">
+                    <span>{t('dashboard.liveStream.colTime')}</span>
+                    <div
+                      onMouseDown={(e) => startLiveResizing(e, 'time')}
+                      className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-cyan-400/80 active:bg-cyan-400 transition-colors z-20 flex items-center justify-end"
+                      title="Kéo chuột để co giãn độ rộng cột"
                     >
-                      {getPayloadSummary(tx.payloadJson)}
-                    </span>
-
-                    {/* Độ trễ & Checksum */}
-                    <div className="col-span-1 flex items-center justify-end gap-1 font-mono text-[10px]">
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          tx.checksumStatus === 'VALID' ? 'bg-emerald-400' : 'bg-red-400'
-                        }`}
-                        title={`Checksum: ${tx.checksum} (${tx.checksumStatus})`}
-                      />
-                      <span className="text-slate-300 tabular-nums">{tx.responseTimeMs}ms</span>
+                      <span className="w-px h-3.5 bg-slate-700 group-hover:bg-cyan-400/80 mr-0.5" />
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  </th>
+                  <th className="py-1.5 px-1 text-center truncate relative group" title="Chiều IN/OUT">
+                    <span>{t('dashboard.liveStream.colDirection')}</span>
+                    <div
+                      onMouseDown={(e) => startLiveResizing(e, 'direction')}
+                      className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-cyan-400/80 active:bg-cyan-400 transition-colors z-20 flex items-center justify-end"
+                      title="Kéo chuột để co giãn độ rộng cột"
+                    >
+                      <span className="w-px h-3.5 bg-slate-700 group-hover:bg-cyan-400/80 mr-0.5" />
+                    </div>
+                  </th>
+                  <th className="py-1.5 px-2 truncate relative group" title="Mã máy">
+                    <span>{t('dashboard.liveStream.colMachineId')}</span>
+                    <div
+                      onMouseDown={(e) => startLiveResizing(e, 'machineId')}
+                      className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-cyan-400/80 active:bg-cyan-400 transition-colors z-20 flex items-center justify-end"
+                      title="Kéo chuột để co giãn độ rộng cột"
+                    >
+                      <span className="w-px h-3.5 bg-slate-700 group-hover:bg-cyan-400/80 mr-0.5" />
+                    </div>
+                  </th>
+                  <th className="py-1.5 px-2 truncate relative group" title="Model máy">
+                    <span>{t('dashboard.liveStream.colModel') || 'Model'}</span>
+                    <div
+                      onMouseDown={(e) => startLiveResizing(e, 'model')}
+                      className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-cyan-400/80 active:bg-cyan-400 transition-colors z-20 flex items-center justify-end"
+                      title="Kéo chuột để co giãn độ rộng cột"
+                    >
+                      <span className="w-px h-3.5 bg-slate-700 group-hover:bg-cyan-400/80 mr-0.5" />
+                    </div>
+                  </th>
+                  <th className="py-1.5 px-1.5 truncate relative group" title="Lệnh">
+                    <span>{t('dashboard.liveStream.colCommand')}</span>
+                    <div
+                      onMouseDown={(e) => startLiveResizing(e, 'command')}
+                      className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-cyan-400/80 active:bg-cyan-400 transition-colors z-20 flex items-center justify-end"
+                      title="Kéo chuột để co giãn độ rộng cột"
+                    >
+                      <span className="w-px h-3.5 bg-slate-700 group-hover:bg-cyan-400/80 mr-0.5" />
+                    </div>
+                  </th>
+                  <th className="py-1.5 px-1 text-center font-bold text-slate-200 truncate relative group" title="Kết quả">
+                    <span>RESULT</span>
+                    <div
+                      onMouseDown={(e) => startLiveResizing(e, 'result')}
+                      className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-cyan-400/80 active:bg-cyan-400 transition-colors z-20 flex items-center justify-end"
+                      title="Kéo chuột để co giãn độ rộng cột"
+                    >
+                      <span className="w-px h-3.5 bg-slate-700 group-hover:bg-cyan-400/80 mr-0.5" />
+                    </div>
+                  </th>
+                  <th className="py-1.5 px-2 truncate relative group" title="Nội dung tóm tắt">
+                    <span>{t('dashboard.liveStream.colSummary')}</span>
+                    <div
+                      onMouseDown={(e) => startLiveResizing(e, 'summary')}
+                      className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-cyan-400/80 active:bg-cyan-400 transition-colors z-20 flex items-center justify-end"
+                      title="Kéo chuột để co giãn độ rộng cột"
+                    >
+                      <span className="w-px h-3.5 bg-slate-700 group-hover:bg-cyan-400/80 mr-0.5" />
+                    </div>
+                  </th>
+                  <th className="py-1.5 px-2 text-right truncate relative group" title="Độ trễ">
+                    <span>{t('dashboard.liveStream.colLatency')}</span>
+                    <div
+                      onMouseDown={(e) => startLiveResizing(e, 'latency')}
+                      className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize hover:bg-cyan-400/80 active:bg-cyan-400 transition-colors z-20 flex items-center justify-end"
+                      title="Kéo chuột để co giãn độ rộng cột"
+                    >
+                      <span className="w-px h-3.5 bg-slate-700 group-hover:bg-cyan-400/80 mr-0.5" />
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/40">
+                {streamBuffer.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-slate-500 text-xs italic">
+                      <Activity className="w-6 h-6 mx-auto text-slate-600 animate-pulse mb-2" />
+                      <p>{t('dashboard.liveStream.waitingPackets')}</p>
+                    </td>
+                  </tr>
+                ) : (
+                  streamBuffer.slice(0, 100).map((tx) => {
+                    const model = tx.equipmentModel || deviceModelMap[tx.equipmentId] || '-';
+                    let codeColor = 'text-cyan-400 bg-cyan-950/60 border-cyan-800/50';
+                    if (tx.messageCode === 'M001') codeColor = 'text-emerald-400 bg-emerald-950/60 border-emerald-800/50';
+                    if (tx.messageCode === 'S005' || tx.messageCode === 'S006') codeColor = 'text-purple-400 bg-purple-950/60 border-purple-800/50';
+                    if (tx.messageCode === 'S000' || tx.messageCode === 'S002') codeColor = 'text-amber-400 bg-amber-950/60 border-amber-800/50';
+                    if (tx.messageCode.startsWith('E')) codeColor = 'text-red-400 bg-red-950/60 border-red-800/50';
+
+                    return (
+                      <tr
+                        key={tx.id}
+                        onClick={() => setSelectedTx(tx)}
+                        className={`hover:bg-slate-800/50 cursor-pointer transition-colors text-[11px] group select-none ${
+                          selectedTx?.id === tx.id ? 'bg-blue-600/20 border-l-2 border-blue-500' : ''
+                        }`}
+                        title={`${formatFullDateTime(tx.timestamp)} · ${tx.direction} · ${tx.equipmentId} · ${tx.messageCode}\nNhấp để xem chi tiết Hex Dump & JSON`}
+                      >
+                        <td className="py-1.5 px-2 text-slate-300 font-mono text-[10px] tabular-nums whitespace-nowrap truncate font-medium">
+                          {formatFullDateTime(tx.timestamp)}
+                        </td>
+                        <td className="py-1.5 px-1 text-center">
+                          {tx.direction === 'INBOUND' ? (
+                            <span className="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 text-[9px] font-bold border border-emerald-500/30">
+                              IN
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-400 text-[9px] font-bold border border-blue-500/30">
+                              OUT
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-1.5 px-2 font-mono font-bold text-xs text-slate-100 truncate group-hover:text-cyan-300" title={tx.equipmentId}>
+                          {tx.equipmentId}
+                        </td>
+                        <td className="py-1.5 px-2 truncate font-mono text-[10px]" title={model}>
+                          {model !== '-' ? (
+                            <span className="px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/25 text-amber-300 font-medium truncate inline-block max-w-full">
+                              {model}
+                            </span>
+                          ) : (
+                            <span className="text-slate-600">-</span>
+                          )}
+                        </td>
+                        <td className="py-1.5 px-1.5 truncate">
+                          <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold border ${codeColor}`}>
+                            {tx.messageCode}
+                          </span>
+                        </td>
+                        <td className="py-1.5 px-1 text-center">
+                          {tx.status === 'SUCCESS' ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/60 shadow-[0_0_8px_rgba(16,185,129,0.35)]">
+                              OK
+                            </span>
+                          ) : tx.status === 'TIMEOUT' ? (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-black bg-amber-500/20 text-amber-400 border border-amber-500/60 shadow-[0_0_8px_rgba(245,158,11,0.35)]">
+                              TO
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-black bg-rose-500/25 text-rose-400 border border-rose-500/70 shadow-[0_0_8px_rgba(244,63,94,0.4)]">
+                              NG
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-1.5 px-2 text-slate-400 truncate text-[10px] font-mono group-hover:text-slate-200" title={JSON.stringify(tx.payloadJson)}>
+                          {getPayloadSummary(tx.payloadJson)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right">
+                          <div className="flex items-center justify-end gap-1 font-mono text-[10px]">
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                tx.checksumStatus === 'VALID' ? 'bg-emerald-400' : 'bg-red-400'
+                              }`}
+                              title={`Checksum: ${tx.checksum} (${tx.checksumStatus})`}
+                            />
+                            <span className="text-slate-300 tabular-nums">{tx.responseTimeMs}ms</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
             <div ref={streamEndRef} />
           </div>
 
@@ -1613,6 +1851,97 @@ export const DashboardView: React.FC = () => {
         transaction={selectedTx}
         onClose={() => setSelectedTx(null)}
       />
+
+      {/* ========================================================================= */}
+      {/* 6. MODAL ĐIỀU CHỈNH ĐỘ RỘNG CỘT BẢNG LIVE STREAM (PIXEL)                  */}
+      {/* ========================================================================= */}
+      {showColWidthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-[#0C1220] border border-cyan-500/40 rounded-xl shadow-2xl max-w-lg w-full p-4 space-y-4 text-slate-100 font-sans">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
+                <h3 className="font-bold text-sm text-slate-100">
+                  Điều Chỉnh Độ Rộng Cột Bảng Dashboard (Pixel)
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowColWidthModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400">
+              Nhập số pixel (px) cho từng cột theo ý bạn. Bảng sẽ lưu lại vào trình duyệt và giữ nguyên kích thước này.
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+              {[
+                { key: 'time', label: 'Thời gian' },
+                { key: 'direction', label: 'Chiều (IN/OUT)' },
+                { key: 'machineId', label: 'Mã Máy' },
+                { key: 'model', label: 'Model Máy' },
+                { key: 'command', label: 'Lệnh' },
+                { key: 'result', label: 'RESULT' },
+                { key: 'summary', label: 'Nội dung tóm tắt' },
+                { key: 'latency', label: 'Độ trễ' },
+              ].map(({ key, label }) => (
+                <div key={key} className="bg-slate-900/90 border border-slate-800 p-2 rounded-md space-y-1">
+                  <label className="text-[11px] text-slate-300 font-medium block truncate" title={label}>
+                    {label}
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={30}
+                      max={600}
+                      step={5}
+                      value={tempColWidths[key as keyof DashboardColumnWidthConfig] || 0}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10) || 0;
+                        setTempColWidths((prev) => ({
+                          ...prev,
+                          [key]: Math.max(30, val),
+                        }));
+                      }}
+                      className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 font-mono text-xs text-cyan-300 focus:outline-hidden focus:border-cyan-500"
+                    />
+                    <span className="text-[10px] text-slate-500 font-mono">px</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+              <button
+                onClick={handleResetLiveWidths}
+                className="flex items-center gap-1 px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 hover:text-white transition-colors cursor-pointer"
+                title="Khôi phục về kích thước mặc định"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                <span>Mặc định</span>
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowColWidthModal(false)}
+                  className="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 hover:text-white transition-colors cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleSaveLiveWidths}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-xs font-semibold text-white shadow-xs transition-colors cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Áp Dụng</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

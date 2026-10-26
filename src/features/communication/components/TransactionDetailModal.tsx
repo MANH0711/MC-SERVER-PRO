@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Copy,
@@ -18,6 +18,8 @@ import {
   Tag,
 } from 'lucide-react';
 import { CommunicationTransaction } from '@/core/types';
+import { copyToClipboard } from '@/core/utils/clipboard';
+import { cleanPayloadForDisplay } from '@/core/utils/payloadUtils';
 
 interface TransactionDetailModalProps {
   transaction: CommunicationTransaction | null;
@@ -42,17 +44,26 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  // Trích xuất các trường dữ liệu quan trọng từ payload JSON hoặc rawAscii
+  const rawPayload = transaction?.payloadJson || {};
+  const payload = useMemo(() => cleanPayloadForDisplay(rawPayload), [rawPayload]);
+
   if (!transaction) return null;
 
-  const handleCopy = (text: string, keyName: string) => {
+  const handleCopy = async (text: string, keyName: string) => {
     if (!text) return;
-    navigator.clipboard.writeText(text);
+    const success = await copyToClipboard(text);
+    if (!success) return;
     setCopiedKey(keyName);
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
   const handleExport = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(transaction, null, 2));
+    const exportData = {
+      ...transaction,
+      payloadJson: payload,
+    };
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportData, null, 2));
     const dl = document.createElement('a');
     dl.setAttribute('href', dataStr);
     dl.setAttribute('download', `Transaction_${transaction.messageCode}_${transaction.equipmentId}_${transaction.id}.json`);
@@ -82,16 +93,20 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
     return rows;
   };
 
-  // Trích xuất các trường dữ liệu quan trọng từ payload JSON hoặc rawAscii
-  const payload = transaction.payloadJson || {};
   const isWorkInOrInterlock =
     transaction.messageCode === 'S050' ||
     transaction.messageCode === 'S051' ||
     !!payload.PCB_ID ||
     !!payload.LOT_NUMBER ||
-    (Array.isArray(payload.DATA) && payload.DATA.length > 0);
+    (Array.isArray(payload.DATA) && payload.DATA.length > 0) ||
+    (payload.responseMessage && Array.isArray(payload.responseMessage.DATA));
 
-  const firstItem = Array.isArray(payload.DATA) && payload.DATA[0] ? payload.DATA[0] : payload;
+  const firstItem =
+    Array.isArray(payload.DATA) && payload.DATA[0]
+      ? payload.DATA[0]
+      : payload.responseMessage && Array.isArray(payload.responseMessage.DATA) && payload.responseMessage.DATA[0]
+        ? payload.responseMessage.DATA[0]
+        : payload;
 
   const pcbId = firstItem.PCB_ID || payload.PCB_ID || payload.pcbId || '';
   const lotNumber = firstItem.LOT_NUMBER || payload.LOT_NUMBER || payload.lotNumber || '';
@@ -141,6 +156,11 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                 <span className="font-mono font-bold text-slate-100 truncate cursor-text select-text">
                   {transaction.equipmentId}
                 </span>
+                {transaction.equipmentModel && (
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-amber-500/10 text-amber-300 border border-amber-500/25">
+                    {transaction.equipmentModel}
+                  </span>
+                )}
                 <span className="text-slate-600">·</span>
                 <span className="text-[11px] font-mono text-slate-400 truncate cursor-text select-text">
                   TxID: <span className="text-slate-300 font-semibold">{transaction.correlationId || transaction.id}</span>

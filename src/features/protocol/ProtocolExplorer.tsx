@@ -19,10 +19,10 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/core/i18n';
 import { useApp } from '@/core/context';
-import { MESSAGE_DEFINITIONS } from '@/features/protocol';
-import { encodeFrame, EncodedFrameResult } from '@/features/protocol';
-import { IndustrialFrameParser } from '@/features/protocol';
-import { calculateChecksum } from '@/features/protocol';
+import { MESSAGE_DEFINITIONS } from './engine/messageDefinitions';
+import { encodeFrame, EncodedFrameResult } from './engine/frameEncoder';
+import { IndustrialFrameParser } from './engine/frameParser';
+import { calculateChecksum } from './engine/checksum';
 import { ParsedFrame, ChecksumAlgorithm } from '@/core/types';
 
 export const ProtocolExplorerView: React.FC = () => {

@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEMI_RULE_INTERLOCK - Báo Cáo Kỹ Thuật & Sơ Đồ Hệ Thống</title>
+    <style>
+        :root {
+            --bg-canvas: #f8fafc;
+            --bg-surface: #ffffff;
+            --bg-subtle: #f1f5f9;
+            --border-light: #e2e8f0;
+            --border-subtle: #cbd5e1;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
+            --primary-border: #bfdbfe;
+            --accent: #0284c7;
+            --success: #059669;
+            --success-light: #ecfdf5;
+            --success-border: #a7f3d0;
+            --warning: #d97706;
+            --warning-light: #fffbeb;
+            --warning-border: #fde68a;
+            --danger: #e11d48;
+            --danger-light: #fff1f2;
+            --danger-border: #fecdd3;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-600: #475569;
+            --slate-500: #64748b;
+            --code-bg: #0f172a;
+            --code-text: #f8fafc;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-mono: "JetBrains Mono", Consolas, "SF Mono", Monaco, monospace;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-canvas);
+            color: var(--slate-800);
+            font-size: 13px;
+            line-height: 1.5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-light);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            box-shadow: var(--shadow-sm);
+            z-index: 20;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #2563eb, #0284c7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+        }
+
+        .brand-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--slate-900);
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-subtitle {
+            font-size: 11px;
+            color: var(--slate-500);
+            font-weight: 500;
+        }
+
+        .header-search {
+            position: relative;
+            width: 360px;
+        }
+
+        .header-search input {
+            width: 100%;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 6px 12px 6px 32px;
+            font-size: 12px;
+            color: var(--slate-800);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .header-search input:focus {
+            background: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .header-search svg {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 14px;
+            color: var(--slate-500);
+        }
+
+        .header-meta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        /* PILLS & BADGES */
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            font-family: var(--font-mono);
+            white-space: nowrap;
+        }
+
+        .chip-blue { background: var(--primary-light); color: var(--primary); border: 1px solid var(--primary-border); }
+        .chip-green { background: var(--success-light); color: var(--success); border: 1px solid var(--success-border); }
+        .chip-amber { background: var(--warning-light); color: var(--warning); border: 1px solid var(--warning-border); }
+        .chip-rose { background: var(--danger-light); color: var(--danger); border: 1px solid var(--danger-border); }
+        .chip-slate { background: var(--bg-subtle); color: var(--slate-700); border: 1px solid var(--border-light); }
+
+        /* VIEWPORT LAYOUT */
+        .viewport {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR NAVIGATION */
+        nav.sidebar {
+            width: 280px;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-light);
+            overflow-y: auto;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 10px 8px;
+        }
+
+        .nav-category {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--slate-500);
+            padding: 8px 10px 4px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 10px;
+            border-radius: 6px;
+            color: var(--slate-700);
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-bottom: 2px;
+        }
+
+        .nav-link:hover {
+            background: var(--bg-subtle);
+            color: var(--slate-900);
+        }
+
+        .nav-link.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* MAIN CONTENT AREA */
+        main.main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 18px 24px 60px;
+            scroll-behavior: smooth;
+        }
+
+        /* VIEW TOGGLE TABS (Visual vs Code) */
+        .tab-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            background: var(--bg-surface);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tab-group {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-subtle);
+            padding: 3px;
+            border-radius: 6px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            padding: 5px 14px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--slate-600);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab-btn.active {
+            background: #ffffff;
+            color: var(--primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        /* CARDS */
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-header {
+            padding: 10px 16px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--slate-900);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-body {
+            padding: 16px;
+        }
+
+        /* DIAGRAM CONTAINER (SVG & Visuals) */
+        .diagram-surface {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 16px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: auto;
+        }
+
+        svg.interactive-svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* GRIDS */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
+        .metric-card {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .metric-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--slate-500);
+            letter-spacing: 0.04em;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--slate-900);
+        }
+
+        .metric-desc {
+            font-size: 11px;
+            color: var(--slate-600);
+        }
+
+        /* TABLES */
+        .table-responsive {
+            overflow-x: auto;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            text-align: left;
+        }
+
+        th {
+            background: var(--bg-subtle);
+            color: var(--slate-700);
+            font-weight: 600;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-light);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-light);
+            color: var(--slate-800);
+            vertical-align: top;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: rgba(37, 99, 235, 0.02); }
+
+        /* CODE BLOCKS */
+        .code-window {
+            background: var(--code-bg);
+            border-radius: 8px;
+            border: 1px solid var(--slate-800);
+            margin: 10px 0;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+        }
+
+        .code-titlebar {
+            background: #1e293b;
+            padding: 6px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+
+        .window-dots {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .dot { width: 9px; height: 9px; border-radius: 50%; }
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #f59e0b; }
+        .dot-green { background: #10b981; }
+
+        .code-caption {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        .copy-btn {
+            background: #334155;
+            color: #f8fafc;
+            border: none;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.15s ease;
+        }
+
+        .copy-btn:hover { background: var(--primary); }
+
+        pre {
+            padding: 12px 14px;
+            color: var(--code-text);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            line-height: 1.45;
+            overflow-x: auto;
+        }
+
+        .kw { color: #f472b6; font-weight: 600; }
+        .fn { color: #38bdf8; }
+        .tbl { color: #c084fc; font-weight: 500; }
+        .str { color: #4ade80; }
+        .cmt { color: #64748b; font-style: italic; }
+        .var { color: #fbbf24; }
+
+        /* TOAST */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--slate-900);
+            color: #ffffff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            display: none;
+            z-index: 100;
+            animation: slideUp 0.2s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP APP BAR -->
+    <header>
+        <div class="header-brand">
+            <div class="brand-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div>
+                <div class="brand-title">
+                    SEMI_RULE_INTERLOCK
+                    <span class="chip chip-blue">ORACLE PL/SQL ENGINE</span>
+                </div>
+                <div class="brand-subtitle">Hệ Thống Kiểm Soát & Chặn Lỗi Sản Xuất Bán Dẫn / SMT (MES & EIF)</div>
+            </div>
+        </div>
+
+        <div class="header-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" id="searchInput" placeholder="Tìm kiếm nhanh Query (Q1..Q10), Bảng DB, Hàm, Mã lỗi..." onkeyup="filterQueries()">
+        </div>
+
+        <div class="header-meta">
+            <span class="chip chip-slate">SCHEMA: MIGHTY</span>
+            <span class="chip chip-rose">LOCK: SPRH (HOLD)</span>
+            <span class="chip chip-green">12 CRITICAL QUERIES</span>
+        </div>
+    </header>
+
+    <div class="viewport">
+
+        <!-- SIDEBAR NAVIGATION -->
+        <nav class="sidebar" id="sidebarNav">
+            <div class="nav-category">Tổng Quan & Sơ Đồ</div>
+            <a class="nav-link active" onclick="scrollToElement('sec-overview')">
+                <span>0. Tổng Quan & KPI Vận Hành</span>
+                <span class="chip chip-blue">KPI</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-master-flow')">
+                <span>1. Sơ Đồ Pipeline Master</span>
+                <span class="chip chip-blue">SVG</span>
+            </a>
+
+            <div class="nav-category">12 Câu Truy Vấn Bóc Tách</div>
+            <a class="nav-link" onclick="scrollToElement('sec-q1')">
+                <span>Q1. Kiểm Tra Lệch Giờ DB (±20m)</span>
+                <span class="chip chip-amber">TIME</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-q2')">
+                <span>Q2. Trạng Thái Lot & Active Check</span>
+                <span class="chip chip-blue">LOT</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-q3')">
+                <span>Q3. CTE 4 Tầng Tìm Rule Ưu Tiên</span>
+                <span class="chip chip-rose">CTE CORE</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-q4')">
+                <span>Q4. DENSE_RANK Truy Vết Lịch Sử</span>
+                <span class="chip chip-blue">TRACE</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-q5')">
+                <span>Q5. Quét Liên Hoàn In-Line SMT</span>
+                <span class="chip chip-green">IN-LINE</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-q6')">
+                <span>Q6. MINUS Tìm Sót Unit Khi Out</span>
+                <span class="chip chip-rose">DIFF</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-q7')">
+                <span>Q7. Check Trùng Barcode (Rescan)</span>
+                <span class="chip chip-amber">RESCAN</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-q8')">
+                <span>Q8. Tuổi Thọ Tool Dao/Khuôn/Thiếc</span>
+                <span class="chip chip-green">TOOLS</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-q9')">
+                <span>Q9. Phễu 5 Tầng Kiểm Tra 4M</span>
+                <span class="chip chip-rose">4M AUDIT</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-q10')">
+                <span>Q10. Khóa Lot Nguyên Tử (SPRH)</span>
+                <span class="chip chip-rose">HOLD</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-q11')">
+                <span>Q11. Tạo Phiếu Sự Cố (ABN Auto)</span>
+                <span class="chip chip-amber">TICKET</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-q12')">
+                <span>Q12. Ghi Vết Trace & Process Time</span>
+                <span class="chip chip-slate">TRACE</span>
+            </a>
+
+            <div class="nav-category">Tra Cứu Nhanh</div>
+            <a class="nav-link" onclick="scrollToElement('sec-error-matrix')">
+                <span>Ma Trận Mã Lỗi RtnMsgID</span>
+                <span class="chip chip-slate">CODES</span>
+            </a>
+            <a class="nav-link" onclick="scrollToElement('sec-schema')">
+                <span>Ma Trận Bảng Dữ Liệu</span>
+                <span class="chip chip-slate">SCHEMA</span>
+            </a>
+        </nav>
+
+        <!-- MAIN VIEWPORT -->
+        <main class="main-content" id="mainScroll">
+
+            <!-- SECTION 0: OVERVIEW & METRICS -->
+            <section id="sec-overview" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                        Tổng Quan Vận Hành Engine SEMI_RULE_INTERLOCK
+                    </span>
+                    <span class="chip chip-blue">EXECUTIVE SUMMARY</span>
+                </div>
+                <div class="card-body">
+                    <div class="grid-4">
+                        <div class="metric-card">
+                            <span class="metric-title">Phạm Vi Bảo Vệ</span>
+                            <span class="metric-value">100% Giao Dịch</span>
+                            <span class="metric-desc">Chặn ở cả 2 cấp: Lot MES và Thiết Bị Tự Động EIF</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Cửa Sổ Lệch Giờ DB</span>
+                            <span class="metric-value">±20 Phút</span>
+                            <span class="metric-desc">Chống lỗi lệch đồng hồ và nghẽn Message Queue</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Thuật Toán Phân Cấp</span>
+                            <span class="metric-value">4 Tầng CTE</span>
+                            <span class="metric-desc">Ưu tiên cấu hình Specific (0) triệt tiêu cấu hình ALL (1)</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Hành Động Vi Phạm</span>
+                            <span class="metric-value" style="color: var(--danger);">Hard Lock (SPRH)</span>
+                            <span class="metric-desc">Tự động sinh phiếu ABN và ngắt quyền di chuyển Lot</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 1: MASTER PIPELINE SVG DIAGRAM -->
+            <section id="sec-master-flow" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        Sơ Đồ Luồng Hoạt Động Tổng Thể (Master Interlock Pipeline)
+                    </span>
+                    <span class="chip chip-blue">INTERACTIVE VECTOR FLOW</span>
+                </div>
+                <div class="card-body">
+                    <div class="diagram-surface">
+                        <svg class="interactive-svg" width="920" height="260" viewBox="0 0 920 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Background Grid Elements -->
+                            <rect x="10" y="10" width="160" height="90" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5"/>
+                            <text x="90" y="38" text-anchor="middle" fill="#0F172A" font-size="12" font-weight="700">1. TIẾP NHẬN DỮ LIỆU</text>
+                            <text x="90" y="58" text-anchor="middle" fill="#64748B" font-size="10">P_LOT_MAIN / P_EQPIF_MAIN</text>
+                            <text x="90" y="74" text-anchor="middle" fill="#0284C7" font-size="10" font-weight="600">Check lệch giờ ±20m</text>
+
+                            <!-- Arrow 1 -->
+                            <path d="M170 55 L210 55" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <!-- Box 2 -->
+                            <rect x="210" y="10" width="170" height="90" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5"/>
+                            <text x="295" y="38" text-anchor="middle" fill="#0F172A" font-size="12" font-weight="700">2. THẨM ĐỊNH THỰC THỂ</text>
+                            <text x="295" y="58" text-anchor="middle" fill="#64748B" font-size="10">ASFC_LOT_STATUS</text>
+                            <text x="295" y="74" text-anchor="middle" fill="#D97706" font-size="10" font-weight="600">in_hold = 'N' & Oper & Model</text>
+
+                            <!-- Arrow 2 -->
+                            <path d="M380 55 L420 55" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <!-- Box 3 -->
+                            <rect x="420" y="10" width="180" height="90" rx="8" fill="#EFF6FF" stroke="#3B82F6" stroke-width="2"/>
+                            <text x="510" y="38" text-anchor="middle" fill="#1D4ED8" font-size="12" font-weight="700">3. PHÂN CẤP ƯU TIÊN CTE</text>
+                            <text x="510" y="58" text-anchor="middle" fill="#2563EB" font-size="10">F_ILRULE_CHECK_SQL</text>
+                            <text x="510" y="74" text-anchor="middle" fill="#0284C7" font-size="10" font-weight="600">Specific (0) > ALL (1)</text>
+
+                            <!-- Arrow 3 -->
+                            <path d="M600 55 L640 55" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <!-- Decision Diamond -->
+                            <polygon points="710,15 780,55 710,95 640,55" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5"/>
+                            <text x="710" y="52" text-anchor="middle" fill="#0F172A" font-size="11" font-weight="700">KẾT QUẢ</text>
+                            <text x="710" y="66" text-anchor="middle" fill="#0F172A" font-size="10">CHECK?</text>
+
+                            <!-- Arrow PASS -> Green Box -->
+                            <path d="M780 55 L830 55" stroke="#10B981" stroke-width="2" marker-end="url(#arrowhead-green)"/>
+                            <rect x="830" y="25" width="80" height="60" rx="6" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5"/>
+                            <text x="870" y="52" text-anchor="middle" fill="#059669" font-size="11" font-weight="700">PASS (OK)</text>
+                            <text x="870" y="68" text-anchor="middle" fill="#059669" font-size="9">Cho phép chạy</text>
+
+                            <!-- Arrow FAIL -> Down -> Red Box -->
+                            <path d="M710 95 L710 160" stroke="#E11D48" stroke-width="2" marker-end="url(#arrowhead-red)"/>
+                            <rect x="610" y="160" width="200" height="85" rx="8" fill="#FFF1F2" stroke="#E11D48" stroke-width="2"/>
+                            <text x="710" y="185" text-anchor="middle" fill="#E11D48" font-size="12" font-weight="700">4. KÍCH HOẠT CHẶN (NG)</text>
+                            <text x="710" y="205" text-anchor="middle" fill="#9F1239" font-size="10">P_Action_AbNormal (Tạo ABN)</text>
+                            <text x="710" y="222" text-anchor="middle" fill="#9F1239" font-size="10">P_Action_LotHold (Khóa SPRH)</text>
+                            <text x="710" y="236" text-anchor="middle" fill="#E11D48" font-size="9" font-weight="600">RtnPause = 'Y' (Dừng Thiết Bị)</text>
+
+                            <!-- Sub-branch for Dynamic checks -->
+                            <rect x="210" y="160" width="350" height="85" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5"/>
+                            <text x="385" y="185" text-anchor="middle" fill="#0F172A" font-size="11" font-weight="700">CÁC HÀM KIỂM TRA ĐỘNG THỰC THI (PL/SQL)</text>
+                            <text x="385" y="205" text-anchor="middle" fill="#475569" font-size="10">F_PREOPER_INTERLOCK • F_RESCAN_ID_CHECK • F_TOOLS_*</text>
+                            <text x="385" y="222" text-anchor="middle" fill="#475569" font-size="10">F_SPOU_UNITCHECK • F_4MABN_* • F_REFLOW_RUNSTART</text>
+
+                            <path d="M510 100 L510 160" stroke="#3B82F6" stroke-width="2" stroke-dasharray="4 4"/>
+
+                            <!-- Defs for arrows -->
+                            <defs>
+                                <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                    <polygon points="0 0, 8 3, 0 6" fill="#94A3B8"/>
+                                </marker>
+                                <marker id="arrowhead-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                    <polygon points="0 0, 8 3, 0 6" fill="#10B981"/>
+                                </marker>
+                                <marker id="arrowhead-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                    <polygon points="0 0, 8 3, 0 6" fill="#E11D48"/>
+                                </marker>
+                            </defs>
+                        </svg>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUERY 1 -->
+            <section id="sec-q1" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span class="chip chip-amber">Q1</span>
+                        Kiểm Tra Lệch Giờ DB (Time Drift Window Check)
+                    </span>
+                    <span class="chip chip-slate">DUAL / DATE ARITHMETIC</span>
+                </div>
+                <div class="card-body">
+                    <div class="diagram-surface" style="padding: 10px;">
+                        <svg width="780" height="60" viewBox="0 0 780 60" fill="none">
+                            <line x1="40" y1="30" x2="740" y2="30" stroke="#CBD5E1" stroke-width="4" stroke-linecap="round"/>
+                            <!-- Danger Past -->
+                            <rect x="40" y="20" width="220" height="20" rx="4" fill="#FEE2E2"/>
+                            <text x="150" y="34" text-anchor="middle" fill="#EF4444" font-size="10" font-weight="700">NG: Quá Khứ ( < -20 phút )</text>
+                            <!-- Safe Zone -->
+                            <rect x="260" y="16" width="260" height="28" rx="6" fill="#DCFCE7" stroke="#22C55E" stroke-width="1.5"/>
+                            <text x="390" y="34" text-anchor="middle" fill="#15803D" font-size="11" font-weight="800">VÙNG HỢP LỆ (SYSDATE ± 20 PHÚT)</text>
+                            <!-- Danger Future -->
+                            <rect x="520" y="20" width="220" height="20" rx="4" fill="#FEE2E2"/>
+                            <text x="630" y="34" text-anchor="middle" fill="#EF4444" font-size="10" font-weight="700">NG: Tương Lai ( > +20 phút )</text>
+                        </svg>
+                    </div>
+
+                    <div class="code-window">
+                        <div class="code-titlebar">
+                            <div class="window-dots"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                            <span class="code-caption">QUERY 1: Time Offset Verification</span>
+                            <button class="copy-btn" onclick="copySnippet(this)">Copy SQL</button>
+                        </div>
+                        <pre><code><span class="kw">SELECT</span> 
+    <span class="kw">CASE WHEN</span> ((<span class="fn">TO_DATE</span>(:ArgTransTime, <span class="str">'yyyymmddhh24miss'</span>) - <span class="kw">SYSDATE</span>) * 24 * 60) > 20 
+         <span class="kw">THEN</span> <span class="str">'NG'</span> <span class="kw">ELSE</span> <span class="str">'OK'</span> <span class="kw">END AS</span> v_Future,
+    <span class="kw">CASE WHEN</span> ((<span class="fn">TO_DATE</span>(:ArgTransTime, <span class="str">'yyyymmddhh24miss'</span>) - <span class="kw">SYSDATE</span>) * 24 * 60) &lt; -20 
+         <span class="kw">THEN</span> <span class="str">'NG'</span> <span class="kw">ELSE</span> <span class="str">'OK'</span> <span class="kw">END AS</span> V_past
+<span class="kw">FROM</span> dual;</code></pre>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr><th>Tham số / Biểu thức</th><th>Giải thích giải phẫu</th><th>Ý nghĩa thực tế trên sàn sản xuất</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>(Target_Date - SYSDATE)</code></td>
+                                    <td>Phép trừ Date trong Oracle trả về số ngày (Real Number).</td>
+                                    <td>Đo khoảng cách thời gian giữa máy EIF và máy chủ Database.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>* 24 * 60</code></td>
+                                    <td>Đổi số ngày ra số phút (1 ngày = 24h = 1440 phút).</td>
+                                    <td>Quy đổi về thang đo phút để so sánh với ngưỡng 20 phút.</td>
+                                </tr>
+                                <tr>
+                                    <td>Ngưỡng <code>&gt; 20</code> / <code>&lt; -20</code></td>
+                                    <td>Phát hiện máy trạm lệch giờ hoặc tin nhắn bị nghẽn (Lag).</td>
+                                    <td>Chặn việc ghi nhận sai thứ tự thời gian các công đoạn sản xuất.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUERY 2 -->
+            <section id="sec-q2" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span class="chip chip-blue">Q2</span>
+                        Xác Minh Trạng Thái Lot, Active, Hold & Đúng Công Đoạn
+                    </span>
+                    <span class="chip chip-slate">ASFC_LOT_STATUS</span>
+                </div>
+                <div class="card-body">
+                    <div class="code-window">
+                        <div class="code-titlebar">
+                            <div class="window-dots"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                            <span class="code-caption">QUERY 2: Lot Verification & Left Outer Join</span>
+                            <button class="copy-btn" onclick="copySnippet(this)">Copy SQL</button>
+                        </div>
+                        <pre><code><span class="kw">SELECT</span> a.lot_number, a.device_stype, a.device, a.operation,
+       <span class="fn">NVL</span>(<span class="fn">MAX</span>(b.equipment_id), <span class="str">'X'</span>) <span class="kw">AS</span> current_equip,
+       <span class="fn">MAX</span>(a.in_hold) <span class="kw">AS</span> in_hold
+  <span class="kw">FROM</span> <span class="tbl">ASFC_LOT_STATUS</span> a,
+       <span class="tbl">ASFC_EQPLOT_STATUS</span> b
+ <span class="kw">WHERE</span> a.plant = :gv_Plant <span class="kw">AND</span> a.lot_number = :gv_Lot
+   <span class="kw">AND</span> a.operation = :ArgOper <span class="kw">AND</span> a.in_active = <span class="str">'Y'</span>
+   <span class="kw">AND</span> b.plant(+) = a.plant <span class="kw">AND</span> b.lot_number(+) = a.lot_number
+ <span class="kw">GROUP BY</span> a.lot_number, a.device_stype, a.device, a.operation;</code></pre>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr><th>Kịch bản kiểm tra</th><th>Kết quả Query</th><th>Thông báo lỗi trả về</th><th>Xử lý của Engine</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Không tìm thấy bản ghi</td>
+                                    <td><code>NO_DATA_FOUND</code></td>
+                                    <td><code>Not Found Lot Infomation [:gv_Lot]</code></td>
+                                    <td>Hủy giao dịch ngay lập tức (Commit trace log).</td>
+                                </tr>
+                                <tr>
+                                    <td>Công đoạn không khớp</td>
+                                    <td><code>a.operation &lt;&gt; ArgOper</code></td>
+                                    <td><code>Lot Does Not Exist in the Operation [:ArgOper]</code></td>
+                                    <td>Chặn thao tác nhầm công đoạn trên chuyền.</td>
+                                </tr>
+                                <tr>
+                                    <td>Lot đang bị HOLD</td>
+                                    <td><code>in_hold &lt;&gt; 'N'</code></td>
+                                    <td><code>The Status Of Lot [:gv_Lot] Is Hold</code></td>
+                                    <td>Khóa cứng, không cho phép tiếp tục gia công.</td>
+                                </tr>
+                                <tr>
+                                    <td>Sai Model sản xuất</td>
+                                    <td><code>a.device &lt;&gt; ArgDevice</code></td>
+                                    <td><code>The Device in Lot are different</code></td>
+                                    <td>Chặn bắn nhầm chương trình/thiết bị khác Model.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUERY 3: CTE MATRIX -->
+            <section id="sec-q3" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span class="chip chip-rose">Q3</span>
+                        CTE 4 Tầng Phân Cấp Tìm Rule Ưu Tiên (F_ILRULE_CHECK_SQL)
+                    </span>
+                    <span class="chip chip-blue">HIERARCHY CASCADE</span>
+                </div>
+                <div class="card-body">
+                    <!-- SVG Visual for CTE Matrix -->
+                    <div class="diagram-surface">
+                        <svg width="840" height="120" viewBox="0 0 840 120" fill="none">
+                            <rect x="20" y="20" width="170" height="75" rx="6" fill="#F8FAFC" stroke="#0284C7" stroke-width="1.5"/>
+                            <text x="105" y="45" text-anchor="middle" fill="#0369A1" font-size="11" font-weight="700">TẦNG 1: DEVICE</text>
+                            <text x="105" y="65" text-anchor="middle" fill="#64748B" font-size="10">Specific (0) > ALL (1)</text>
+                            <text x="105" y="80" text-anchor="middle" fill="#0F172A" font-size="9" font-family="monospace">min_deviceseq</text>
+
+                            <path d="M190 57 L230 57" stroke="#0284C7" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <rect x="230" y="20" width="170" height="75" rx="6" fill="#F8FAFC" stroke="#0284C7" stroke-width="1.5"/>
+                            <text x="315" y="45" text-anchor="middle" fill="#0369A1" font-size="11" font-weight="700">TẦNG 2: OPERATION</text>
+                            <text x="315" y="65" text-anchor="middle" fill="#64748B" font-size="10">Specific (0) > ALL (1)</text>
+                            <text x="315" y="80" text-anchor="middle" fill="#0F172A" font-size="9" font-family="monospace">min_operseq</text>
+
+                            <path d="M400 57 L440 57" stroke="#0284C7" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <rect x="440" y="20" width="170" height="75" rx="6" fill="#F8FAFC" stroke="#0284C7" stroke-width="1.5"/>
+                            <text x="525" y="45" text-anchor="middle" fill="#0369A1" font-size="11" font-weight="700">TẦNG 3: EQUIP GROUP</text>
+                            <text x="525" y="65" text-anchor="middle" fill="#64748B" font-size="10">Specific (0) > ALL (1)</text>
+                            <text x="525" y="80" text-anchor="middle" fill="#0F172A" font-size="9" font-family="monospace">min_typeseq</text>
+
+                            <path d="M610 57 L650 57" stroke="#0284C7" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <rect x="650" y="15" width="170" height="85" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="2"/>
+                            <text x="735" y="42" text-anchor="middle" fill="#1D4ED8" font-size="11" font-weight="800">TẦNG 4: EQUIPMENT ID</text>
+                            <text x="735" y="62" text-anchor="middle" fill="#2563EB" font-size="10">Specific (0) > ALL (1)</text>
+                            <text x="735" y="80" text-anchor="middle" fill="#E11D48" font-size="10" font-weight="700">LỌC RA RULE DUY NHẤT</text>
+                        </svg>
+                    </div>
+
+                    <div class="code-window">
+                        <div class="code-titlebar">
+                            <div class="window-dots"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                            <span class="code-caption">QUERY 3: 4-Tier Specificity Cascade CTE</span>
+                            <button class="copy-btn" onclick="copySnippet(this)">Copy SQL</button>
+                        </div>
+                        <pre><code><span class="kw">WITH</span> RULE_DEVICE_GROUP <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> a.*, <span class="fn">MIN</span>(device_seq) <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> rule_id) <span class="kw">AS</span> min_deviceseq
+      <span class="kw">FROM</span> (
+        <span class="kw">SELECT</span> a.*, <span class="kw">CASE WHEN</span> rule_key_group1 = <span class="str">'ALL'</span> <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END AS</span> device_seq
+          <span class="kw">FROM</span> <span class="tbl">BIZ_ILRULE_INFO</span> a
+         <span class="kw">WHERE</span> plant = :plant <span class="kw">AND</span> trans_code = :trans_code
+           <span class="kw">AND</span> rule_key_group1 <span class="kw">IN</span> (<span class="str">'ALL'</span>, :deviceGroup)
+           <span class="kw">AND</span> rule_type = :ArgType <span class="kw">AND</span> active_flag = <span class="str">'Y'</span>
+      ) a
+),
+RULE_OPERATION_GROUP <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> b.*, <span class="fn">MIN</span>(oper_seq) <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> rule_id) <span class="kw">AS</span> min_operseq
+      <span class="kw">FROM</span> (
+        <span class="kw">SELECT</span> a.*, <span class="kw">CASE WHEN</span> rule_key_group2 = <span class="str">'ALL'</span> <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END AS</span> oper_seq
+          <span class="kw">FROM</span> RULE_DEVICE_GROUP a
+         <span class="kw">WHERE</span> rule_key_group2 <span class="kw">IN</span> (<span class="str">'ALL'</span>, :operation)
+           <span class="kw">AND</span> device_seq = min_deviceseq
+      ) b
+),
+RULE_EQPTYPE_GROUP <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> b.*, <span class="fn">MIN</span>(type_seq) <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> rule_id) <span class="kw">AS</span> min_typeseq
+      <span class="kw">FROM</span> (
+        <span class="kw">SELECT</span> a.*, <span class="kw">CASE WHEN</span> rule_key_group3 = <span class="str">'ALL'</span> <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END AS</span> type_seq
+          <span class="kw">FROM</span> RULE_OPERATION_GROUP a
+         <span class="kw">WHERE</span> rule_key_group3 <span class="kw">IN</span> (<span class="str">'ALL'</span>, :equipgroup)
+           <span class="kw">AND</span> oper_seq = min_operseq
+      ) b
+)
+<span class="kw">SELECT</span> rule_id, rule_key_group1, rule_key_group2, rule_key_group3, rule_key_group4,
+       <span class="fn">NVL</span>(bind_item, <span class="str">'NONE'</span>) <span class="kw">AS</span> bind_item, check_type, check_sql_1, check_sql_2,
+       lot_abn_yn, equip_pause_yn, error_msg_e, rule_key
+  <span class="kw">FROM</span> (
+    <span class="kw">SELECT</span> c.*, <span class="fn">MIN</span>(equip_seq) <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> rule_id) <span class="kw">AS</span> min_equipseq
+      <span class="kw">FROM</span> (
+        <span class="kw">SELECT</span> a.*, <span class="kw">CASE WHEN</span> rule_key_group4 = <span class="str">'ALL'</span> <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END AS</span> equip_seq
+          <span class="kw">FROM</span> RULE_EQPTYPE_GROUP a
+         <span class="kw">WHERE</span> rule_key_group4 <span class="kw">IN</span> (<span class="str">'ALL'</span>, :equip_id)
+           <span class="kw">AND</span> type_seq = min_typeseq
+      ) c
+  )
+ <span class="kw">WHERE</span> equip_seq = min_equipseq
+ <span class="kw">ORDER BY</span> rule_id, rule_key;</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUERY 4: DENSE_RANK TRACE -->
+            <section id="sec-q4" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span class="chip chip-blue">Q4</span>
+                        DENSE_RANK() Lùi Lịch Sử Tìm Công Đoạn Hoàn Thành Trước Đó
+                    </span>
+                    <span class="chip chip-slate">F_PREOPER_INTERLOCK</span>
+                </div>
+                <div class="card-body">
+                    <div class="code-window">
+                        <div class="code-titlebar">
+                            <div class="window-dots"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                            <span class="code-caption">QUERY 4: History Trace-back Window Function</span>
+                            <button class="copy-btn" onclick="copySnippet(this)">Copy SQL</button>
+                        </div>
+                        <pre><code><span class="kw">SELECT</span> a.operation <span class="kw">AS</span> pre_oper, a.equip_type <span class="kw">AS</span> pre_equip_type,
+       a.equip_group <span class="kw">AS</span> pre_equip_group, a.equipment_id <span class="kw">AS</span> pre_equip,
+       b.group_value <span class="kw">AS</span> pre_oper_group
+  <span class="kw">FROM</span> (
+    <span class="kw">SELECT</span> equipment_id, operation, trans_time,
+           <span class="fn">MAX</span>(<span class="kw">CASE WHEN</span> group_index = 12 <span class="kw">THEN</span> group_value <span class="kw">END</span>) <span class="kw">AS</span> equip_type,
+           <span class="fn">MAX</span>(<span class="kw">CASE WHEN</span> group_index = 13 <span class="kw">THEN</span> group_value <span class="kw">END</span>) <span class="kw">AS</span> equip_group,
+           <span class="fn">DENSE_RANK</span>() <span class="kw">OVER</span> (<span class="kw">ORDER BY</span> trans_time <span class="kw">DESC</span>, equipment_id) <span class="kw">AS</span> rank_no
+      <span class="kw">FROM</span> <span class="tbl">asfc_eqplot_history</span> a, <span class="tbl">adm_group_category_data</span> b
+     <span class="kw">WHERE</span> a.plant = :ArgPlant <span class="kw">AND</span> b.plant = a.plant
+       <span class="kw">AND</span> b.group_target = <span class="str">'EQUIPMENT'</span> <span class="kw">AND</span> b.group_index <span class="kw">IN</span> (12, 13)
+       <span class="kw">AND</span> b.group_object = a.equipment_id <span class="kw">AND</span> a.transaction = <span class="str">'SPOU'</span>
+       <span class="kw">AND</span> a.lot_number = :ArgLot
+       <span class="kw">AND</span> a.trans_time &lt;= (
+            <span class="kw">SELECT MAX</span>(trans_time) <span class="kw">FROM</span> <span class="tbl">asfc_eqplot_history</span>
+             <span class="kw">WHERE</span> plant = :ArgPlant <span class="kw">AND</span> lot_number = :ArgLot
+               <span class="kw">AND</span> transaction = <span class="str">'SPOU'</span> <span class="kw">AND</span> trans_time &lt; :ArgTransTime
+               <span class="kw">AND</span> equipment_id <span class="kw">IN</span> (
+                    <span class="kw">SELECT</span> group_object <span class="kw">FROM</span> <span class="tbl">adm_group_category_data</span>
+                     <span class="kw">WHERE</span> plant = :ArgPlant <span class="kw">AND</span> group_target = <span class="str">'EQUIPMENT'</span>
+                       <span class="kw">AND</span> group_index = 13
+                       <span class="kw">AND</span> group_value <span class="kw">NOT IN</span> (
+                            <span class="kw">SELECT</span> code_name <span class="kw">FROM</span> <span class="tbl">adm_user_code_data</span>
+                             <span class="kw">WHERE</span> plant = :ArgPlant <span class="kw">AND</span> table_name = <span class="str">'EIF_EQUIP_GROUP'</span>
+                               <span class="kw">AND</span> code_group1 = <span class="str">'X'</span> <span class="kw">AND</span> :v_HandlingPcb = 0
+                       )
+               )
+       )
+     <span class="kw">GROUP BY</span> equipment_id, operation, trans_time
+  ) a, <span class="tbl">adm_group_category_data</span> b
+ <span class="kw">WHERE</span> b.plant = :ArgPlant <span class="kw">AND</span> b.group_target = <span class="str">'OPERATION'</span>
+   <span class="kw">AND</span> b.group_index = 22 <span class="kw">AND</span> b.group_object = a.operation
+   <span class="kw">AND</span> a.rank_no = 1;</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUERY 5: IN-LINE SMT -->
+            <section id="sec-q5" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span class="chip chip-green">Q5</span>
+                        Đối Chiếu Quét Liên Hoàn In-Line SMT (Trạm Trước &rarr; Trạm Sau)
+                    </span>
+                    <span class="chip chip-slate">AFA_%_SCAN_HIS</span>
+                </div>
+                <div class="card-body">
+                    <!-- SVG SMT Line Diagram -->
+                    <div class="diagram-surface">
+                        <svg width="860" height="90" viewBox="0 0 860 90" fill="none">
+                            <!-- Stencil Printer -->
+                            <rect x="10" y="15" width="140" height="60" rx="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5"/>
+                            <text x="80" y="42" text-anchor="middle" fill="#0F172A" font-size="11" font-weight="700">1. SCREEN PRINTER</text>
+                            <text x="80" y="58" text-anchor="middle" fill="#64748B" font-size="9">AFA_SEMI_SP_SCAN_HIS</text>
+
+                            <path d="M150 45 L180 45" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <!-- SPI -->
+                            <rect x="180" y="15" width="140" height="60" rx="6" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5"/>
+                            <text x="250" y="42" text-anchor="middle" fill="#1D4ED8" font-size="11" font-weight="700">2. MÁY ĐO SPI</text>
+                            <text x="250" y="58" text-anchor="middle" fill="#2563EB" font-size="9">AFA_SPI_SCAN_HIS</text>
+
+                            <path d="M320 45 L350 45" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <!-- Mounter / PreAOI -->
+                            <rect x="350" y="15" width="150" height="60" rx="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5"/>
+                            <text x="425" y="42" text-anchor="middle" fill="#0F172A" font-size="11" font-weight="700">3. PRE-AOI / MOUNTER</text>
+                            <text x="425" y="58" text-anchor="middle" fill="#64748B" font-size="9">AFA_SEMI_PREAOI_SCAN</text>
+
+                            <path d="M500 45 L530 45" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <!-- Reflow -->
+                            <rect x="530" y="15" width="140" height="60" rx="6" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5"/>
+                            <text x="600" y="42" text-anchor="middle" fill="#0F172A" font-size="11" font-weight="700">4. LÒ HÀN REFLOW</text>
+                            <text x="600" y="58" text-anchor="middle" fill="#64748B" font-size="9">AFA_SEMI_REFLOW_SCAN</text>
+
+                            <path d="M670 45 L700 45" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <!-- Post AOI -->
+                            <rect x="700" y="15" width="150" height="60" rx="6" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5"/>
+                            <text x="775" y="42" text-anchor="middle" fill="#059669" font-size="11" font-weight="700">5. MÁY POST-AOI</text>
+                            <text x="775" y="58" text-anchor="middle" fill="#059669" font-size="9">AFA_SEMI_POSTAOI_SCAN</text>
+                        </svg>
+                    </div>
+
+                    <div class="code-window">
+                        <div class="code-titlebar">
+                            <div class="window-dots"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                            <span class="code-caption">QUERY 5: Dynamic In-Line Scan SQL</span>
+                            <button class="copy-btn" onclick="copySnippet(this)">Copy SQL</button>
+                        </div>
+                        <pre><code><span class="kw">SELECT COUNT</span>(barcode_id) <span class="kw">AS</span> pass_count
+  <span class="kw">FROM</span> {EIFTableName} <span class="cmt">-- Điền bảng trạm trước: AFA_SEMI_SP_SCAN_HIS / AFA_SPI_SCAN_HIS...</span>
+ <span class="kw">WHERE</span> plant = :ArgPlant <span class="kw">AND</span> operation = :ArgOper
+   <span class="kw">AND</span> lot_number = :ArgLot <span class="kw">AND</span> pcb_id = :ArgID
+   <span class="kw">AND</span> apply_flag = <span class="str">'Y'</span> <span class="kw">AND</span> process_flag = <span class="str">'O'</span>; <span class="cmt">-- process_flag = 'O' nghĩa là OK</span></code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUERY 6: MINUS UNCOMPLETED -->
+            <section id="sec-q6" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span class="chip chip-rose">Q6</span>
+                        MINUS Phép Trừ Tập Hợp Phát Hiện PCB Bỏ Quên Khi Out Lot (SPOU)
+                    </span>
+                    <span class="chip chip-slate">F_SPOU_UNITCHECK_INTERLOCK</span>
+                </div>
+                <div class="card-body">
+                    <!-- SVG Set Math Diagram -->
+                    <div class="diagram-surface">
+                        <svg width="780" height="90" viewBox="0 0 780 90" fill="none">
+                            <!-- Box Unpack -->
+                            <rect x="20" y="20" width="220" height="50" rx="6" fill="#F8FAFC" stroke="#0F172A" stroke-width="1.5"/>
+                            <text x="130" y="42" text-anchor="middle" fill="#0F172A" font-size="11" font-weight="700">A. TẬP PCB MỞ HỘP (UNPACK)</text>
+                            <text x="130" y="58" text-anchor="middle" fill="#64748B" font-size="9">ETC_PCB_UNPACKING</text>
+
+                            <!-- Minus 1 -->
+                            <text x="260" y="52" text-anchor="middle" fill="#E11D48" font-size="20" font-weight="900">−</text>
+
+                            <!-- Box Loss -->
+                            <rect x="280" y="20" width="200" height="50" rx="6" fill="#FFF1F2" stroke="#E11D48" stroke-width="1.5"/>
+                            <text x="380" y="42" text-anchor="middle" fill="#E11D48" font-size="11" font-weight="700">B. PHẾ PHẨM (LOSS/SCRAP)</text>
+                            <text x="380" y="58" text-anchor="middle" fill="#9F1239" font-size="9">etc_pcb_loss_history</text>
+
+                            <!-- Minus 2 -->
+                            <text x="500" y="52" text-anchor="middle" fill="#E11D48" font-size="20" font-weight="900">−</text>
+
+                            <!-- Box Completed -->
+                            <rect x="520" y="20" width="230" height="50" rx="6" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5"/>
+                            <text x="635" y="42" text-anchor="middle" fill="#059669" font-size="11" font-weight="700">C. PCB ĐÃ QUÉT HOÀN THÀNH</text>
+                            <text x="635" y="58" text-anchor="middle" fill="#065F46" font-size="9">AFA_SEMI_POSTAOI_SCAN_HIS...</text>
+                        </svg>
+                    </div>
+
+                    <div class="code-window">
+                        <div class="code-titlebar">
+                            <div class="window-dots"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                            <span class="code-caption">QUERY 6: Uncompleted PCB Detection Query</span>
+                            <button class="copy-btn" onclick="copySnippet(this)">Copy SQL</button>
+                        </div>
+                        <pre><code><span class="kw">SELECT NVL</span>(<span class="fn">MAX</span>(pcb_id), <span class="str">'N/A'</span>) <span class="kw">AS</span> uncompleted_pcb
+  <span class="kw">FROM</span> (
+    <span class="kw">SELECT</span> pcb_barcode <span class="kw">AS</span> pcb_id
+      <span class="kw">FROM</span> <span class="tbl">ETC_PCB_UNPACKING</span>
+     <span class="kw">WHERE</span> plant = :ArgPlant <span class="kw">AND</span> lot_number = :ArgLot
+       <span class="kw">AND</span> pcb_barcode <span class="kw">NOT IN</span> (
+            <span class="kw">SELECT</span> pcb_id <span class="kw">FROM</span> <span class="tbl">etc_pcb_loss_history</span>
+             <span class="kw">WHERE</span> plant = :ArgPlant <span class="kw">AND</span> lot_number = :ArgLot
+       )
+    <span class="kw">MINUS</span>
+    <span class="kw">SELECT</span> barcode_id
+      <span class="kw">FROM</span> <span class="tbl">AFA_SEMI_POSTAOI_SCAN_HIS</span>
+     <span class="kw">WHERE</span> plant = :ArgPlant <span class="kw">AND</span> apply_flag = <span class="str">'Y'</span> 
+       <span class="kw">AND</span> process_flag = <span class="str">'O'</span> <span class="kw">AND</span> operation = :ArgOper 
+       <span class="kw">AND</span> lot_number = :ArgLot
+  );
+<span class="cmt">-- uncompleted_pcb &lt;&gt; 'N/A' -> Chặn SPOU (Vẫn còn bảng mạch chưa chạy qua máy)</span></code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUERY 7: RESCAN DUPLICATE -->
+            <section id="sec-q7" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span class="chip chip-amber">Q7</span>
+                        Kiểm Tra Quét Trùng Lặp Barcode (Rescan Prevention)
+                    </span>
+                    <span class="chip chip-slate">F_RESCAN_ID_CHECK</span>
+                </div>
+                <div class="card-body">
+                    <div class="grid-2">
+                        <div class="code-window">
+                            <div class="code-titlebar">
+                                <span class="code-caption">Bảng Chuẩn Mới (tableType = 'NEW')</span>
+                                <button class="copy-btn" onclick="copySnippet(this)">Copy</button>
+                            </div>
+                            <pre><code><span class="kw">SELECT COUNT</span>(barcode_id) <span class="kw">AS</span> rescan_count
+  <span class="kw">FROM</span> <span class="tbl">AFA_SEMI_SP_SCAN_HIS</span>
+ <span class="kw">WHERE</span> plant = :ArgPlant <span class="kw">AND</span> operation = :ArgOper
+   <span class="kw">AND</span> barcode_type = :ArgIDType
+   <span class="kw">AND</span> barcode_id = :ArgID <span class="kw">AND</span> lot_number = :ArgLot
+   <span class="kw">AND</span> (:v_EquipOrder = <span class="str">'X'</span> <span class="kw">OR</span> operation_group = :v_EquipOrder)
+   <span class="kw">AND</span> (:v_EquipGroup &lt;&gt; <span class="str">'MOUNTER'</span> <span class="kw">OR</span> equipment_id = :ArgEquip);</code></pre>
+                        </div>
+                        <div class="code-window">
+                            <div class="code-titlebar">
+                                <span class="code-caption">Bảng Chuẩn Cũ (tableType = 'OLD')</span>
+                                <button class="copy-btn" onclick="copySnippet(this)">Copy</button>
+                            </div>
+                            <pre><code><span class="kw">SELECT COUNT</span>(lot_number) <span class="kw">AS</span> rescan_count
+  <span class="kw">FROM</span> <span class="tbl">AFA_SMT_BCR_READ</span>
+ <span class="kw">WHERE</span> plant = :ArgPlant <span class="kw">AND</span> operation = :ArgOper
+   <span class="kw">AND</span> lot_number = :ArgLot <span class="kw">AND</span> bottom_bcr_id = :ArgID
+   <span class="kw">AND</span> (:v_EquipOrder &lt;&gt; <span class="str">'3rd'</span> <span class="kw">OR</span> equipment_id = :ArgEquip);</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUERY 8: TOOLS LIFE -->
+            <section id="sec-q8" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span class="chip chip-green">Q8</span>
+                        Kiểm Tra Hạn Dùng & Tuổi Thọ Tool Dao Gạt / Khung In / Thiếc Hàn
+                    </span>
+                    <span class="chip chip-slate">F_TOOLS_USECOUNT_CHECK</span>
+                </div>
+                <div class="card-body">
+                    <div class="grid-3" style="margin-bottom: 12px;">
+                        <div class="metric-card">
+                            <span class="metric-title">Khung In (Stencil - T0004)</span>
+                            <span class="metric-value">&lt; 4 Giờ</span>
+                            <span class="metric-desc">Chặn nếu usage_hours &ge; 4 hoặc strokes &ge; alarm_period</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Dao Gạt (Squeegee - T0002)</span>
+                            <span class="metric-value">Front & Rear</span>
+                            <span class="metric-desc">Kiểm tra độc lập số lần gạt cả 2 mặt F/R</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Thiếc Hàn (Solder Paste)</span>
+                            <span class="metric-value">&lt; 8 Giờ</span>
+                            <span class="metric-desc">Chặn nếu thời gian mở nắp gá trên máy &ge; 8 giờ</span>
+                        </div>
+                    </div>
+
+                    <div class="code-window">
+                        <div class="code-titlebar">
+                            <div class="window-dots"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                            <span class="code-caption">QUERY 8: SMT Tool Life & Time Audit</span>
+                            <button class="copy-btn" onclick="copySnippet(this)">Copy SQL</button>
+                        </div>
+                        <pre><code><span class="kw">SELECT</span> s.parts_lotno, s.trans_time,
+       <span class="fn">ROUND</span>((<span class="kw">SYSDATE</span> - <span class="fn">TO_DATE</span>(s.trans_time, <span class="str">'yyyymmddhh24miss'</span>)) * 24, 2) <span class="kw">AS</span> usage_hours,
+       <span class="fn">NVL</span>(t.life_time, 0) <span class="kw">AS</span> cur_stroke, <span class="fn">NVL</span>(t.alarm_period, 0) <span class="kw">AS</span> limit_stroke,
+       <span class="kw">CASE </span>
+           <span class="kw">WHEN</span> <span class="fn">ROUND</span>((<span class="kw">SYSDATE</span> - <span class="fn">TO_DATE</span>(s.trans_time, <span class="str">'yyyymmddhh24miss'</span>)) * 24, 2) >= 4 
+                <span class="kw">THEN</span> <span class="str">'NG: Khung in gá quá 4 giờ'</span>
+           <span class="kw">WHEN</span> <span class="fn">NVL</span>(t.life_time, 0) >= <span class="fn">NVL</span>(t.alarm_period, 0) <span class="kw">AND</span> t.expire_check_flag = <span class="str">'Y'</span> 
+                <span class="kw">THEN</span> <span class="str">'NG: Vượt số lần dập quy định'</span>
+           <span class="kw">ELSE</span> <span class="str">'OK'</span>
+       <span class="kw">END AS</span> status
+  <span class="kw">FROM</span> <span class="tbl">etc_erp_eqpparts_status</span> s
+  <span class="kw">LEFT JOIN</span> <span class="tbl">amat_tools_item</span> t 
+    <span class="kw">ON</span> t.plant = s.plant <span class="kw">AND</span> t.parts_stype = <span class="str">'T0004'</span> <span class="kw">AND</span> t.parts_itemid = s.parts_lotno
+ <span class="kw">WHERE</span> s.plant = :ArgPlant <span class="kw">AND</span> s.parts_kind = <span class="str">'T0004'</span>
+   <span class="kw">AND</span> s.equipment_id = :v_MainEquip <span class="kw">AND</span> s.itemcode = <span class="str">'T0004'</span>;</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUERY 9: 4M WATERFALL -->
+            <section id="sec-q9" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span class="chip chip-rose">Q9</span>
+                        Thuật Toán Phễu 5 Tầng Đối Chiếu Lỗi 4M Vật Tư (F_MAT_4MABN_CHECK)
+                    </span>
+                    <span class="chip chip-slate">ABN_4M_STATUS</span>
+                </div>
+                <div class="card-body">
+                    <div class="diagram-surface">
+                        <svg width="780" height="70" viewBox="0 0 780 70" fill="none">
+                            <rect x="10" y="15" width="130" height="40" rx="4" fill="#F8FAFC" stroke="#CBD5E1"/>
+                            <text x="75" y="38" text-anchor="middle" fill="#0F172A" font-size="10" font-weight="700">1. Item Code</text>
+
+                            <path d="M140 35 L165 35" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <rect x="165" y="15" width="130" height="40" rx="4" fill="#F8FAFC" stroke="#CBD5E1"/>
+                            <text x="230" y="38" text-anchor="middle" fill="#0F172A" font-size="10" font-weight="700">2. Item Lot > ALL</text>
+
+                            <path d="M295 35 L320 35" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <rect x="320" y="15" width="130" height="40" rx="4" fill="#F8FAFC" stroke="#CBD5E1"/>
+                            <text x="385" y="38" text-anchor="middle" fill="#0F172A" font-size="10" font-weight="700">3. P_Date > ALL</text>
+
+                            <path d="M450 35 L475 35" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <rect x="475" y="15" width="130" height="40" rx="4" fill="#F8FAFC" stroke="#CBD5E1"/>
+                            <text x="540" y="38" text-anchor="middle" fill="#0F172A" font-size="10" font-weight="700">4. Reel No > ALL</text>
+
+                            <path d="M605 35 L630 35" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+                            <rect x="630" y="15" width="140" height="40" rx="4" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+                            <text x="700" y="38" text-anchor="middle" fill="#1D4ED8" font-size="10" font-weight="700">5. Vendor > ABN_ID</text>
+                        </svg>
+                    </div>
+
+                    <div class="code-window">
+                        <div class="code-titlebar">
+                            <div class="window-dots"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                            <span class="code-caption">QUERY 9: 5-Tier Material 4M Audit</span>
+                            <button class="copy-btn" onclick="copySnippet(this)">Copy SQL</button>
+                        </div>
+                        <pre><code><span class="kw">WITH</span> ABN_ITEM_CODE <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> a.* <span class="kw">FROM</span> <span class="tbl">ABN_4M_STATUS</span> a
+     <span class="kw">WHERE</span> plant = :ArgPlant <span class="kw">AND</span> abn_type = :ArgType <span class="kw">AND</span> abn_key_1 = :ArgItemCode
+),
+ABN_ITEM_LOT <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> b.*, <span class="fn">MIN</span>(ItemLot_Seq) <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> abn_type) <span class="kw">AS</span> min_itemlot_seq
+      <span class="kw">FROM</span> (
+        <span class="kw">SELECT</span> a.*, <span class="kw">CASE WHEN</span> abn_key_2 = <span class="str">'ALL'</span> <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END AS</span> ItemLot_Seq
+          <span class="kw">FROM</span> ABN_ITEM_CODE a <span class="kw">WHERE</span> abn_key_2 <span class="kw">IN</span> (<span class="str">'ALL'</span>, :ArgItemLot)
+      ) b
+),
+ABN_PROD_DATE <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> b.*, <span class="fn">MIN</span>(ProdDate_Seq) <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> abn_type) <span class="kw">AS</span> min_ProdDate_Seq
+      <span class="kw">FROM</span> (
+        <span class="kw">SELECT</span> a.*, <span class="kw">CASE WHEN</span> abn_key_3 = <span class="str">'ALL'</span> <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END AS</span> ProdDate_Seq
+          <span class="kw">FROM</span> ABN_ITEM_LOT a <span class="kw">WHERE</span> abn_key_3 <span class="kw">IN</span> (<span class="str">'ALL'</span>, :ArgPdate) <span class="kw">AND</span> ItemLot_Seq = min_itemlot_seq
+      ) b
+),
+ABN_REEL_NO <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> b.*, <span class="fn">MIN</span>(ReelNo_Seq) <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> abn_type) <span class="kw">AS</span> min_ReelNo_Seq
+      <span class="kw">FROM</span> (
+        <span class="kw">SELECT</span> a.*, <span class="kw">CASE WHEN</span> abn_key_4 = <span class="str">'ALL'</span> <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END AS</span> ReelNo_Seq
+          <span class="kw">FROM</span> ABN_PROD_DATE a <span class="kw">WHERE</span> abn_key_4 <span class="kw">IN</span> (<span class="str">'ALL'</span>, :ArgReelNo) <span class="kw">AND</span> ProdDate_Seq = min_ProdDate_Seq
+      ) b
+)
+<span class="kw">SELECT NVL</span>(<span class="fn">MIN</span>(ABN_ID), <span class="str">'X'</span>) <span class="kw">AS</span> final_abn_id
+  <span class="kw">FROM</span> (
+    <span class="kw">SELECT</span> b.*, <span class="fn">MIN</span>(vendor_seq) <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> abn_type) <span class="kw">AS</span> min_vendor_seq
+      <span class="kw">FROM</span> (
+        <span class="kw">SELECT</span> a.*, <span class="kw">CASE WHEN</span> abn_key_5 = <span class="str">'ALL'</span> <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END AS</span> vendor_seq
+          <span class="kw">FROM</span> ABN_REEL_NO a <span class="kw">WHERE</span> abn_key_5 <span class="kw">IN</span> (<span class="str">'ALL'</span>, :ArgVendorName) <span class="kw">AND</span> ReelNo_Seq = min_ReelNo_Seq
+      ) b
+  )
+ <span class="kw">WHERE</span> vendor_seq = min_vendor_seq;</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUERY 10: ATOMIC LOT HOLD -->
+            <section id="sec-q10" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span class="chip chip-rose">Q10</span>
+                        Giao Dịch Khóa Lot Nguyên Tử (SPRH Hard Lock)
+                    </span>
+                    <span class="chip chip-slate">P_Action_LotHold</span>
+                </div>
+                <div class="card-body">
+                    <div class="code-window">
+                        <div class="code-titlebar">
+                            <div class="window-dots"><div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div></div>
+                            <span class="code-caption">QUERY 10: Synchronous ASFC_LOT_STATUS Update</span>
+                            <button class="copy-btn" onclick="copySnippet(this)">Copy SQL</button>
+                        </div>
+                        <pre><code><span class="kw">UPDATE</span> <span class="tbl">asfc_lot_status</span>
+   <span class="kw">SET</span> last_hst_seq   = :v_LasthstSeq + 1,
+       sys_trans_time = :gv_TransTime,
+       trans_time     = :gv_TransTime,
+       transaction    = <span class="str">'SPRH'</span>,         <span class="cmt">-- Giao dịch Stop Production Hold</span>
+       status         = <span class="str">'02'</span>,           <span class="cmt">-- 02 = LOCKED / IN-HOLD</span>
+       in_hold        = <span class="str">'Y'</span>,
+       hold_code      = :gv_HoldCode,     <span class="cmt">-- 'LOT_ILRULE' hoặc 'EIF_ILRULE'</span>
+       hold_note      = <span class="str">'InterLock Hold. Rule ID:'</span> || :gv_RuleID,
+       abnormal_no    = :gv_AlarmId,      <span class="cmt">-- Liên kết mã phiếu ABN</span>
+       user_id        = <span class="str">'SYSTEM'</span>,
+       user_comment   = <span class="str">'Rule Check Msg:'</span> || <span class="fn">SUBSTR</span>(:gv_Msg, 1, 150)
+ <span class="kw">WHERE</span> plant = :Plant <span class="kw">AND</span> lot_number = :Lot;</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUERY 11: ABNORMAL AUTO-GENERATION -->
+            <section id="sec-q11" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span class="chip chip-amber">Q11</span>
+                        Tự Động Tạo Số Phiếu Sự Cố ABNyyMM-xxxx & Ghi Vào Master
+                    </span>
+                    <span class="chip chip-slate">P_Action_AbNormal</span>
+                </div>
+                <div class="card-body">
+                    <div class="code-window">
+                        <div class="code-titlebar">
+                            <span class="code-caption">QUERY 11: Auto Increment ABN Number & Insert Master</span>
+                            <button class="copy-btn" onclick="copySnippet(this)">Copy SQL</button>
+                        </div>
+                        <pre><code><span class="cmt">-- 1. Sinh số phiếu ABN tự động theo tháng</span>
+<span class="kw">SELECT DECODE</span>(<span class="fn">MAX</span>(<span class="fn">SUBSTR</span>(ABN_NUMBER, 4)), <span class="kw">NULL</span>, <span class="str">'ABN'</span> || <span class="fn">TO_CHAR</span>(<span class="kw">SYSDATE</span> - 7/24, <span class="str">'YYMM'</span>) || <span class="str">'-0001'</span>,
+              <span class="str">'ABN'</span> || <span class="fn">TO_CHAR</span>(<span class="kw">SYSDATE</span> - 7/24, <span class="str">'YYMM'</span>) || <span class="str">'-'</span> || 
+              <span class="fn">TRIM</span>(<span class="fn">TO_CHAR</span>(<span class="fn">SUBSTR</span>(<span class="fn">MAX</span>(ABN_NUMBER), 9, 4) + 1, <span class="str">'0000'</span>)) )
+  <span class="kw">INTO</span> :gv_AlarmId
+  <span class="kw">FROM</span> <span class="tbl">abn_abnormal_master</span>
+ <span class="kw">WHERE</span> plant = :gv_Plant 
+   <span class="kw">AND</span> abn_number <span class="kw">LIKE</span> <span class="str">'ABN'</span> || <span class="fn">TO_CHAR</span>(<span class="kw">SYSDATE</span> - 7/24, <span class="str">'YYMM'</span>) || <span class="str">'%'</span>;
+
+<span class="cmt">-- 2. Ghi nhận vào bảng Master Sự Cố</span>
+<span class="kw">INSERT INTO</span> <span class="tbl">abn_abnormal_master</span> (
+    plant, abn_number, hst_seq, abn_seq, issue_time, grade_code,
+    to_grade_code, return_flag, operation, trans_time, image_flag,
+    hold_code, hold_note, appro_user, dept_code, user_id
+) <span class="kw">VALUES</span> (
+    :gv_Plant, :gv_AlarmId, 1, 1, :gv_TransTime, 0,
+    3, <span class="str">'N'</span>, :gv_Oper, <span class="fn">TO_CHAR</span>(<span class="kw">SYSDATE</span>, <span class="str">'yyyymmddhh24miss'</span>), <span class="str">'N'</span>,
+    :gv_HoldCode, :gv_HoldNote, <span class="fn">SUBSTR</span>(get_abnuser(:gv_Plant, :gv_TransUserID, :gv_HoldCode), 1, 12),
+    :v_DeptCode, :gv_TransUserID
+);</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUERY 12: TRACE & PROCESS TIME -->
+            <section id="sec-q12" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <span class="chip chip-slate">Q12</span>
+                        Đo Lường Thời Gian Xử Lý & Ghi Vết Kiểm Tra (Audit Trail)
+                    </span>
+                    <span class="chip chip-slate">BIZ_ILRULE_TRACELOG</span>
+                </div>
+                <div class="card-body">
+                    <div class="code-window">
+                        <div class="code-titlebar">
+                            <span class="code-caption">QUERY 12: Precision Process Time & Audit Insert</span>
+                            <button class="copy-btn" onclick="copySnippet(this)">Copy SQL</button>
+                        </div>
+                        <pre><code><span class="cmt">-- Đo thời gian xử lý chính xác đến một phần nghìn giây (Process Time in Seconds)</span>
+:v_ProcTime := <span class="fn">ROUND</span>((<span class="fn">TO_DATE</span>(<span class="fn">TO_CHAR</span>(<span class="kw">SYSDATE</span>, <span class="str">'yyyymmddhh24miss'</span>), <span class="str">'yyyymmddhh24miss'</span>) 
+                     - <span class="fn">TO_DATE</span>(:gv_StartTime, <span class="str">'yyyymmddhh24miss'</span>)) * 24 * 60 * 60, 3);
+
+<span class="kw">INSERT INTO</span> <span class="tbl">biz_ilrule_tracelog</span> (
+    insert_time, trans_time, trans_code, trans_lot,
+    trans_unit_type, trans_unit, send_msg, msg_type,
+    msg_code, msg_text, process_time
+) <span class="kw">VALUES</span> (
+    <span class="fn">TO_CHAR</span>(<span class="kw">SYSTIMESTAMP</span>, <span class="str">'yyyymmddhh24miss.ff6'</span>) || <span class="str">'.'</span> || <span class="fn">NVL</span>(:gv_Equip, <span class="str">'N'</span>),
+    <span class="kw">CASE WHEN</span> :gv_transtime <span class="kw">IS NULL THEN</span> <span class="fn">TO_CHAR</span>(<span class="kw">SYSDATE</span>, <span class="str">'yyyymmddhh24miss'</span>) <span class="kw">ELSE</span> :gv_transtime <span class="kw">END</span>,
+    <span class="fn">NVL</span>(:gv_transcode, <span class="str">' '</span>), <span class="fn">NVL</span>(:gv_lot, <span class="str">' '</span>), <span class="fn">NVL</span>(:gv_idtype, <span class="str">' '</span>),
+    <span class="fn">NVL</span>(:gv_bcrid, <span class="str">' '</span>), :gv_sendmsg,
+    <span class="kw">CASE WHEN</span> :argmsgid <span class="kw">IN</span> (<span class="str">'EIF-COM01'</span>, <span class="str">'LOT-COM01'</span>) <span class="kw">THEN</span> <span class="str">'S'</span> <span class="kw">ELSE</span> <span class="str">'E'</span> <span class="kw">END</span>,
+    :ArgMsgid, :ArgMsg, :v_ProcTime
+);</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION ERROR CODES -->
+            <section id="sec-error-matrix" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                        Ma Trận Mã Lỗi Trả Về (RtnMsgID Matrix)
+                    </span>
+                    <span class="chip chip-slate">RETURN CODES</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr><th>Mã Phản Hồi (RtnMsgID)</th><th>Cấp Độ</th><th>Ý Nghĩa Nghiệp Vụ</th><th>Hành Động Khắc Phục</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><code>LOT-COM01</code> / <code>EIF-COM01</code></td>
+                                    <td><span class="chip chip-green">SUCCESS</span></td>
+                                    <td>Giao dịch hoàn toàn hợp lệ, không vi phạm bất kỳ Rule nào.</td>
+                                    <td>Cho phép mẻ chạy tiếp; máy tiếp tục nạp sản phẩm.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>LOT-COM02</code> / <code>EIF-COM02</code></td>
+                                    <td><span class="chip chip-amber">DATA VALID</span></td>
+                                    <td>Thiếu TransCode, TransTime, UnitType hoặc lệch giờ &gt; ±20 phút.</td>
+                                    <td>Hiệu chỉnh NTP Server trên máy hoặc gửi đủ tham số.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>LOT-COM03</code> / <code>EIF-COM03</code></td>
+                                    <td><span class="chip chip-rose">DYNAMIC ERR</span></td>
+                                    <td>Lỗi cú pháp SQL/Function khai báo trong BIZ_ILRULE_INFO.</td>
+                                    <td>DBA rà soát lại cột check_sql_1..4 và danh sách bind_item.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>LOT-COM04</code> / <code>EIF-COM04</code></td>
+                                    <td><span class="chip chip-rose">CRASH / EXCP</span></td>
+                                    <td>Ngoại lệ nghiêm trọng không kiểm soát được (WHEN OTHERS).</td>
+                                    <td>Rollback giao dịch, tra cứu bảng <code>BIZ_ILRULE_ERRORLOG</code>.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>Mã Rule ID Cụ Thể</code></td>
+                                    <td><span class="chip chip-rose">RULE VIOLATION</span></td>
+                                    <td>Vi phạm quy tắc công nghệ (Quét trùng, nhảy cóc bước, quá hạn Tool...).</td>
+                                    <td>Dừng máy (RtnPause='Y'), khóa Lot (SPRH), thông báo QA xử lý.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION SCHEMA -->
+            <section id="sec-schema" class="card search-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                        Ma Trận Các Bảng Dữ Liệu Phụ Thuộc (Data Dependency Dictionary)
+                    </span>
+                    <span class="chip chip-slate">DATA DICTIONARY</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr><th>Nhóm Bảng</th><th>Tên Bảng Database</th><th>Mục Đích Trong Engine SEMI_RULE_INTERLOCK</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Cấu Hình Quy Tắc</strong></td>
+                                    <td><code>BIZ_ILRULE_INFO</code></td>
+                                    <td>Lưu trữ các câu lệnh SQL/Function kiểm tra động, cờ dừng máy và cấu hình Bind Item.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Trạng Thái MES</strong></td>
+                                    <td><code>ASFC_LOT_STATUS</code>, <code>ASFC_LOT_HISTORY</code></td>
+                                    <td>Bảng snapshot điều hành và bảng lịch sử giao dịch toàn bộ vòng đời của Lot.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Thiết Bị & Line</strong></td>
+                                    <td><code>ADM_GROUP_CATEGORY_DATA</code>, <code>EIF_SMT_MERGE</code></td>
+                                    <td>Phân nhóm thiết bị: Line (idx 11), Loại máy (idx 12), Nhóm máy (idx 13), Bậc line ghép (idx 14).</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Lịch Sử Quét EIF</strong></td>
+                                    <td><code>AFA_%_SCAN_HIS</code>, <code>AFA_SMT_BIN_CODE_DATA</code></td>
+                                    <td>Lưu vết từng lần đọc barcode PCB, Magazine, kết quả kiểm tra AOI/SPI đạt/hỏng.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Quản Lý Tool SMT</strong></td>
+                                    <td><code>ETC_ERP_EQPPARTS_STATUS</code>, <code>AMAT_TOOLS_ITEM</code></td>
+                                    <td>Giám sát số lần gạt in của Dao in Squeegee (Front/Rear) và Khung in Stencil.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Sự Cố & 4M</strong></td>
+                                    <td><code>ABN_4M_STATUS</code>, <code>ABN_ABNORMAL_MASTER</code></td>
+                                    <td>Quản lý danh sách cấm 4M (Man/Machine/Material) và các phiếu sự cố tự động lập.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast">Đã sao chép câu lệnh SQL vào Clipboard!</div>
+
+    <script>
+        function scrollToElement(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            // Active nav state
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        function copySnippet(btn) {
+            const pre = btn.closest('.code-window').querySelector('pre code');
+            const text = pre.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast("Đã sao chép mã SQL thành công!");
+            });
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 2200);
+        }
+
+        function filterQueries() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.search-card');
+            cards.forEach(card => {
+                const text = card.innerText.toLowerCase();
+                if (text.includes(keyword)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

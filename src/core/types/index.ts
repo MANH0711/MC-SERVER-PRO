@@ -134,6 +134,7 @@ export interface CommunicationTransaction {
   id: string;
   correlationId: string;
   equipmentId: string;
+  equipmentModel?: string;
   messageCode: string;
   direction: MessageDirection;
   rawHex: string;

@@ -21,6 +21,7 @@ import { TransactionTable } from './components/TransactionTable';
 import { TransactionInspector } from './components/TransactionInspector';
 import { DieAttachSimulatorModal } from './components/DieAttachSimulatorModal';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
+import { copyToClipboard } from '@/core/utils/clipboard';
 
 export const CommunicationMonitorView: React.FC = () => {
   const { t, formatNumber } = useTranslation();
@@ -37,8 +38,9 @@ export const CommunicationMonitorView: React.FC = () => {
 
   const activeTx = selectedTx || transactions[0] || null;
 
-  const handleCopy = (text: string, isHex: boolean) => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = async (text: string, isHex: boolean) => {
+    const success = await copyToClipboard(text);
+    if (!success) return;
     if (isHex) {
       setCopiedHex(true);
       setTimeout(() => setCopiedHex(false), 2000);
@@ -117,6 +119,7 @@ export const CommunicationMonitorView: React.FC = () => {
           activeTx={activeTx}
           onSelectTx={setSelectedTx}
           onOpenModalTx={setModalTx}
+          devices={devices}
           t={t}
         />
 

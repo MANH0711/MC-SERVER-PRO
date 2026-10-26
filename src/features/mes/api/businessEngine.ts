@@ -4,7 +4,7 @@
  */
 
 import { ParsedFrame, CommunicationTransaction, AlarmItem, LogEntry, DeviceModel } from '@/core/types';
-import { encodeFrame } from '@/features/protocol';
+import { encodeFrame } from '@/features/protocol/engine/frameEncoder';
 
 export interface BusinessProcessingResult {
   responseTransaction?: CommunicationTransaction;

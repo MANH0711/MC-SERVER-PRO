@@ -25,10 +25,10 @@ import {
   INITIAL_ALARMS,
   INITIAL_LOGS,
 } from '@/core/storage';
-import { SessionManager } from '@/features/communication';
-import { MesAdapter } from '@/features/mes';
-import { deviceApi } from '@/features/devices';
-import { fetchRecentTransactions, subscribeTransactionStream } from '@/features/communication';
+import { SessionManager } from '@/features/communication/api/sessionManager';
+import { MesAdapter } from '@/features/mes/api/mesAdapter';
+import { deviceApi } from '@/features/devices/api/deviceApi';
+import { fetchRecentTransactions, subscribeTransactionStream } from '@/features/communication/api/transactionApi';
 
 export type NavView =
   | 'dashboard'

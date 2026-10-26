@@ -29,7 +29,7 @@ import {
   SystemHealthApi,
   RealSystemHealthData,
   DiagnosticResultItem,
-} from '@/features/system-health';
+} from './api/systemHealthApi';
 
 export const SystemHealthView: React.FC = () => {
   const { t } = useTranslation();

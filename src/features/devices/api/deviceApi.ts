@@ -5,7 +5,7 @@
  */
 
 import { DeviceModel, DeviceInfoRecord } from '@/core/types';
-import { recordToDevice, deviceToRecord } from '@/features/devices';
+import { recordToDevice, deviceToRecord } from '../utils/deviceFormat';
 
 const BACKEND_BASE_URL = 'http://localhost:3005';
 

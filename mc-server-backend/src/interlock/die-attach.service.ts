@@ -884,6 +884,23 @@ export class DieAttachService {
         rtnMsgID: checkResult.rtnMsgID,
         operation: checkResult.operation,
         plant: checkResult.plant,
+        responseHeader: `${parsed.equipment} S051${parsed.div.trim()}`,
+        responseData: {
+          DATA: [
+            {
+              AUTHORITY: item.AUTHORITY || 'No AUTHORITY',
+              ID: item.ID || 'No ID',
+              LOT_NUMBER: item.LOT_NUMBER,
+              EQUIPMENT: parsed.equipment,
+              CONFIG: item.CONFIG,
+              RECIPE: item.RECIPE,
+              TRANS_TIME: item.TRANS_TIME,
+              PCB_ID: item.PCB_ID,
+              WORK_IN_RESULT: checkResult.isValid ? 'OK' : 'NG',
+              WORK_IN_MSG: checkResult.rtnMsg,
+            },
+          ],
+        },
         responseMessage,
         summary: checkResult.isValid ? `Work-In OK: ${item.PCB_ID}` : `Work-In NG: ${checkResult.rtnMsg}`,
       }),

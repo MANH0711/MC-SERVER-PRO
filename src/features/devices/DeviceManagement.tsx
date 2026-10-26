@@ -20,7 +20,8 @@ import {
   exportDevicesToCsv,
   exportDevicesToTsv,
   parseDevicesFromTsvOrCsv,
-} from '@/features/devices';
+} from './utils/deviceFormat';
+import { copyToClipboard } from '@/core/utils/clipboard';
 import {
   DeviceToolbar,
   DeviceMasterTable,
@@ -515,10 +516,10 @@ export const DeviceManagementView: React.FC = () => {
 
   const handleExportTsv = async () => {
     const tsvContent = exportDevicesToTsv(devices);
-    try {
-      await navigator.clipboard.writeText(tsvContent);
+    const success = await copyToClipboard(tsvContent);
+    if (success) {
       showToast(t('device.toasts.tsvCopied'));
-    } catch {
+    } else {
       const blob = new Blob([tsvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -527,7 +528,7 @@ export const DeviceManagementView: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      showToast(t('device.toasts.tsvCopied'));
+      showToast('Đã tải xuống file TSV');
     }
   };
 
