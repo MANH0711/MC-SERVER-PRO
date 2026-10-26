@@ -318,8 +318,8 @@ export const IlruleHistoryReport: React.FC = () => {
       {showCharts && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 shrink-0 animate-in fade-in duration-150">
           {/* Daily Trend Timeline */}
-          <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-1">
+          <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between min-w-0 overflow-hidden">
+            <div className="flex items-center justify-between mb-1 shrink-0">
               <span className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
                 <TrendingUp className="w-3 h-3 text-blue-400" />
                 Biến Thiên Vi Phạm Theo Ngày
@@ -329,15 +329,23 @@ export const IlruleHistoryReport: React.FC = () => {
               </span>
             </div>
 
-            <div className="h-24 flex items-end gap-1 pt-1 pb-1 px-1">
+            <div className="h-24 flex items-end gap-1.5 pt-1 pb-1 px-1 w-full overflow-x-auto overflow-y-hidden min-w-0">
               {stats && stats.dailyTrend.length > 0 ? (
                 stats.dailyTrend.map((t, idx) => {
                   const barHeight = Math.max(4, Math.round((t.TOTAL / maxDailyCount) * 48));
                   const dateLabel = t.REPORT_DATE.length >= 8
                     ? `${t.REPORT_DATE.substring(4, 6)}/${t.REPORT_DATE.substring(6, 8)}`
                     : t.REPORT_DATE;
+                  const isScrollMode = stats.dailyTrend.length > 12;
                   return (
-                    <div key={idx} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                    <div
+                      key={idx}
+                      className="flex flex-col items-center justify-end h-full group relative"
+                      style={{
+                        minWidth: isScrollMode ? '22px' : 'auto',
+                        flex: isScrollMode ? '0 0 auto' : 1,
+                      }}
+                    >
                       {/* Number on top of bar */}
                       <span className="text-[9px] font-mono font-bold text-slate-300 group-hover:text-cyan-300 transition-colors">
                         {t.TOTAL}
@@ -346,7 +354,7 @@ export const IlruleHistoryReport: React.FC = () => {
                       {/* Bar Track & Fill */}
                       <div className="w-full flex items-end justify-center h-14 pb-0.5">
                         <div
-                          className="w-full max-w-[20px] min-w-[8px] rounded-t overflow-hidden bg-gradient-to-t from-red-600 via-amber-500 to-yellow-400 shadow-sm group-hover:brightness-125 transition-all cursor-pointer"
+                          className="w-full max-w-[18px] min-w-[8px] rounded-t overflow-hidden bg-gradient-to-t from-red-600 via-amber-500 to-yellow-400 shadow-sm group-hover:brightness-125 transition-all cursor-pointer"
                           style={{ height: `${barHeight}px` }}
                         />
                       </div>
@@ -377,8 +385,8 @@ export const IlruleHistoryReport: React.FC = () => {
           </div>
 
           {/* Top 5 Rules Vi Phạm */}
-          <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-1">
+          <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between min-w-0 overflow-hidden">
+            <div className="flex items-center justify-between mb-1 shrink-0">
               <span className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
                 <ShieldAlert className="w-3 h-3 text-red-400" />
                 Top 5 Quy Tắc Vi Phạm
@@ -415,7 +423,7 @@ export const IlruleHistoryReport: React.FC = () => {
           </div>
 
           {/* Top 5 Thiết Bị Báo Động */}
-          <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+          <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between min-w-0 overflow-hidden">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
                 <Cpu className="w-3 h-3 text-cyan-400" />
