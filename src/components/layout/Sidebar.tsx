@@ -14,6 +14,7 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  ShieldAlert,
   HeartPulse,
   ChevronLeft,
   ChevronRight,
@@ -35,6 +36,7 @@ export const Sidebar: React.FC = () => {
     { id: 'communication', labelKey: 'nav.communication', icon: Activity },
     { id: 'protocol', labelKey: 'nav.protocol', icon: FileCode2 },
     { id: 'mesMonitor', labelKey: 'nav.mesMonitor', icon: Share2 },
+    { id: 'ilruleHistory', labelKey: 'nav.ilruleHistory', icon: ShieldAlert },
     {
       id: 'alarmCenter',
       labelKey: 'nav.alarmCenter',

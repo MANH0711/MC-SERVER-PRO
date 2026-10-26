@@ -36,6 +36,7 @@ export type NavView =
   | 'communication'
   | 'protocol'
   | 'mesMonitor'
+  | 'ilruleHistory'
   | 'alarmCenter'
   | 'logs'
   | 'configuration'

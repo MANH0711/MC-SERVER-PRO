@@ -14,6 +14,7 @@ import { ProtocolExplorer } from './protocol';
 import { ConfigurationCenter } from './configuration';
 import { UserManagement } from './users';
 import { MesMonitor } from './mes';
+import { IlruleHistoryReport } from './interlock-history';
 import { AlarmCenter } from './alarms';
 import { LogCenter } from './logs';
 import { SystemHealth } from './system-health';
@@ -26,6 +27,7 @@ export * from './protocol';
 export * from './configuration';
 export * from './users';
 export * from './mes';
+export * from './interlock-history';
 export * from './alarms';
 export * from './logs';
 export * from './system-health';
@@ -53,6 +55,8 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ currentView })
         return <ProtocolExplorer />;
       case 'mesMonitor':
         return <MesMonitor />;
+      case 'ilruleHistory':
+        return <IlruleHistoryReport />;
       case 'alarmCenter':
         return <AlarmCenter />;
       case 'logs':

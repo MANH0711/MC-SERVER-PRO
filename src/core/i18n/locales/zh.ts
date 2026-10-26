@@ -14,6 +14,7 @@ export const zh = {
     communication: '通信监控',
     protocol: '协议分析器',
     mesMonitor: 'MES 监控',
+    ilruleHistory: 'Interlock 历史 (BIZ)',
     alarmCenter: '告警中心',
     logs: '系统日志',
     configuration: '系统配置',

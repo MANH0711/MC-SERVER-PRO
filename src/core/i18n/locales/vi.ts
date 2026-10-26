@@ -14,6 +14,7 @@ export const vi = {
     communication: 'Giám Sát Truyền Thông',
     protocol: 'Protocol Explorer',
     mesMonitor: 'Giám Sát MES',
+    ilruleHistory: 'Lịch Sử Interlock (BIZ)',
     alarmCenter: 'Trung Tâm Cảnh Báo',
     logs: 'Nhật Ký Hệ Thống',
     configuration: 'Cấu Hình Hệ Thống',

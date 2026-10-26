@@ -14,6 +14,7 @@ export const en = {
     communication: 'Communication Monitor',
     protocol: 'Protocol Explorer',
     mesMonitor: 'MES Monitor',
+    ilruleHistory: 'Interlock History (BIZ)',
     alarmCenter: 'Alarm Center',
     logs: 'System Logs',
     configuration: 'Configuration',
