@@ -78,6 +78,9 @@ export const IlruleHistoryReport: React.FC = () => {
   // Modal chi tiết
   const [selectedRecord, setSelectedRecord] = useState<IlruleHistoryRecord | null>(null);
 
+  // Trạng thái thu gọn/mở rộng biểu đồ phân tích
+  const [showCharts, setShowCharts] = useState<boolean>(false);
+
   // Kéo dãn độ rộng các cột
   const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(DEFAULT_COLUMN_WIDTHS);
   const resizingRef = useRef<{ column: ColumnKey; startX: number; startWidth: number } | null>(null);
@@ -217,23 +220,23 @@ export const IlruleHistoryReport: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 text-slate-100 p-3 space-y-3">
-      {/* 1. Header Banner & Actions */}
-      <div className="p-3.5 rounded-lg bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400">
-            <ShieldAlert className="w-5 h-5" />
+      {/* 1. Compact Header Banner & Actions */}
+      <div className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0">
+            <ShieldAlert className="w-4 h-4" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold uppercase tracking-wider text-slate-100">
+              <h1 className="text-xs font-bold uppercase tracking-wider text-slate-100">
                 Báo Cáo Lịch Sử Kiểm Tra Quy Tắc Interlock
               </h1>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold">
+              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold">
                 BIZ_ILRULE_CHECK_HISTORY
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Tra cứu & phân tích trực quan toàn bộ sự kiện kiểm tra Interlock, vi phạm quy tắc sản xuất và cảnh báo MES
+            <p className="text-[11px] text-slate-400">
+              Tra cứu & phân tích sự kiện kiểm tra Interlock, vi phạm quy tắc sản xuất và cảnh báo MES
             </p>
           </div>
         </div>
@@ -245,7 +248,7 @@ export const IlruleHistoryReport: React.FC = () => {
               loadStats();
             }}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors border border-slate-700"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors border border-slate-700"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span>Làm Mới</span>
@@ -253,200 +256,197 @@ export const IlruleHistoryReport: React.FC = () => {
 
           <button
             onClick={handleExportCsv}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-sm"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Xuất Excel/CSV</span>
+            <span>Xuất CSV</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Visual KPI Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 shrink-0">
-        <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] text-slate-400 font-medium block">Tổng Lượt Vi Phạm / Check</span>
-            <span className="text-xl font-extrabold font-mono text-slate-100 mt-0.5 block">
+      {/* 2. Ultra-Compact KPI Ribbon Bar */}
+      <div className="px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0 select-none">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-950 border border-slate-800">
+            <Layers className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-slate-400 text-[11px]">Tổng check:</span>
+            <span className="font-mono font-bold text-slate-100">
               {stats ? stats.totalCount.toLocaleString() : '---'}
             </span>
-            <span className="text-[10px] text-slate-500 mt-0.5 block">Trong khoảng thời gian lọc</span>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-            <Layers className="w-4 h-4" />
-          </div>
-        </div>
 
-        <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] text-slate-400 font-medium block">Cảnh Báo Kích Hoạt (Alarm)</span>
-            <span className="text-xl font-extrabold font-mono text-red-400 mt-0.5 block">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-950 border border-slate-800">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+            <span className="text-slate-400 text-[11px]">Cảnh báo (Alarm):</span>
+            <span className="font-mono font-bold text-red-400">
               {stats ? stats.alarmCount.toLocaleString() : '---'}
             </span>
-            <span className="text-[10px] text-red-400/80 mt-0.5 block">Phát sinh mã ILARM</span>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
-            <AlertTriangle className="w-4 h-4" />
-          </div>
-        </div>
 
-        <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] text-slate-400 font-medium block">Alarm Đang Chờ (Active)</span>
-            <span className="text-xl font-extrabold font-mono text-amber-400 mt-0.5 block">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-950 border border-slate-800">
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-slate-400 text-[11px]">Chờ xử lý (Active):</span>
+            <span className="font-mono font-bold text-amber-400">
               {stats ? stats.activeAlarms.toLocaleString() : '---'}
             </span>
-            <span className="text-[10px] text-amber-400/80 mt-0.5 block">Chưa được xác nhận/xóa</span>
           </div>
-          <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-            <Clock className="w-4 h-4" />
-          </div>
-        </div>
 
-        <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between">
-          <div>
-            <span className="text-[11px] text-slate-400 font-medium block">Alarm Đã Giải Tỏa (Cleared)</span>
-            <span className="text-xl font-extrabold font-mono text-emerald-400 mt-0.5 block">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-950 border border-slate-800">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-slate-400 text-[11px]">Đã giải tỏa (Cleared):</span>
+            <span className="font-mono font-bold text-emerald-400">
               {stats ? stats.clearedAlarms.toLocaleString() : '---'}
             </span>
-            <span className="text-[10px] text-emerald-400/80 mt-0.5 block">Vận hành viên đã reset</span>
-          </div>
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <CheckCircle2 className="w-4 h-4" />
           </div>
         </div>
+
+        <button
+          onClick={() => setShowCharts(!showCharts)}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold transition-colors border ${
+            showCharts
+              ? 'bg-blue-600/20 text-blue-400 border-blue-500/40'
+              : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+          }`}
+          title="Thu gọn hoặc mở rộng biểu đồ phân tích"
+        >
+          <TrendingUp className="w-3.5 h-3.5" />
+          <span>{showCharts ? 'Thu Gọn Biểu Đồ' : 'Xem Biểu Đồ Phân Tích'}</span>
+        </button>
       </div>
 
-      {/* 3. Analytics Visual Charts (Xu hướng ngày & Top 5 Rules & Top 5 Thiết bị) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5 shrink-0">
-        {/* Daily Trend Timeline */}
-        <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-              <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
-              Biến Thiên Vi Phạm Theo Ngày
-            </span>
-            <span className="text-[10px] text-slate-400 font-mono">
-              {stats?.dailyTrend.length || 0} ngày
-            </span>
-          </div>
+      {/* 3. Collapsible Analytics Visual Charts (Sleek Compact Mode) */}
+      {showCharts && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 shrink-0 animate-in fade-in duration-150">
+          {/* Daily Trend Timeline */}
+          <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
+                <TrendingUp className="w-3 h-3 text-blue-400" />
+                Biến Thiên Vi Phạm Theo Ngày
+              </span>
+              <span className="text-[9px] text-slate-400 font-mono">
+                {stats?.dailyTrend.length || 0} ngày
+              </span>
+            </div>
 
-          <div className="h-28 flex items-end gap-1.5 pt-4 pb-1 px-1">
-            {stats && stats.dailyTrend.length > 0 ? (
-              stats.dailyTrend.map((t, idx) => {
-                const heightPct = Math.max(8, Math.round((t.TOTAL / maxDailyCount) * 100));
-                const activePct = t.TOTAL > 0 ? Math.round((t.ACTIVE_ALARMS / t.TOTAL) * 100) : 0;
-                const dateLabel = `${t.REPORT_DATE.substring(4, 6)}/${t.REPORT_DATE.substring(6, 8)}`;
-                return (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-1 group relative">
-                    <div
-                      className="w-full bg-slate-800 rounded-t flex flex-col justify-end overflow-hidden group-hover:bg-slate-700 transition-all cursor-pointer"
-                      style={{ height: `${heightPct}%` }}
-                    >
+            <div className="h-20 flex items-end gap-1 pt-2 pb-1 px-1">
+              {stats && stats.dailyTrend.length > 0 ? (
+                stats.dailyTrend.map((t, idx) => {
+                  const heightPct = Math.max(12, Math.round((t.TOTAL / maxDailyCount) * 100));
+                  const activePct = t.TOTAL > 0 ? Math.round((t.ACTIVE_ALARMS / t.TOTAL) * 100) : 0;
+                  const dateLabel = `${t.REPORT_DATE.substring(4, 6)}/${t.REPORT_DATE.substring(6, 8)}`;
+                  return (
+                    <div key={idx} className="flex-1 flex flex-col items-center gap-0.5 group relative">
                       <div
-                        className="w-full bg-red-500/80 transition-all"
-                        style={{ height: `${activePct}%` }}
-                      />
-                    </div>
-                    <span className="text-[9px] font-mono text-slate-400 truncate w-full text-center">
-                      {dateLabel}
-                    </span>
+                        className="w-full bg-slate-800 rounded-t flex flex-col justify-end overflow-hidden group-hover:bg-slate-700 transition-all cursor-pointer"
+                        style={{ height: `${heightPct}%` }}
+                      >
+                        <div
+                          className="w-full bg-red-500/80 transition-all"
+                          style={{ height: `${activePct}%` }}
+                        />
+                      </div>
+                      <span className="text-[8px] font-mono text-slate-400 truncate w-full text-center">
+                        {dateLabel}
+                      </span>
 
-                    {/* Tooltip */}
-                    <div className="absolute bottom-full mb-1 hidden group-hover:flex flex-col items-center z-30 pointer-events-none">
-                      <div className="bg-slate-900 text-slate-200 text-[10px] font-mono px-2 py-1 rounded shadow-lg border border-slate-700 whitespace-nowrap">
-                        <div className="font-bold text-cyan-400">{t.REPORT_DATE}</div>
-                        <div>Tổng: {t.TOTAL}</div>
-                        <div className="text-red-400">Active: {t.ACTIVE_ALARMS}</div>
-                        <div className="text-emerald-400">Cleared: {t.CLEARED_ALARMS}</div>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full mb-1 hidden group-hover:flex flex-col items-center z-30 pointer-events-none">
+                        <div className="bg-slate-900 text-slate-200 text-[10px] font-mono px-2 py-1 rounded shadow-lg border border-slate-700 whitespace-nowrap">
+                          <div className="font-bold text-cyan-400">{t.REPORT_DATE}</div>
+                          <div>Tổng: {t.TOTAL}</div>
+                          <div className="text-red-400">Active: {t.ACTIVE_ALARMS}</div>
+                          <div className="text-emerald-400">Cleared: {t.CLEARED_ALARMS}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs text-slate-500">
-                Không có dữ liệu xu hướng
-              </div>
-            )}
+                  );
+                })
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[11px] text-slate-500">
+                  Không có dữ liệu xu hướng
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Top 5 Rules Vi Phạm */}
+          <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
+                <ShieldAlert className="w-3 h-3 text-red-400" />
+                Top 5 Quy Tắc Vi Phạm
+              </span>
+            </div>
+
+            <div className="space-y-1 overflow-hidden">
+              {stats && stats.topRules.length > 0 ? (
+                stats.topRules.slice(0, 4).map((rule, idx) => {
+                  const maxRuleVal = stats.topRules[0]?.VIOLATION_COUNT || 1;
+                  const pct = Math.round((rule.VIOLATION_COUNT / maxRuleVal) * 100);
+                  return (
+                    <div key={idx} className="space-y-0.5">
+                      <div className="flex justify-between text-[10px]">
+                        <span className="font-mono font-bold text-slate-200 truncate max-w-[190px]" title={rule.RULE_DESC}>
+                          {rule.RULE_ID || rule.RULE_KEY} - {rule.RULE_DESC}
+                        </span>
+                        <span className="font-mono text-red-400 font-bold shrink-0">
+                          {rule.VIOLATION_COUNT}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                        <div className="bg-gradient-to-r from-red-500 to-amber-500 h-full rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="h-20 flex items-center justify-center text-[11px] text-slate-500">
+                  Không có dữ liệu quy tắc
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Top 5 Thiết Bị Báo Động */}
+          <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-bold text-slate-200 flex items-center gap-1.5">
+                <Cpu className="w-3 h-3 text-cyan-400" />
+                Top Thiết Bị Lỗi
+              </span>
+            </div>
+
+            <div className="space-y-1 overflow-hidden">
+              {stats && stats.topEquipments.length > 0 ? (
+                stats.topEquipments.slice(0, 4).map((eqp, idx) => {
+                  const maxEqpVal = stats.topEquipments[0]?.VIOLATION_COUNT || 1;
+                  const pct = Math.round((eqp.VIOLATION_COUNT / maxEqpVal) * 100);
+                  return (
+                    <div key={idx} className="space-y-0.5">
+                      <div className="flex justify-between text-[10px]">
+                        <span className="font-mono font-bold text-cyan-300">
+                          {eqp.EQUIP_ID}
+                        </span>
+                        <span className="font-mono text-slate-200 font-semibold shrink-0">
+                          {eqp.VIOLATION_COUNT}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                        <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="h-20 flex items-center justify-center text-[11px] text-slate-500">
+                  Không có dữ liệu thiết bị
+                </div>
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Top 5 Rules Vi Phạm */}
-        <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-              <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
-              Top 5 Quy Tắc Vi Phạm Nhiều Nhất
-            </span>
-          </div>
-
-          <div className="space-y-1.5 overflow-hidden">
-            {stats && stats.topRules.length > 0 ? (
-              stats.topRules.map((rule, idx) => {
-                const maxRuleVal = stats.topRules[0]?.VIOLATION_COUNT || 1;
-                const pct = Math.round((rule.VIOLATION_COUNT / maxRuleVal) * 100);
-                return (
-                  <div key={idx} className="space-y-0.5">
-                    <div className="flex justify-between text-[11px]">
-                      <span className="font-mono font-bold text-slate-200 truncate max-w-[200px]" title={rule.RULE_DESC}>
-                        {rule.RULE_ID || rule.RULE_KEY} - {rule.RULE_DESC}
-                      </span>
-                      <span className="font-mono text-red-400 font-bold shrink-0">
-                        {rule.VIOLATION_COUNT}
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-gradient-to-r from-red-500 to-amber-500 h-full rounded-full" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="h-28 flex items-center justify-center text-xs text-slate-500">
-                Không có dữ liệu quy tắc
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Top 5 Thiết Bị Báo Động */}
-        <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-              <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-              Top 5 Thiết Bị Phát Sinh Lỗi
-            </span>
-          </div>
-
-          <div className="space-y-1.5 overflow-hidden">
-            {stats && stats.topEquipments.length > 0 ? (
-              stats.topEquipments.map((eqp, idx) => {
-                const maxEqpVal = stats.topEquipments[0]?.VIOLATION_COUNT || 1;
-                const pct = Math.round((eqp.VIOLATION_COUNT / maxEqpVal) * 100);
-                return (
-                  <div key={idx} className="space-y-0.5">
-                    <div className="flex justify-between text-[11px]">
-                      <span className="font-mono font-bold text-cyan-300">
-                        {eqp.EQUIP_ID}
-                      </span>
-                      <span className="font-mono text-slate-200 font-semibold shrink-0">
-                        {eqp.VIOLATION_COUNT} lần
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full rounded-full" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="h-28 flex items-center justify-center text-xs text-slate-500">
-                Không có dữ liệu thiết bị
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* 4. Filter Toolbar */}
       <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex flex-wrap items-center gap-2 text-xs shrink-0">
