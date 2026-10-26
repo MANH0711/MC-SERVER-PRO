@@ -67,11 +67,11 @@ export const IlruleDetailModal: React.FC<IlruleDetailModalProps> = ({ record, on
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs animate-in fade-in duration-150">
       <div
-        className="w-full max-w-4xl bg-[#0d1322] border border-slate-700/80 rounded-xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+        className="w-full max-w-4xl h-[620px] max-h-[90vh] bg-[#0d1322] border border-slate-700/80 rounded-xl shadow-2xl flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800 bg-slate-900/60">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800 bg-slate-900/60 shrink-0">
           <div className="flex items-center gap-3">
             <div
               className={`p-2 rounded-lg border ${
@@ -119,7 +119,7 @@ export const IlruleDetailModal: React.FC<IlruleDetailModalProps> = ({ record, on
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b border-slate-800 px-5 bg-slate-950/40">
+        <div className="flex border-b border-slate-800 px-5 bg-slate-950/40 shrink-0">
           <button
             onClick={() => setActiveTab('overview')}
             className={`py-2.5 px-3.5 text-xs font-semibold border-b-2 transition-colors flex items-center gap-2 ${
@@ -156,7 +156,7 @@ export const IlruleDetailModal: React.FC<IlruleDetailModalProps> = ({ record, on
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 flex-1 overflow-y-auto space-y-4">
+        <div className="p-5 flex-1 min-h-0 overflow-y-auto space-y-4">
           {activeTab === 'overview' && (
             <div className="space-y-4">
               {/* Highlight Box for Error */}
@@ -261,8 +261,8 @@ export const IlruleDetailModal: React.FC<IlruleDetailModalProps> = ({ record, on
           )}
 
           {activeTab === 'checkMsg' && (
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
+            <div className="h-full flex flex-col space-y-2">
+              <div className="flex justify-between items-center shrink-0">
                 <span className="text-xs text-slate-400 font-medium">Toàn bộ thông điệp kiểm tra (CHECK_MSG):</span>
                 <button
                   onClick={() => handleCopy(record.CHECK_MSG || '', 'checkMsgTab')}
@@ -272,15 +272,15 @@ export const IlruleDetailModal: React.FC<IlruleDetailModalProps> = ({ record, on
                   <span>Sao chép</span>
                 </button>
               </div>
-              <pre className="p-4 rounded-lg bg-slate-950 border border-slate-800 font-mono text-xs text-red-300 whitespace-pre-wrap break-words leading-relaxed select-text">
+              <pre className="p-4 rounded-lg bg-slate-950 border border-slate-800 font-mono text-xs text-red-300 whitespace-pre-wrap break-words leading-relaxed select-text flex-1 min-h-[360px] overflow-y-auto">
                 {record.CHECK_MSG || 'Không có thông báo lỗi'}
               </pre>
             </div>
           )}
 
           {activeTab === 'receiveMsg' && (
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
+            <div className="h-full flex flex-col space-y-2">
+              <div className="flex justify-between items-center shrink-0">
                 <span className="text-xs text-slate-400 font-medium">Bản tin hoặc chuỗi tham số nhận được (RECEIVE_MSG):</span>
                 <button
                   onClick={() => handleCopy(record.RECEIVE_MSG || '', 'receiveMsgTab')}
@@ -290,7 +290,7 @@ export const IlruleDetailModal: React.FC<IlruleDetailModalProps> = ({ record, on
                   <span>Sao chép</span>
                 </button>
               </div>
-              <pre className="p-4 rounded-lg bg-slate-950 border border-slate-800 font-mono text-xs text-cyan-300 whitespace-pre-wrap break-words leading-relaxed select-text">
+              <pre className="p-4 rounded-lg bg-slate-950 border border-slate-800 font-mono text-xs text-cyan-300 whitespace-pre-wrap break-words leading-relaxed select-text flex-1 min-h-[360px] overflow-y-auto">
                 {record.RECEIVE_MSG || 'Không có dữ liệu bản tin'}
               </pre>
             </div>
@@ -298,7 +298,7 @@ export const IlruleDetailModal: React.FC<IlruleDetailModalProps> = ({ record, on
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between">
+        <div className="px-5 py-3 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between shrink-0">
           <span className="text-xs text-slate-500 font-mono">
             RULE_KEY: {record.RULE_KEY}
           </span>

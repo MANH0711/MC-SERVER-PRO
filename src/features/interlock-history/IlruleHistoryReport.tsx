@@ -705,8 +705,7 @@ export const IlruleHistoryReport: React.FC = () => {
                   return (
                     <tr
                       key={`${row.SYS_TRANS_TIME}-${idx}`}
-                      onClick={() => setSelectedRecord(row)}
-                      className="hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                      className="hover:bg-slate-800/30 transition-colors group"
                     >
                       <td className="p-2 text-slate-300 truncate" title={row.SYS_TRANS_TIME}>
                         {formatTimestamp(row.SYS_TRANS_TIME || row.TRANS_TIME)}
@@ -764,11 +763,8 @@ export const IlruleHistoryReport: React.FC = () => {
 
                       <td className="p-2 text-center">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedRecord(row);
-                          }}
-                          className="p-1 rounded text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors"
+                          onClick={() => setSelectedRecord(row)}
+                          className="p-1 px-2 rounded bg-blue-600/15 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 hover:border-blue-400 transition-colors flex items-center justify-center gap-1 mx-auto"
                           title="Xem chi tiết"
                         >
                           <Eye className="w-3.5 h-3.5" />
