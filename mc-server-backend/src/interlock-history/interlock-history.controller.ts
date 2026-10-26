@@ -1,17 +1,17 @@
-import { Controller, Get, Query, Res, Header } from '@nestjs/common';
+import { Controller, Get, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
-import { IlruleHistoryService, IlruleHistoryQueryParams } from './ilrule-history.service';
+import { InterlockHistoryService, IlruleHistoryQueryParams } from './interlock-history.service';
 
 @Controller('api/v1/interlock/history')
-export class IlruleHistoryController {
-  constructor(private readonly ilruleHistoryService: IlruleHistoryService) {}
+export class InterlockHistoryController {
+  constructor(private readonly interlockHistoryService: InterlockHistoryService) {}
 
   /**
    * Truy vấn danh sách lịch sử kiểm tra Interlock Rule (có phân trang & bộ lọc)
    */
   @Get()
   async getHistory(@Query() query: IlruleHistoryQueryParams) {
-    return this.ilruleHistoryService.getHistory(query);
+    return this.interlockHistoryService.getHistory(query);
   }
 
   /**
@@ -19,7 +19,7 @@ export class IlruleHistoryController {
    */
   @Get('stats')
   async getStats(@Query() query: IlruleHistoryQueryParams) {
-    return this.ilruleHistoryService.getStats(query);
+    return this.interlockHistoryService.getStats(query);
   }
 
   /**
@@ -27,7 +27,7 @@ export class IlruleHistoryController {
    */
   @Get('export')
   async exportCsv(@Query() query: IlruleHistoryQueryParams, @Res() res: Response) {
-    const csvContent = await this.ilruleHistoryService.exportCsv(query);
+    const csvContent = await this.interlockHistoryService.exportCsv(query);
     const filename = `BIZ_ILRULE_CHECK_HISTORY_${new Date().toISOString().slice(0, 10)}.csv`;
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');

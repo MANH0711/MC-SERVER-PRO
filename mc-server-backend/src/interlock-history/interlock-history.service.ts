@@ -69,8 +69,8 @@ export interface IlruleHistoryStats {
 }
 
 @Injectable()
-export class IlruleHistoryService {
-  private readonly logger = new Logger(IlruleHistoryService.name);
+export class InterlockHistoryService {
+  private readonly logger = new Logger(InterlockHistoryService.name);
 
   constructor(private readonly oracleService: OracleService) {}
 
@@ -384,6 +384,6 @@ export class IlruleHistoryService {
       );
     }
 
-    return '\uFEFF' + lines.join('\r\n'); // Thêm BOM UTF-8 để mở tiếng Việt/tiếng Hàn trong Excel không bị lỗi font
+    return '\uFEFF' + lines.join('\r\n'); // Thêm BOM UTF-8
   }
 }

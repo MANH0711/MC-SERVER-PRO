@@ -13,6 +13,7 @@ import { MesModule } from './mes/mes.module';
 import { SystemModule } from './system/system.module';
 import { AuthorityModule } from './authority/authority.module';
 import { InterlockModule } from './interlock/interlock.module';
+import { InterlockHistoryModule } from './interlock-history/interlock-history.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { InterlockModule } from './interlock/interlock.module';
     SystemModule,
     AuthorityModule,
     InterlockModule,
+    InterlockHistoryModule,
   ],
   providers: [
     {
