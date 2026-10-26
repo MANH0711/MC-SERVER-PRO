@@ -329,34 +329,40 @@ export const IlruleHistoryReport: React.FC = () => {
               </span>
             </div>
 
-            <div className="h-20 flex items-end gap-1 pt-2 pb-1 px-1">
+            <div className="h-24 flex items-end gap-1 pt-1 pb-1 px-1">
               {stats && stats.dailyTrend.length > 0 ? (
                 stats.dailyTrend.map((t, idx) => {
-                  const heightPct = Math.max(12, Math.round((t.TOTAL / maxDailyCount) * 100));
-                  const activePct = t.TOTAL > 0 ? Math.round((t.ACTIVE_ALARMS / t.TOTAL) * 100) : 0;
-                  const dateLabel = `${t.REPORT_DATE.substring(4, 6)}/${t.REPORT_DATE.substring(6, 8)}`;
+                  const barHeight = Math.max(4, Math.round((t.TOTAL / maxDailyCount) * 48));
+                  const dateLabel = t.REPORT_DATE.length >= 8
+                    ? `${t.REPORT_DATE.substring(4, 6)}/${t.REPORT_DATE.substring(6, 8)}`
+                    : t.REPORT_DATE;
                   return (
-                    <div key={idx} className="flex-1 flex flex-col items-center gap-0.5 group relative">
-                      <div
-                        className="w-full bg-slate-800 rounded-t flex flex-col justify-end overflow-hidden group-hover:bg-slate-700 transition-all cursor-pointer"
-                        style={{ height: `${heightPct}%` }}
-                      >
+                    <div key={idx} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                      {/* Number on top of bar */}
+                      <span className="text-[9px] font-mono font-bold text-slate-300 group-hover:text-cyan-300 transition-colors">
+                        {t.TOTAL}
+                      </span>
+
+                      {/* Bar Track & Fill */}
+                      <div className="w-full flex items-end justify-center h-14 pb-0.5">
                         <div
-                          className="w-full bg-red-500/80 transition-all"
-                          style={{ height: `${activePct}%` }}
+                          className="w-full max-w-[20px] min-w-[8px] rounded-t overflow-hidden bg-gradient-to-t from-red-600 via-amber-500 to-yellow-400 shadow-sm group-hover:brightness-125 transition-all cursor-pointer"
+                          style={{ height: `${barHeight}px` }}
                         />
                       </div>
-                      <span className="text-[8px] font-mono text-slate-400 truncate w-full text-center">
+
+                      {/* Date label at bottom */}
+                      <span className="text-[8px] font-mono text-slate-400 group-hover:text-slate-200 truncate w-full text-center">
                         {dateLabel}
                       </span>
 
                       {/* Tooltip */}
                       <div className="absolute bottom-full mb-1 hidden group-hover:flex flex-col items-center z-30 pointer-events-none">
-                        <div className="bg-slate-900 text-slate-200 text-[10px] font-mono px-2 py-1 rounded shadow-lg border border-slate-700 whitespace-nowrap">
-                          <div className="font-bold text-cyan-400">{t.REPORT_DATE}</div>
-                          <div>Tổng: {t.TOTAL}</div>
-                          <div className="text-red-400">Active: {t.ACTIVE_ALARMS}</div>
-                          <div className="text-emerald-400">Cleared: {t.CLEARED_ALARMS}</div>
+                        <div className="bg-slate-900 text-slate-200 text-[10px] font-mono px-2.5 py-1.5 rounded-md shadow-xl border border-slate-700 whitespace-nowrap">
+                          <div className="font-bold text-cyan-400 border-b border-slate-800 pb-0.5 mb-1">{t.REPORT_DATE}</div>
+                          <div>Tổng vi phạm: <span className="font-bold text-white">{t.TOTAL}</span></div>
+                          <div className="text-red-400">Chờ xử lý (Active): <span className="font-bold">{t.ACTIVE_ALARMS}</span></div>
+                          <div className="text-emerald-400">Đã giải tỏa (Cleared): <span className="font-bold">{t.CLEARED_ALARMS}</span></div>
                         </div>
                       </div>
                     </div>
