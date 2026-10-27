@@ -351,6 +351,26 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
           </div>
         )}
 
+        {/* Cảnh báo lỗi cho các giao dịch bị lỗi (ví dụ mã lệnh không tồn tại trong model nào) */}
+        {!isWorkInOrInterlock && (!isSuccess || transaction.errorDetail || payload.error || payload.errorMessage) && (
+          <div className="px-3.5 py-2 bg-rose-950/70 border-b border-rose-500/40 flex items-start gap-2.5 text-rose-200 shrink-0">
+            <div className="w-5 h-5 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 mt-0.5">
+              <AlertTriangle className="w-3.5 h-3.5" />
+            </div>
+            <div className="min-w-0 flex-1 text-xs font-mono">
+              <div className="font-bold text-rose-300 uppercase tracking-wide flex items-center gap-2">
+                <span>CẢNH BÁO LỖI MÃ LỆNH</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-900/60 border border-rose-700 text-rose-200">
+                  {transaction.messageCode}
+                </span>
+              </div>
+              <p className="mt-0.5 text-slate-100 font-medium select-text break-words leading-relaxed">
+                {transaction.errorDetail || payload.error || payload.errorMessage || 'Lệnh thực thi không thành công.'}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ─── 3. TABS NAVIGATION (COMPACT) ─── */}
         <div className="px-3.5 bg-[#090E1B] border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-1 -mb-px">

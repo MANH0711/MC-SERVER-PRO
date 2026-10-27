@@ -42,6 +42,24 @@ export const ProtocolExplorerView: React.FC = () => {
   const [wbEncoded, setWbEncoded] = useState<EncodedFrameResult | null>(null);
   const [wbParseResult, setWbParseResult] = useState<ParsedFrame | null>(null);
   const [injectedSuccess, setInjectedSuccess] = useState<boolean>(false);
+  const [isCustomCode, setIsCustomCode] = useState<boolean>(false);
+  const [backendSendStatus, setBackendSendStatus] = useState<string | null>(null);
+
+  // Kiểm tra mã lệnh có thuộc model thiết bị nào không
+  const isCommandInAnyModel = (code: string): boolean => {
+    if (!code) return false;
+    const clean = code.trim().toUpperCase();
+    if (MESSAGE_DEFINITIONS[clean]) return true;
+    const allKnownCodes = [
+      'M001', 'M002', 'M003', 'M004', 'M005', 'M006', 'M007', 'M008', 'M009', 'M010',
+      'S000', 'S001', 'S002', 'S003', 'S005', 'S006', 'S007', 'S010', 'S012', 'S020', 'S099',
+      'B101', 'B102', 'B103', 'B104', 'B105', // BAKE Model
+      'J201', 'J202', 'J203', 'J204', 'J205', // BENDING Model
+    ];
+    return allKnownCodes.includes(clean);
+  };
+
+  const isCommandNotFound = !isCommandInAnyModel(wbMsgCode);
 
   // Checksum Calc state
   const [calcInput, setCalcInput] = useState<string>('0034EQP_SMT_01M001TX100001{"status":"IDLE"}');
@@ -53,6 +71,11 @@ export const ProtocolExplorerView: React.FC = () => {
   const [boundaryTestResult, setBoundaryTestResult] = useState<string>('');
 
   const handleSelectCode = (code: string) => {
+    if (code === 'CUSTOM_CODE') {
+      setIsCustomCode(true);
+      setWbMsgCode('M999_UNKNOWN');
+      return;
+    }
     setSelectedCode(code);
     setWbMsgCode(code);
     if (MESSAGE_DEFINITIONS[code]) {
@@ -91,6 +114,30 @@ export const ProtocolExplorerView: React.FC = () => {
       setInjectedSuccess(true);
       setTimeout(() => setInjectedSuccess(false), 2500);
     }
+  };
+
+  const handleSendToBackend = async () => {
+    setBackendSendStatus('Đang gửi...');
+    try {
+      const res = await fetch('http://localhost:3005/api/communication/manual-command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          equipmentId: wbEquipId,
+          commandCode: wbMsgCode,
+          payloadHex: wbEncoded?.hexDump ? wbEncoded.hexDump.replace(/\s+/g, '') : '',
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setBackendSendStatus(`❌ Backend báo: ${data.errorMessage}`);
+      } else {
+        setBackendSendStatus('✅ Backend phản hồi thành công (PASS)');
+      }
+    } catch (err: any) {
+      setBackendSendStatus(`❌ Lỗi kết nối MC Server: ${err.message}`);
+    }
+    setTimeout(() => setBackendSendStatus(null), 6000);
   };
 
   const runBoundaryTest = (type: '20013' | '20014' | 'corrupted') => {
@@ -233,20 +280,40 @@ export const ProtocolExplorerView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 text-[10px] uppercase font-semibold mb-0.5">
-                    {t('protocol.workbench.msgCode')}
-                  </label>
-                  <select
-                    value={wbMsgCode}
-                    onChange={(e) => handleSelectCode(e.target.value)}
-                    className="w-full px-2 py-1 rounded bg-slate-950 border border-slate-800 text-cyan-400 font-mono font-bold text-xs focus:outline-none focus:border-blue-500"
-                  >
-                    {Object.keys(MESSAGE_DEFINITIONS).map((code) => (
-                      <option key={code} value={code}>
-                        {code} - {MESSAGE_DEFINITIONS[code].name.slice(0, 16)}...
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label className="text-slate-400 text-[10px] uppercase font-semibold">
+                      {t('protocol.workbench.msgCode')}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomCode(!isCustomCode)}
+                      className="text-[9px] text-cyan-400 hover:text-cyan-300 underline font-sans cursor-pointer"
+                    >
+                      {isCustomCode ? 'Chọn danh mục' : 'Nhập tự do'}
+                    </button>
+                  </div>
+                  {isCustomCode ? (
+                    <input
+                      type="text"
+                      value={wbMsgCode}
+                      onChange={(e) => setWbMsgCode(e.target.value.trim().toUpperCase())}
+                      placeholder="VD: M999, UNK..."
+                      className="w-full px-2 py-1 rounded bg-slate-950 border border-slate-800 text-cyan-400 font-mono font-bold text-xs focus:outline-none focus:border-blue-500"
+                    />
+                  ) : (
+                    <select
+                      value={wbMsgCode}
+                      onChange={(e) => handleSelectCode(e.target.value)}
+                      className="w-full px-2 py-1 rounded bg-slate-950 border border-slate-800 text-cyan-400 font-mono font-bold text-xs focus:outline-none focus:border-blue-500"
+                    >
+                      {Object.keys(MESSAGE_DEFINITIONS).map((code) => (
+                        <option key={code} value={code}>
+                          {code} - {MESSAGE_DEFINITIONS[code].name.slice(0, 16)}...
+                        </option>
+                      ))}
+                      <option value="CUSTOM_CODE">-- Nhập mã khác (Thử nghiệm lỗi) --</option>
+                    </select>
+                  )}
                 </div>
 
                 <div>
@@ -262,6 +329,21 @@ export const ProtocolExplorerView: React.FC = () => {
                 </div>
               </div>
 
+              {/* Cảnh báo mã lệnh không tồn tại trong model thiết bị nào */}
+              {isCommandNotFound && (
+                <div className="p-2 rounded bg-rose-950/70 border border-rose-500/50 flex items-start gap-2 text-rose-200 animate-in fade-in">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <div className="text-[11px] font-mono leading-tight">
+                    <span className="font-bold text-rose-300 block uppercase tracking-wide">
+                      Cảnh Báo Kiểm Tra Mã Lệnh:
+                    </span>
+                    <span className="text-rose-100 font-medium">
+                      Mã lệnh này không tồn tại trong model thiết bị nào hãy kiểm tra lại thông tin
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-slate-400 text-[10px] uppercase font-semibold mb-0.5">
                   {t('protocol.workbench.payloadJson')} (JSON)
@@ -274,27 +356,42 @@ export const ProtocolExplorerView: React.FC = () => {
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center gap-2 pt-1 flex-wrap">
                 <button
                   onClick={handleEncode}
-                  className="px-2.5 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-500 transition-colors flex items-center gap-1 shadow-xs"
+                  className="px-2.5 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-500 transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
                 >
                   <Code className="w-3 h-3" />
                   <span>{t('protocol.workbench.encodeBtn')}</span>
                 </button>
                 <button
                   onClick={handleInjectSocket}
-                  className="px-2.5 py-1 rounded bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-500 transition-colors flex items-center gap-1 shadow-xs"
+                  className="px-2.5 py-1 rounded bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-500 transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
+                  title="Mô phỏng gửi frame từ Socket thiết bị lên MC Server FE"
                 >
                   <Send className="w-3 h-3" />
-                  <span>{t('protocol.workbench.injectToSocket')}</span>
+                  <span>Mô phỏng Socket</span>
+                </button>
+                <button
+                  onClick={handleSendToBackend}
+                  className="px-2.5 py-1 rounded bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
+                  title="Gửi trực tiếp qua HTTP REST API tới Backend MC Server"
+                >
+                  <Terminal className="w-3 h-3" />
+                  <span>Gửi Tới Backend</span>
                 </button>
                 {injectedSuccess && (
                   <span className="text-[11px] text-emerald-400 flex items-center gap-1 font-mono animate-pulse">
-                    <CheckCircle2 className="w-3 h-3" /> Sent!
+                    <CheckCircle2 className="w-3 h-3" /> Sent Socket!
                   </span>
                 )}
               </div>
+
+              {backendSendStatus && (
+                <div className="p-1.5 rounded bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-200 animate-in fade-in">
+                  {backendSendStatus}
+                </div>
+              )}
             </div>
 
             {/* Encoded Output & Hex Result */}

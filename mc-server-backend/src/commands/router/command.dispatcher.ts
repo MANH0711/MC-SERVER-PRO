@@ -46,7 +46,7 @@ export class CommandDispatcher implements OnModuleInit {
       this.logger.warn(`⚠️ Không tìm thấy handler xử lý cho mã lệnh: [${frame.commandCode}]`);
       return {
         success: false,
-        errorMessage: `UNSUPPORTED_COMMAND_CODE: ${frame.commandCode}`,
+        errorMessage: `Mã lệnh này không tồn tại trong model thiết bị nào hãy kiểm tra lại thông tin`,
       };
     }
 
@@ -55,7 +55,7 @@ export class CommandDispatcher implements OnModuleInit {
       this.logger.warn(`❌ Lệnh [${frame.commandCode}] chỉ dành cho model [${handler.equipmentModel}], máy hiện tại là [${equipment.EQUIPMENT_MODEL}]`);
       return {
         success: false,
-        errorMessage: `EQUIPMENT_MODEL_MISMATCH: Requires ${handler.equipmentModel}, but got ${equipment.EQUIPMENT_MODEL}`,
+        errorMessage: `Mã lệnh [${frame.commandCode}] không thuộc model [${equipment.EQUIPMENT_MODEL}] (Lệnh này thuộc model [${handler.equipmentModel}]). Mã lệnh này không tồn tại trong model thiết bị nào hãy kiểm tra lại thông tin`,
       };
     }
 

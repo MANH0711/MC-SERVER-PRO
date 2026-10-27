@@ -132,6 +132,24 @@ export class CommunicationService {
 
       await this.transactionRepo.logTransaction(rxRecord);
       this.transactionStream$.next(rxRecord);
+    } else if (!dispatchResult.success) {
+      // Khi lệnh thất bại (mã lệnh không tồn tại / không khớp model) và không có responsePayload
+      const rxId = `RX-ERR-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      rxRecord = {
+        transactionId: rxId,
+        timestamp: new Date().toISOString(),
+        equipmentId: equipment.EQUIPMENT_ID,
+        commandCode: cmd.commandCode,
+        direction: 'RX',
+        rawHex: '',
+        status: 'ERROR',
+        durationMs,
+        payloadJson: JSON.stringify({ error: dispatchResult.errorMessage }),
+        errorMessage: dispatchResult.errorMessage,
+      };
+
+      await this.transactionRepo.logTransaction(rxRecord);
+      this.transactionStream$.next(rxRecord);
     }
 
     return {
@@ -215,6 +233,35 @@ export class CommunicationService {
         rawHex: ChecksumUtils.bufferToHexString(respBuffer),
         status: result.success ? 'SUCCESS' : 'ERROR',
         durationMs: 0,
+        payloadJson: JSON.stringify(result.parsedData || {}),
+        errorMessage: result.errorMessage,
+      };
+      await this.transactionRepo.logTransaction(txRecord);
+      this.transactionStream$.next(txRecord);
+
+      return respBuffer;
+    } else if (!result.success) {
+      // Đóng gói frame phản hồi NAK (0x15) và thông báo lỗi cho thiết bị
+      const errBuffer = Buffer.from(`\x15${result.errorMessage || 'ERROR'}`, 'utf-8');
+      const respBuffer = this.frameCodec.encode(
+        equipment.DEVICE_ID,
+        equipment.SERVER_NO,
+        frame.commandCode,
+        0,
+        errBuffer
+      );
+
+      const txRecord: TransactionRecord = {
+        transactionId: this.generateTxId('TX'),
+        timestamp: new Date().toISOString(),
+        equipmentId: equipment.EQUIPMENT_ID,
+        commandCode: frame.commandCode,
+        direction: 'TX',
+        rawHex: ChecksumUtils.bufferToHexString(respBuffer),
+        status: 'ERROR',
+        durationMs: 0,
+        payloadJson: JSON.stringify({ error: result.errorMessage }),
+        errorMessage: result.errorMessage,
       };
       await this.transactionRepo.logTransaction(txRecord);
       this.transactionStream$.next(txRecord);

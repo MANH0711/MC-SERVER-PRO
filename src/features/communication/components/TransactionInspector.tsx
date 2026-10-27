@@ -3,6 +3,7 @@ import {
   Copy,
   Check,
   Maximize2,
+  AlertTriangle,
 } from 'lucide-react';
 import { CommunicationTransaction } from '@/core/types';
 import { cleanPayloadForDisplay } from '@/core/utils/payloadUtils';
@@ -85,6 +86,19 @@ export const TransactionInspector: React.FC<TransactionInspectorProps> = ({
 
           {/* Inspector Content */}
           <div className="flex-1 overflow-y-auto p-2.5 space-y-2 font-mono text-xs">
+            {/* Error Notification Alert */}
+            {(activeTx.status === 'ERROR' || activeTx.errorDetail) && (
+              <div className="p-2 rounded bg-rose-950/70 border border-rose-500/50 flex items-start gap-2 text-rose-200">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                <div className="min-w-0 flex-1 text-[11px] font-mono leading-tight">
+                  <span className="font-bold text-rose-300 mr-1.5 uppercase tracking-wide">Cảnh báo lỗi:</span>
+                  <span className="text-slate-200 font-medium break-words select-text">
+                    {activeTx.errorDetail || (displayPayload && (displayPayload.error || displayPayload.errorMessage)) || 'Lệnh thực thi không thành công'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Frame Structural Breakdown */}
             <div className="p-2 rounded bg-slate-950 border border-slate-800/80 space-y-1">
               <div className="text-[10px] text-slate-400 uppercase font-semibold">

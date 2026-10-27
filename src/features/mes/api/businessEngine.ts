@@ -412,18 +412,72 @@ export class IndustrialBusinessEngine {
       }
 
       default: {
-        // Unknown message code
-        const log: LogEntry = {
-          id: `LOG_UNK_${Date.now()}`,
+        // Mã lệnh không tồn tại trong model thiết bị nào
+        const errorMessage = 'Mã lệnh này không tồn tại trong model thiết bị nào hãy kiểm tra lại thông tin';
+
+        const errorPayload = {
+          ack: 'NAK',
+          commandCode: messageCode,
+          error: errorMessage,
+          serverTime: timestamp,
+        };
+
+        const encoded = encodeFrame({
+          equipmentId,
+          messageCode: messageCode || 'ERR',
+          txId: correlationId,
+          payload: errorPayload,
+          checksumAlg: currentDevice?.checksumAlgorithm || 'LRC_MOD256',
+          boundary: currentDevice?.frameBoundary || '20013_STANDARD',
+        });
+
+        const respTx: CommunicationTransaction = {
+          id: `TX_OUT_ERR_${Date.now()}`,
+          correlationId,
+          equipmentId,
+          equipmentModel: currentDevice?.model || currentDevice?.equipmentModel,
+          messageCode: messageCode || 'ERR',
+          direction: 'OUTBOUND',
+          rawHex: encoded.hexDump,
+          rawAscii: encoded.asciiString,
+          payloadLength: encoded.lengthHeader,
+          payloadJson: errorPayload,
+          checksum: encoded.checksum,
+          checksumStatus: 'VALID',
+          responseTimeMs: Math.floor(Math.random() * 6 + 4),
+          status: 'ERROR',
+          errorDetail: errorMessage,
           timestamp,
-          level: 'WARN',
+        };
+
+        const alarm: AlarmItem = {
+          id: `ALM_CMD_ERR_${Date.now()}`,
+          equipmentId,
+          equipmentName: currentDevice?.name || equipmentId,
+          alarmCode: 'ERR_UNKNOWN_COMMAND',
+          severity: 'ERROR',
+          description: `[${equipmentId}] ${errorMessage} (Mã lệnh gửi lên: "${messageCode}")`,
+          acknowledged: false,
+          createdAt: timestamp,
+        };
+
+        const log: LogEntry = {
+          id: `LOG_CMD_ERR_${Date.now()}`,
+          timestamp,
+          level: 'ERROR',
           category: 'COMMUNICATION',
           equipmentId,
           correlationId,
-          message: `Unrecognized message code received: ${messageCode}`,
+          message: `${errorMessage}: [${messageCode}] từ máy ${equipmentId}`,
         };
 
         return {
+          responseTransaction: respTx,
+          updatedDevice: {
+            errorCount: (currentDevice?.errorCount || 0) + 1,
+            lastDataReceivedAt: timestamp,
+          },
+          generatedAlarm: alarm,
           generatedLog: log,
           mesSynced: false,
         };
