@@ -854,9 +854,15 @@ export class DieAttachService {
     };
     await this.transactionRepo.logTransaction(rxRecord);
 
+    // Đảm bảo tên máy gửi lên và phản hồi luôn chuẩn hóa đúng với ID thiết bị trong DB
+    const finalEquipName = dbEquipmentName || parsed.equipment;
+    if (item) {
+      item.EQUIPMENT = finalEquipName;
+    }
+
     // Tạo phản hồi S051 gửi lại máy EQP
     const responseMessage = this.formatResponse(
-      parsed.equipment,
+      finalEquipName,
       parsed.div,
       item,
       checkResult.isValid,

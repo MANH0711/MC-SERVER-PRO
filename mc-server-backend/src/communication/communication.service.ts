@@ -195,18 +195,20 @@ export class CommunicationService {
     if (rawStr.includes(';{"') || (rawStr.includes('WORKIN') && rawStr.includes('{')) || (rawStr.includes('PCB_ID') && rawStr.includes(';'))) {
       const headerPart = rawStr.split(';')[0]?.trim() || '';
       const match = headerPart.match(/^([^\s]+)\s+([A-Za-z0-9]{4})(.*)$/);
-      const eqpName = match ? match[1] : equipmentId;
+      const rawEqpHeader = match ? match[1] : equipmentId;
+      // Ưu tiên tên ID thiết bị thực tế trong Database gắn với kết nối socket này
+      const finalEquipmentId = (equipmentId && equipmentId !== 'UNKNOWN') ? equipmentId : (rawEqpHeader || 'UNKNOWN');
       const cmdCode = match ? match[2].toUpperCase() : 'S052';
       const divRaw = match && match[3] ? match[3] : 'WORKIN        ';
 
       const errorMessage = 'Mã lệnh này không tồn tại trong model thiết bị nào hãy kiểm tra lại thông tin';
-      this.logger.warn(`⚠️ Nhận bản tin Interlock ASCII với mã lệnh không hỗ trợ [${cmdCode}] từ thiết bị [${equipmentId}]: ${rawStr.substring(0, 80)}...`);
+      this.logger.warn(`⚠️ Nhận bản tin Interlock ASCII với mã lệnh không hỗ trợ [${cmdCode}] từ thiết bị [${finalEquipmentId}]: ${rawStr.substring(0, 80)}...`);
 
       // Ghi nhận RX giao dịch lỗi
       const rxRecord: TransactionRecord = {
         transactionId: this.generateTxId('RX'),
         timestamp: new Date().toISOString(),
-        equipmentId: eqpName || equipmentId,
+        equipmentId: finalEquipmentId,
         commandCode: cmdCode,
         direction: 'RX',
         rawHex: Buffer.from(rawStr, 'ascii').toString('hex'),
@@ -218,7 +220,7 @@ export class CommunicationService {
       await this.transactionRepo.logTransaction(rxRecord);
       this.transactionStream$.next(rxRecord);
 
-      // Đóng gói bản tin phản hồi lỗi chuẩn ASCII gửi lại cho socket máy EQP
+      // Đóng gói bản tin phản hồi lỗi chuẩn ASCII gửi lại cho socket máy EQP (mang đúng ID thiết bị trong DB)
       const responsePayload = {
         RESULT: 'NG',
         WORK_IN_RESULT: 'NG',
@@ -227,18 +229,18 @@ export class CommunicationService {
           {
             PCB_ID: (rawStr.match(/"PCB_ID"\s*:\s*"([^"]+)"/) || [])[1] || '',
             LOT_NUMBER: (rawStr.match(/"LOT_NUMBER"\s*:\s*"([^"]+)"/) || [])[1] || '',
-            EQUIPMENT: eqpName,
+            EQUIPMENT: finalEquipmentId,
             WORK_IN_RESULT: 'NG',
             WORK_IN_MSG: errorMessage,
           },
         ],
       };
-      const responseStr = `${eqpName} S051${divRaw};${JSON.stringify(responsePayload, null, 2)};${divRaw.trim() || 'WORKIN'}        `;
+      const responseStr = `${finalEquipmentId} S051${divRaw};${JSON.stringify(responsePayload, null, 2)};${divRaw.trim() || 'WORKIN'}        `;
 
       const txRecord: TransactionRecord = {
         transactionId: this.generateTxId('TX'),
         timestamp: new Date().toISOString(),
-        equipmentId: eqpName || equipmentId,
+        equipmentId: finalEquipmentId,
         commandCode: 'S051',
         direction: 'TX',
         rawHex: Buffer.from(responseStr, 'utf-8').toString('hex'),
