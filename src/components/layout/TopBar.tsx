@@ -22,6 +22,7 @@ import {
   Cpu,
   RefreshCw,
   Activity,
+  Building2,
 } from 'lucide-react';
 import { useTranslation, SUPPORTED_LANGUAGES } from '@/core/i18n';
 import { useApp } from '@/core/context';
@@ -52,6 +53,9 @@ export const TopBar: React.FC = () => {
     users,
     switchActiveUser,
     setActiveView,
+    plants,
+    selectedPlant,
+    setSelectedPlant,
   } = useApp();
 
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -295,6 +299,38 @@ export const TopBar: React.FC = () => {
             <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.9)] animate-pulse" />
           )}
         </button>
+
+        {/* PLANT SELECTOR (ADM_PLANT) */}
+        <div className="relative shrink-0 flex items-center">
+          <div className="h-8 flex items-center gap-1.5 px-2.5 rounded-lg bg-slate-900/90 border border-slate-800/90 hover:border-emerald-500/50 text-slate-200 text-xs shadow-xs transition-colors group">
+            <Building2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono hidden sm:inline">
+              Nhà máy:
+            </span>
+            <select
+              value={selectedPlant}
+              onChange={(e) => setSelectedPlant(e.target.value)}
+              className="bg-transparent text-emerald-400 font-semibold text-xs focus:outline-none cursor-pointer pr-1"
+              title="Chọn Nhà Máy từ bảng ADM_PLANT (Áp dụng cho mọi Stored Procedure & Truy vấn)"
+            >
+              {plants && plants.length > 0 ? (
+                plants.map((p) => (
+                  <option
+                    key={p.plant}
+                    value={p.plant}
+                    className="bg-slate-900 text-slate-100 py-1 font-sans"
+                  >
+                    {p.plant} - {p.description}
+                  </option>
+                ))
+              ) : (
+                <option value={selectedPlant} className="bg-slate-900 text-slate-100">
+                  {selectedPlant}
+                </option>
+              )}
+            </select>
+          </div>
+        </div>
 
         {/* 1. 4-LANGUAGE SWITCHER */}
         <div className="relative shrink-0">

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Sse, MessageEvent } from '@nestjs/common';
+import { Controller, Post, Body, Sse, MessageEvent } from '@nestjs/common';
 import { DieAttachService, WorkInCheckResult } from './die-attach.service';
 import { Observable, map } from 'rxjs';
 
@@ -6,6 +6,7 @@ export interface SimulateWorkInDto {
   equipmentId?: string;
   plant?: string;
   lotNumber?: string;
+  operation?: string;
   config?: string;
   recipe?: string;
   pcbId?: string;
@@ -27,6 +28,7 @@ export class InterlockController {
     if (!rawStr) {
       const eqp = body.equipmentId || 'CLEAN001';
       const lot = body.lotNumber || 'BC6430E';
+      const oper = body.operation;
       const config = body.config || 'SSDB08R-B';
       const recipe = body.recipe || 'ITMRecipe';
       const pcb = body.pcbId || 'A3526169031004800260828';
@@ -44,6 +46,7 @@ export class InterlockController {
             AUTHORITY: 'No AUTHORITY',
             ID: 'No ID',
             LOT_NUMBER: lot,
+            ...(oper ? { OPERATION: oper } : {}),
             EQUIPMENT: eqp,
             CONFIG: config,
             RECIPE: recipe,

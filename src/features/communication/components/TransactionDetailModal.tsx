@@ -30,7 +30,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   transaction,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'json' | 'hexdump' | 'raw'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'json' | 'scanhistory' | 'hexdump' | 'raw'>('overview');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Handle ESC key to close
@@ -117,12 +117,62 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   const workInMsg = firstItem.WORK_IN_MSG || payload.workInMsg || payload.rtnMsg || payload.summary || '';
   const operation = payload.operation || '';
   const deviceStype = payload.deviceStype || '';
+  const plant = payload.plant || 'ITMVIET';
+  const equipGroup = payload.equipGroup || 'W/B';
+  const equipType = payload.equipType || 'W/B';
+  const scanHistoryTable = payload.scanHistoryTable || 'AFA_SEMI_WB_SCAN_HIS';
+  const scanHistoryInserted = payload.scanHistoryInserted;
+  const scanHistoryRows = payload.scanHistoryRows ?? (transaction.status === 'SUCCESS' ? 1 : 0);
+  const oldRowsUpdated = payload.oldRowsUpdated ?? 0;
+  const scanHistorySql = payload.scanHistorySql || payload.scanHistoryInsertSql || '';
+  const eqpOpt05 = firstItem.ID || payload.ID || 'No ID';
 
   // Xác định trạng thái Thành Công / Lỗi
   const isSuccess =
     workInResult === 'OK' ||
     (transaction.status === 'SUCCESS' && (!workInResult || workInResult === 'OK'));
   const isTimeout = transaction.status === 'TIMEOUT';
+
+  // Tự động tạo câu lệnh SQL (UPDATE bản ghi cũ về APPLY_FLAG = 'N' và INSERT bản ghi mới với APPLY_FLAG = 'Y')
+  const effectiveInsertSql = (() => {
+    if (scanHistorySql && scanHistorySql.trim()) {
+      return scanHistorySql.trim();
+    }
+    const tTime = transTime || '20261022093044';
+    const eqp = transaction.equipmentId || firstItem.EQUIPMENT || 'WB161VN';
+    const oper = operation || '289';
+    const pcb = pcbId || 'B2226089080039500172361';
+    const lot = lotNumber || '64336';
+    const dev = config || 'ALL';
+    const devSt = deviceStype || dev;
+    const rec = recipe || 'ITMRecipe';
+    const opt = eqpOpt05 || 'No ID';
+
+    return `-- 1. Cập nhật các bản ghi cũ của cùng thiết bị & mã vạch về APPLY_FLAG = 'N'
+UPDATE MIGHTY.${scanHistoryTable}
+   SET APPLY_FLAG = 'N'
+ WHERE PLANT = '${plant}'
+   AND EQUIPMENT_ID = '${eqp}'
+   AND EQUIPMENT_TYPE = '${equipType}'
+   AND EQUIPMENT_GROUP = '${equipGroup}'
+   AND OPERATION = '${oper}'
+   AND BARCODE_TYPE = 'PCB'
+   AND BARCODE_ID = '${pcb}'
+   AND APPLY_FLAG <> 'N';
+
+-- 2. Thêm bản ghi quét mới nhất với APPLY_FLAG = 'Y'
+INSERT INTO MIGHTY.${scanHistoryTable} (
+  PLANT, EQUIPMENT_ID, EQUIPMENT_TYPE, EQUIPMENT_GROUP, OPERATION,
+  BARCODE_TYPE, BARCODE_ID, LOT_NUMBER, TRANS_TIME, APPLY_FLAG,
+  PROCESS_FLAG, REWORK_FLAG, START_TIME, END_TIME, PCB_ID,
+  DEVICE, DEVICE_STYPE, RECIPE_ID, EQP_OPT_05
+) VALUES (
+  '${plant}', '${eqp}', '${equipType}', '${equipGroup}', '${oper}',
+  'PCB', '${pcb}', '${lot}', '${tTime}', 'Y',
+  'O', 'N', '${tTime}', '${tTime}', '${pcb}',
+  '${dev}', '${devSt}', '${rec}', '${opt}'
+);`;
+  })();
 
   // Format full date time
   const formatDateTime = (ts: string) => {
@@ -139,7 +189,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-2 sm:p-4 animate-in fade-in duration-200 select-text">
       {/* ─── COMPACT MODAL CONTAINER (FIXED HEIGHT TO AVOID TAB JUMP) ─── */}
-      <div className="bg-[#0A0F1D] border border-cyan-500/40 rounded-xl shadow-[0_0_50px_rgba(6,182,212,0.18)] max-w-3xl w-full h-[76vh] max-h-[620px] min-h-[460px] flex flex-col overflow-hidden text-slate-100 font-sans border-t-2 border-t-cyan-400 select-text selection:bg-cyan-500/30 selection:text-white">
+      <div className="bg-[#0A0F1D] border border-cyan-500/40 rounded-xl shadow-[0_0_50px_rgba(6,182,212,0.18)] max-w-3xl w-full h-[86vh] max-h-[720px] min-h-[500px] flex flex-col overflow-hidden text-slate-100 font-sans border-t-2 border-t-cyan-400 select-text selection:bg-cyan-500/30 selection:text-white">
         
         {/* ─── 1. MODAL HEADER (COMPACT) ─── */}
         <div className="px-3.5 py-2.5 bg-[#0D1527] border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
@@ -399,6 +449,18 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             </button>
 
             <button
+              onClick={() => setActiveTab('scanhistory')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-all ${
+                activeTab === 'scanhistory'
+                  ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20 shadow-xs'
+                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
+              }`}
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>Lệnh Quét MES</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('hexdump')}
               className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-all ${
                 activeTab === 'hexdump'
@@ -643,7 +705,41 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             </div>
           )}
 
-          {/* TAB 3: HEX DUMP */}
+          {/* TAB 3: LỆNH QUÉT MES */}
+          {activeTab === 'scanhistory' && (
+            <div className="h-full flex flex-col min-h-0 space-y-1.5">
+              <div className="flex items-center justify-between text-xs shrink-0">
+                <span className="text-slate-400 font-semibold flex items-center gap-1">
+                  <Database className="w-3.5 h-3.5 text-cyan-400" />
+                  Câu Lệnh SQL (Bôi đen hoặc ấn copy bên phải)
+                </span>
+                <button
+                  onClick={() => handleCopy(effectiveInsertSql, 'scanHistoryTabSql')}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-xs text-slate-300 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  {copiedKey === 'scanHistoryTabSql' ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-400" />
+                      <span>Đã sao chép</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Sao chép toàn bộ</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex-1 min-h-0 relative rounded-lg bg-slate-950/95 border border-slate-800/90 overflow-hidden shadow-inner flex flex-col">
+                <pre className="flex-1 min-h-0 p-3 text-emerald-300 overflow-auto text-xs leading-relaxed font-mono cursor-text select-text selection:bg-cyan-500/30 selection:text-white whitespace-pre-wrap break-all">
+                  {effectiveInsertSql}
+                </pre>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: HEX DUMP */}
           {activeTab === 'hexdump' && (
             <div className="h-full flex flex-col min-h-0 space-y-1.5">
               <div className="flex items-center justify-between text-xs shrink-0">

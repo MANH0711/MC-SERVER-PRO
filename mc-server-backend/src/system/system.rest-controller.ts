@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Logger } from '@nestjs/common';
 import { SystemService, RealSystemHealthDto, DiagnosticResultItem } from './system.service';
+import { DieAttachService } from '../interlock/die-attach.service';
 
 @Controller('api/system')
 export class SystemRestController {
@@ -10,6 +11,25 @@ export class SystemRestController {
   @Get('health')
   async getHealth(): Promise<RealSystemHealthDto> {
     return await this.systemService.getFullHealth();
+  }
+
+  @Get('plants')
+  async getPlants(): Promise<{ plant: string; description: string }[]> {
+    return await this.systemService.getPlants();
+  }
+
+  @Get('active-plant')
+  getActivePlant() {
+    return { plant: DieAttachService.getGlobalPlant() };
+  }
+
+  @Post('active-plant')
+  setActivePlant(@Body() body: { plant: string }) {
+    if (body.plant && body.plant.trim()) {
+      DieAttachService.setGlobalPlant(body.plant.trim());
+      this.logger.log(`🏭 Đã chọn Nhà máy hoạt động: [${body.plant.trim()}]`);
+    }
+    return { success: true, plant: DieAttachService.getGlobalPlant() };
   }
 
   @Post('diagnostics/run')

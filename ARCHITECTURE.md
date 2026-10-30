@@ -226,6 +226,33 @@ Khi có nghiệp vụ mới (ví dụ: `reports` - Báo cáo sản lượng):
 
 ## 6. KẾT QUẢ KIỂM THỬ VÀ ĐẢM BẢO CHẤT LƯỢNG (QA)
 
-- **Biên dịch:** Lệnh `npm run build` chạy thành công 100% trong **548ms**.
+- **Biên dịch:** Lệnh `npm run build` chạy thành công 100% trong **697ms**.
 - **Kiểm tra kiểu dữ liệu:** Lệnh `npx tsc --noEmit` đạt chuẩn nghiêm ngặt (Strict Type Check), **0 lỗi**.
 - **Tính tương thích ngược:** 100% các file cũ trong `src/views/` đều có file re-export đảm bảo không bao giờ bị gãy ứng dụng khi chuyển tiếp.
+
+---
+
+## 7. CẢI TIẾN HIỆU NĂNG & ĐỘ BỀN VỮNG TOÀN DIỆN (ENTERPRISE RESILIENCE)
+
+### 7.1. Tầng Cách Ly Lỗi Toàn Cục (Error Boundary)
+- Tích hợp `src/components/common/ErrorBoundary.tsx` bao bọc toàn bộ dynamic viewport tại `App.tsx`.
+- Ngăn ngừa tình trạng sập toàn bộ ứng dụng (White Screen of Death) khi có lỗi render bất ngờ từ component con, cung cấp nút phục hồi tức thì *"Thử Lại Giao Diện"*.
+
+### 7.2. Tối Ưu Hóa Gói Bundle & Code-Splitting (React.lazy + Vite manualChunks)
+- Áp dụng `React.lazy` tại `src/features/index.tsx` cho 8 phân hệ thứ cấp (`interlock-history`, `users`, `system-health`, `logs`, `alarms`, `protocol`, `configuration`, `mes`).
+- Cấu hình hàm `manualChunks` tách vendor packages (`vendor-react`, `vendor-icons`, `vendor-motion`).
+- Kích thước bundle chính giảm từ **789 kB xuống còn 388 kB** (giảm hơn 50%, nén Gzip chỉ còn **94 kB**).
+
+### 7.3. Tối Ưu Hóa Bảng Giao Dịch Truyền Tin (TransactionTable)
+- Tách `TransactionTableRow` thành component độc lập với `React.memo` và bộ so sánh tùy biến. Khi luồng SSE gửi liên tục các bản tin mới (<50ms), 499 dòng hiện có không bị re-render lại.
+- Bổ sung thanh phân trang (`50`, `100`, `200`, `Tất cả` bản ghi), giải phóng DOM từ 4,500 nodes xuống còn 450 nodes.
+
+### 7.4. Giảm Tải Polling Thiết Bị (Device Sync Throttling)
+- Tăng chu kỳ định kỳ đồng bộ thiết bị `MIGHTY.GATEWAY_DEVICES` từ **4 giây lên 30 giây**, giảm tới 87% lượng request REST không cần thiết lên backend.
+
+### 7.5. Backend Oracle Database Resilience
+- **Lazy Pool On-Demand (`getOrCreatePool`)**: Khởi tạo độc lập connection pool cho từng TNS (`ITMVMES`, `ITMMES`, `ITMSEMIMES`, `ITMDEV`) khi có nghiệp vụ phát sinh.
+- **Heartbeat Keep-Alive định kỳ 45s**: Chạy `SELECT 1 FROM DUAL` ngầm giữ kết nối xuyên suốt Firewall nhà máy.
+- **Tự Động Tái Kết Nối (Auto-Reconnect)**: Khi gặp lỗi rớt mạng (`ORA-03113`, `ORA-03114`, `NJS-510`), tự động hủy pool hỏng, tạo lại pool mới và retry transaction an toàn.
+- **Xác Thực Phân Loại Nhóm (`ADM_GROUP_CATEGORY_DATA`)**: Bắt buộc đối chiếu nhóm công đoạn `EIF_OPER_GROUP` và nhóm thiết bị `EIF_EQP_GROUP`, cảnh báo rõ ràng khi không khớp nhóm nghiệp vụ.
+

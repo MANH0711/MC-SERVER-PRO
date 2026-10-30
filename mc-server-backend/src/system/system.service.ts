@@ -389,6 +389,52 @@ export class SystemService {
     return results;
   }
 
+  /**
+   * Lấy danh sách nhà máy hoạt động từ Oracle ADM_PLANT
+   * Query: SELECT PLANT, DESCRIPTION FROM ADM_PLANT WHERE ACTIVE_PLANT = 'Y' ORDER BY PLANT
+   */
+  async getPlants(): Promise<{ plant: string; description: string }[]> {
+    const sql = `SELECT PLANT, DESCRIPTION FROM ADM_PLANT WHERE ACTIVE_PLANT = 'Y' ORDER BY PLANT`;
+    try {
+      if (!this.oracleService.isUsingFallback()) {
+        const rows = await this.oracleService.executeQuery<{ PLANT: string; DESCRIPTION: string }>(
+          sql,
+          {},
+          'ITMVMES'
+        );
+        if (rows && rows.length > 0) {
+          return rows.map((r) => ({
+            plant: (r.PLANT || '').trim(),
+            description: (r.DESCRIPTION || r.PLANT || '').trim(),
+          }));
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`Lỗi khi lấy danh sách nhà máy từ ADM_PLANT: ${err.message}. Thử MIGHTY.ADM_PLANT...`);
+      try {
+        const sqlMighty = `SELECT PLANT, DESCRIPTION FROM MIGHTY.ADM_PLANT WHERE ACTIVE_PLANT = 'Y' ORDER BY PLANT`;
+        const rows = await this.oracleService.executeQuery<{ PLANT: string; DESCRIPTION: string }>(
+          sqlMighty,
+          {},
+          'ITMVMES'
+        );
+        if (rows && rows.length > 0) {
+          return rows.map((r) => ({
+            plant: (r.PLANT || '').trim(),
+            description: (r.DESCRIPTION || r.PLANT || '').trim(),
+          }));
+        }
+      } catch (err2: any) {
+        this.logger.error(`Lỗi khi truy vấn MIGHTY.ADM_PLANT: ${err2.message}`);
+      }
+    }
+
+    return [
+      { plant: 'ITMVIET', description: 'ITM VIETNAM' },
+      { plant: 'ITMVPBA', description: 'ITM VIETNAM PBA' },
+    ];
+  }
+
   startSimulation(equipmentId: string, intervalMs = 3000): boolean {
     if (this.simulationActive) return true;
     this.simulationActive = true;

@@ -37,11 +37,17 @@ export type NavView =
   | 'protocol'
   | 'mesMonitor'
   | 'ilruleHistory'
+  | 'interlockRulesAudit'
   | 'alarmCenter'
   | 'logs'
   | 'configuration'
   | 'users'
   | 'systemHealth';
+
+export interface PlantInfo {
+  plant: string;
+  description: string;
+}
 
 interface AppContextType {
   activeView: NavView;
@@ -61,6 +67,11 @@ interface AppContextType {
   setServerOnline: (online: boolean) => void;
   isSimulating: boolean;
   toggleSimulation: () => void;
+  // Nhà máy (PLANT từ ADM_PLANT)
+  plants: PlantInfo[];
+  selectedPlant: string;
+  setSelectedPlant: (plant: string) => void;
+  refreshPlants: () => Promise<void>;
   // Actions
   refreshDevices: () => Promise<void>;
   addDevice: (device: DeviceModel) => void;
@@ -118,6 +129,68 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     () => new SessionManager(INITIAL_DEVICES, INITIAL_CONFIG, mesAdapter),
     [mesAdapter]
   );
+
+  // Quản lý Nhà máy (PLANT từ Oracle ADM_PLANT)
+  const [plants, setPlants] = useState<PlantInfo[]>([
+    { plant: 'ITMVIET', description: 'ITM Vietnam' },
+    { plant: 'ITMVPBA', description: 'PBA SMT' },
+    { plant: 'ITMVPSG', description: 'ITM PSG Vietnam' },
+    { plant: 'ITMVSNR', description: 'ITMV Sensor' },
+  ]);
+  const [selectedPlant, setSelectedPlantState] = useState<string>(() => {
+    return localStorage.getItem('mc_selected_plant') || 'ITMVIET';
+  });
+
+  const setSelectedPlant = (newPlant: string) => {
+    const trimmed = (newPlant || '').trim();
+    if (!trimmed) return;
+    setSelectedPlantState(trimmed);
+    try {
+      localStorage.setItem('mc_selected_plant', trimmed);
+      fetch('http://localhost:3005/api/system/active-plant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plant: trimmed }),
+      }).catch(() => {});
+    } catch {}
+  };
+
+  const refreshPlants = async () => {
+    try {
+      const resp = await fetch('http://localhost:3005/api/system/plants');
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setPlants(data);
+          const saved = localStorage.getItem('mc_selected_plant');
+          const isValidSaved = saved && data.some((p: any) => p.plant === saved);
+          if (!isValidSaved) {
+            // Mặc định chọn PLANT đầu tiên từ ADM_PLANT
+            const firstPlant = data[0].plant;
+            setSelectedPlantState(firstPlant);
+            localStorage.setItem('mc_selected_plant', firstPlant);
+            fetch('http://localhost:3005/api/system/active-plant', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ plant: firstPlant }),
+            }).catch(() => {});
+          } else {
+            fetch('http://localhost:3005/api/system/active-plant', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ plant: saved }),
+            }).catch(() => {});
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Không thể tải danh sách Plant từ backend:', e);
+    }
+  };
+
+  useEffect(() => {
+    refreshPlants();
+  }, []);
 
   useEffect(() => {
     // Sync initial devices from session manager
@@ -184,10 +257,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setMesStatus(mesAdapter.getStatus());
     }, 3000);
 
-    // Periodically sync live TCP socket connection status from Backend
+    // Periodically sync live TCP socket connection status from Backend (30s interval to prevent overhead)
     const deviceSyncInterval = setInterval(() => {
       fetchRealData();
-    }, 4000);
+    }, 30000);
 
     // 1. Luồng Server-Sent Events (SSE): Nhận giao dịch thời gian thực tức thì (<50ms)
     const unsubSse = subscribeTransactionStream((newTx) => {
@@ -586,6 +659,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setServerOnline,
         isSimulating,
         toggleSimulation,
+        plants,
+        selectedPlant,
+        setSelectedPlant,
+        refreshPlants,
         refreshDevices,
         addDevice,
         updateDevice,

@@ -100,3 +100,80 @@ Các hàm xử lý cốt lõi tại `src/utils/deviceFormat.ts`:
 - `acknowledgedAt` (timestamp): Thời điểm xác nhận
 - `createdAt` (timestamp): Thời điểm phát sinh
 
+---
+
+## 6. Bảng Oracle MES `AFA_SEMI_WB_SCAN_HIS` (Lịch Sử Quét Mã Vạch MES)
+
+Bảng ghi nhận toàn bộ dữ liệu quét barcode PCB / Lot tại các công đoạn bán dẫn (Die Attach / Wire Bond).
+
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
+| :--- | :--- | :--- | :--- |
+| `PLANT` | `VARCHAR2(20)` | NOT NULL | Mã nhà máy (mặc định `'ITMVIET'`) |
+| `EQUIPMENT_ID` | `VARCHAR2(50)` | NOT NULL | Mã thiết bị quét (vd: `'WB161VN'`, `'WB182VN'`) |
+| `EQUIPMENT_TYPE`| `VARCHAR2(50)` | NOT NULL | Loại máy (vd: `'W/B'`, `'D/A'`) |
+| `EQUIPMENT_GROUP`| `VARCHAR2(50)`| NOT NULL | Nhóm máy phân xưởng (vd: `'W/B'`) |
+| `OPERATION` | `VARCHAR2(20)` | NOT NULL | Mã công đoạn sản xuất (vd: `'289'`, `'410'`, `'420'`) |
+| `BARCODE_TYPE` | `VARCHAR2(20)` | NOT NULL | Loại mã vạch quét (mặc định `'PCB'`) |
+| `BARCODE_ID` | `VARCHAR2(100)`| NOT NULL | Mã vạch vật phẩm quét (PCB ID / Strip ID) |
+| `LOT_NUMBER` | `VARCHAR2(50)` | NULL | Số Lot sản xuất MES liên kết |
+| `TRANS_TIME` | `VARCHAR2(14)` | NOT NULL | Thời gian quét (Định dạng `YYYYMMDDHH24MISS`) |
+| `APPLY_FLAG` | `CHAR(1)` | NOT NULL | Cờ hiệu lực: `'Y'` (Đang áp dụng) hoặc `'N'` (Đã bị ghi đè) |
+| `RECIPE` | `VARCHAR2(100)`| NULL | Tên công thức sản xuất đã xác thực |
+| `EQP_OPT_05` | `VARCHAR2(50)` | NULL | Tùy chọn mở rộng (User ID / RFID / 'No ID') |
+
+### Quy Tắc Cập Nhật Trạng Thái Tự Động (Auto-Apply Flag Lifecycle):
+Khi phát sinh một lượt quét mới:
+1. **Bước 1 (Đánh dấu hủy bản ghi cũ):**
+   ```sql
+   UPDATE AFA_SEMI_WB_SCAN_HIS
+   SET APPLY_FLAG = 'N'
+   WHERE PLANT = :plant
+     AND EQUIPMENT_ID = :equipmentId
+     AND EQUIPMENT_TYPE = :equipmentType
+     AND EQUIPMENT_GROUP = :equipmentGroup
+     AND OPERATION = :operation
+     AND BARCODE_TYPE = :barcodeType
+     AND BARCODE_ID = :barcodeId
+     AND APPLY_FLAG = 'Y';
+   ```
+2. **Bước 2 (Chèn bản ghi mới nhất có hiệu lực):**
+   ```sql
+   INSERT INTO AFA_SEMI_WB_SCAN_HIS (
+     PLANT, EQUIPMENT_ID, EQUIPMENT_TYPE, EQUIPMENT_GROUP,
+     OPERATION, BARCODE_TYPE, BARCODE_ID, LOT_NUMBER,
+     TRANS_TIME, APPLY_FLAG, RECIPE, EQP_OPT_05
+   ) VALUES (
+     :plant, :equipmentId, :equipmentType, :equipmentGroup,
+     :operation, :barcodeType, :barcodeId, :lotNumber,
+     :transTime, 'Y', :recipe, :eqpOpt05
+   );
+   ```
+*Đảm bảo tính duy nhất: Tại một thời điểm, chỉ có duy nhất 1 bản ghi có `APPLY_FLAG = 'Y'` cho cùng một bộ nhận diện vật phẩm.*
+
+---
+
+## 7. Bảng Oracle Phân Loại Nhóm Nghiệp Vụ `ADM_GROUP_CATEGORY_DATA`
+
+Dùng để xác thực mối tương quan hợp lệ giữa mã công đoạn thao tác và thiết bị thực thi:
+
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Giá Trị Thường Dùng | Mô Tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `PLANT` | `VARCHAR2(20)` | PK | `'ITMVIET'` | Nhà máy |
+| `GROUP_TARGET` | `VARCHAR2(30)` | PK | `'OPERATION'`, `'EQUIPMENT'` | Đối tượng phân loại |
+| `GROUP_OBJECT` | `VARCHAR2(50)` | PK | Mã công đoạn (`'420'`) hoặc Mã máy (`'WB116VN'`) | Giá trị cụ thể cần tra cứu |
+| `GROUP_INDEX` | `VARCHAR2(10)` | PK | `'22'` (Công đoạn) hoặc `'13'` (Thiết bị) | Chỉ mục phân loại MES |
+| `GROUP_CATEGORY`| `VARCHAR2(50)`| PK | `'EIF_OPER_GROUP'`, `'EIF_EQP_GROUP'` | Tên danh mục quy tắc |
+| `GROUP_VALUE` | `VARCHAR2(50)` | NOT NULL | vd: `'WB_GROUP_A'`, `'DA_GROUP_1'` | Nhóm nghiệp vụ thực tế |
+
+### Quy Tắc Xác Thực Đối Chiếu Nhóm (Group Match Rule):
+Hệ thống lấy `GROUP_VALUE` của Công đoạn (`EIF_OPER_GROUP`) và Thiết bị (`EIF_EQP_GROUP`).
+- Nếu `GROUP_VALUE_OPER === GROUP_VALUE_EQP`: **PASS** (Tiến hành mở chốt Interlock).
+- Nếu khác nhau hoặc thiếu cấu hình: **INTERLOCK REJECT** kèm thông báo:
+  `"Mã công đoạn [{operation}] (Nhóm: {operGroup}) và thiết bị [{equipmentId}] (Nhóm: {equipGroup}) không cùng nhóm phân loại nghiệp vụ"`.
+
+---
+
+## 8. Bảng Oracle Master `MIGHTY.GATEWAY_DEVICES` (Đồng Bộ Thiết Bị Thật)
+Lưu trữ toàn bộ danh sách 18 cột của hơn 1,000 thiết bị trên máy chủ Oracle Database. Backend NestJS (`EquipmentRepository`) nạp danh sách lúc khởi động và định kỳ đồng bộ với Frontend qua API `GET /api/devices` mỗi 30 giây.
+
+

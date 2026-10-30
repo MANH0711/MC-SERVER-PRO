@@ -7,19 +7,26 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowUpRight,
+  Building2,
+  FileSearch,
 } from 'lucide-react';
+import { useApp } from '@/core/context';
 
 interface DieAttachSimulatorModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenRuleAudit?: (params: { equip: string; oper: string }) => void;
 }
 
 export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = ({
   isOpen,
   onClose,
+  onOpenRuleAudit,
 }) => {
+  const { selectedPlant } = useApp();
   const [daEquipment, setDaEquipment] = useState<string>('CLEAN001');
   const [daLot, setDaLot] = useState<string>('BC6430E');
+  const [daOperation, setDaOperation] = useState<string>('310');
   const [daPcbId, setDaPcbId] = useState<string>('A3526169031004800260828');
   const [daConfig, setDaConfig] = useState<string>('SSDB08R-B');
   const [daRecipe, setDaRecipe] = useState<string>('ITMRecipe');
@@ -41,7 +48,9 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           equipmentId: daEquipment,
+          plant: selectedPlant,
           lotNumber: daLot,
+          operation: daOperation.trim() || undefined,
           config: daConfig,
           recipe: daRecipe,
           pcbId: daPcbId,
@@ -75,12 +84,18 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
               </div>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[11px] font-bold flex items-center gap-1">
+              <Building2 className="w-3 h-3 text-emerald-400" />
+              PLANT: {selectedPlant}
+            </span>
+            <button
+              onClick={onClose}
+              className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}
@@ -90,6 +105,10 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
             <div className="font-bold text-slate-200 pb-1 border-b border-slate-800 uppercase text-[11px] flex items-center justify-between">
               <span>Bản Tin Gửi Đi Từ Máy (S050)</span>
               <span className="text-cyan-400 font-mono text-[10px]">EQP ➔ Server</span>
+            </div>
+
+            <div className="p-2 rounded bg-cyan-950/40 border border-cyan-500/30 text-[10px] text-cyan-300">
+              <span className="font-bold text-cyan-200">Quy Tắc Model DIEATTACH:</span> Bắt buộc mã lệnh <code className="text-white bg-slate-900 px-1 rounded">S050</code>, nhóm công đoạn (<code className="text-emerald-300">EIF_OPER_GROUP</code>) và nhóm thiết bị (<code className="text-emerald-300">EIF_EQP_GROUP</code>) đều phải là <span className="font-bold text-emerald-400">D/A</span>.
             </div>
 
             <div className="space-y-2">
@@ -103,14 +122,26 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
                 />
               </div>
 
-              <div>
-                <label className="text-[10px] text-slate-400 block mb-0.5">Mã LOT Sản Xuất (LOT_NUMBER):</label>
-                <input
-                  type="text"
-                  value={daLot}
-                  onChange={(e) => setDaLot(e.target.value)}
-                  className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-0.5">Mã LOT (LOT_NUMBER):</label>
+                  <input
+                    type="text"
+                    value={daLot}
+                    onChange={(e) => setDaLot(e.target.value)}
+                    className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 block mb-0.5">Công Đoạn (OPERATION):</label>
+                  <input
+                    type="text"
+                    value={daOperation}
+                    placeholder="310, 320 (D/A)..."
+                    onChange={(e) => setDaOperation(e.target.value)}
+                    className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono"
+                  />
+                </div>
               </div>
 
               <div>
@@ -169,6 +200,17 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
                 </>
               )}
             </button>
+
+            {onOpenRuleAudit && (
+              <button
+                type="button"
+                onClick={() => onOpenRuleAudit({ equip: daEquipment, oper: daOperation })}
+                className="w-full py-1.5 px-3 rounded-lg bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-500/50 text-indigo-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-xs"
+              >
+                <FileSearch className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Tra Cứu BIZ_ILRULE_INFO Cho Máy Này</span>
+              </button>
+            )}
           </div>
 
           {/* Right Column: MES Check Result */}
@@ -220,8 +262,8 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
                   </div>
                 </div>
 
-                {/* Stored Procedure Audit */}
-                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                {/* Stored Procedure Audit & Group Verification */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
                   <div className="p-2 rounded bg-slate-900 border border-slate-800">
                     <span className="text-slate-500 block text-[9px]">RtnYN (Kết Quả):</span>
                     <span className={`font-bold ${daResult.rtnYN === 'OK' ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -229,10 +271,41 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
                     </span>
                   </div>
                   <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-slate-500 block text-[9px]">RtnMsgID:</span>
-                    <span className="text-cyan-300 font-bold">{daResult.rtnMsgID || 'N/A'}</span>
+                    <span className="text-slate-500 block text-[9px]">Mã Lệnh SECS:</span>
+                    <span className="text-cyan-300 font-bold">S050 / S051</span>
+                  </div>
+                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                    <span className="text-slate-500 block text-[9px]">Model Thiết Bị:</span>
+                    <span className="text-cyan-300 font-bold">{daResult.equipmentModel || 'DIEATTACH'}</span>
+                  </div>
+                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
+                    <span className="text-slate-500 block text-[9px]">Nhóm (Oper/Equip):</span>
+                    <span className={`font-bold ${daResult.operGroup === 'D/A' ? 'text-emerald-300' : 'text-slate-300'}`}>
+                      {daResult.operGroup || 'D/A'} / {daResult.equipGroupVal || daResult.equipGroup || 'D/A'}
+                    </span>
                   </div>
                 </div>
+
+                {/* Scan History Record Badge khi Check Thành Công */}
+                {daResult.isValid && daResult.scanHistoryTable && (
+                  <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-[10px] space-y-1">
+                    <div className="font-bold flex items-center justify-between text-emerald-400">
+                      <span className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Đã Ghi Lịch Sử Quét Sản Xuất (Scan History)
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[9px] font-bold">
+                        {daResult.scanHistoryInserted ? 'INSERTED' : 'OK'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 text-[9px] text-slate-300 font-mono pt-0.5 border-t border-emerald-500/20">
+                      <div>Bảng Đích: <span className="text-cyan-300 font-bold">{daResult.scanHistoryTable}</span></div>
+                      <div>Nhóm Máy: <span className="text-cyan-300 font-bold">{daResult.equipGroup || 'W/B'}</span></div>
+                      <div>Loại Máy: <span className="text-slate-200">{daResult.equipType || 'W/B'}</span></div>
+                      <div>Trạng Thái: <span className="text-emerald-400 font-bold">PROCESS=O, APPLY=Y</span></div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Danh Sách Rule BIZ_ILRULE_INFO Khớp Ưu Tiên */}
                 {daResult.appliedRules && daResult.appliedRules.length > 0 && (

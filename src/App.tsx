@@ -8,6 +8,7 @@ import { LanguageProvider } from '@/core/i18n';
 import { AppProvider } from '@/core/context';
 import { Sidebar, TopBar, StatusBar } from '@/components/layout';
 import FeaturesManager from '@/features';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 const MainLayout: React.FC = () => {
   return (
@@ -20,9 +21,11 @@ const MainLayout: React.FC = () => {
         {/* Top Control Header */}
         <TopBar />
 
-        {/* Dynamic Viewport: Rendered by FeaturesManager */}
+        {/* Dynamic Viewport: Rendered by FeaturesManager wrapped in ErrorBoundary */}
         <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-          <FeaturesManager />
+          <ErrorBoundary fallbackTitle="Không thể tải phân hệ chức năng">
+            <FeaturesManager />
+          </ErrorBoundary>
         </main>
 
         {/* Bottom Industrial Status Bar */}

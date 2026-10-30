@@ -5,6 +5,7 @@ import {
   Download,
   Trash2,
   Cpu,
+  FileSearch,
   X,
 } from 'lucide-react';
 import { DeviceModel } from '@/core/types';
@@ -21,6 +22,7 @@ interface MonitorToolbarProps {
   onExport: () => void;
   onClear: () => void;
   onOpenDieAttachTest: () => void;
+  onOpenRuleAudit: () => void;
   t: (key: string) => string;
   formatNumber: (n: number) => string;
 }
@@ -37,6 +39,7 @@ export const MonitorToolbar: React.FC<MonitorToolbarProps> = ({
   onExport,
   onClear,
   onOpenDieAttachTest,
+  onOpenRuleAudit,
   t,
   formatNumber,
 }) => {
@@ -134,6 +137,15 @@ export const MonitorToolbar: React.FC<MonitorToolbarProps> = ({
         >
           <Cpu className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
           <span>Die Attach (S050)</span>
+        </button>
+
+        <button
+          onClick={onOpenRuleAudit}
+          className="flex items-center gap-1 px-2.5 py-1 rounded bg-indigo-600/30 border border-indigo-500/80 text-indigo-200 hover:bg-indigo-600/50 hover:text-white transition-all text-[11px] font-semibold shadow-[0_0_8px_rgba(99,102,241,0.25)]"
+          title="Báo Cáo Tra Cứu Quy Tắc Liên Khóa BIZ_ILRULE_INFO"
+        >
+          <FileSearch className="w-3.5 h-3.5 text-indigo-400" />
+          <span>Tra Cứu BIZ_ILRULE_INFO</span>
         </button>
       </div>
     </div>

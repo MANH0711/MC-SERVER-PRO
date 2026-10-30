@@ -1,32 +1,10 @@
 /**
  * MC Server Industrial Enterprise Edition
- * Views Master Index Router & Form Orchestrator (File Cha)
- * Re-exports from @/features for backward compatibility
+ * Views Master Index Router & Form Orchestrator (Backward Compatibility Bridge)
  */
 
-import FeaturesManager, {
-  Dashboard,
-  DeviceManagement,
-  CommunicationMonitor,
-  ProtocolExplorer,
-  MesMonitor,
-  AlarmCenter,
-  LogCenter,
-  ConfigurationCenter,
-  UserManagement,
-  SystemHealth,
-} from '@/features';
+import FeaturesManager from '@/features';
 
-export const DashboardView = Dashboard;
-export const DeviceManagementView = DeviceManagement;
-export const CommunicationMonitorView = CommunicationMonitor;
-export const ProtocolExplorerView = ProtocolExplorer;
-export const MesMonitorView = MesMonitor;
-export const AlarmCenterView = AlarmCenter;
-export const LogCenterView = LogCenter;
-export const ConfigurationCenterView = ConfigurationCenter;
-export const UserManagementView = UserManagement;
-export const SystemHealthView = SystemHealth;
-
+export { FeaturesManager };
 export const ViewsManager = FeaturesManager;
 export default FeaturesManager;

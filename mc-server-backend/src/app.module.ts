@@ -14,6 +14,7 @@ import { SystemModule } from './system/system.module';
 import { AuthorityModule } from './authority/authority.module';
 import { InterlockModule } from './interlock/interlock.module';
 import { InterlockHistoryModule } from './interlock-history/interlock-history.module';
+import { InterlockRulesModule } from './interlock-rules/interlock-rules.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { InterlockHistoryModule } from './interlock-history/interlock-history.mo
     AuthorityModule,
     InterlockModule,
     InterlockHistoryModule,
+    InterlockRulesModule,
   ],
   providers: [
     {

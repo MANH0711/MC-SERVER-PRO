@@ -41,8 +41,22 @@ export interface WorkInCheckResult {
   config: string;
   recipe: string;
   operation: string;
+  device?: string;
   deviceStype?: string;
+  equipType?: string;
   equipGroup?: string;
+  equipmentModel?: string;
+  operGroup?: string;
+  equipGroupVal?: string;
+  scanHistoryTable?: string;
+  scanHistoryInserted?: boolean;
+  scanHistoryRows?: number;
+  oldRowsUpdated?: number;
+  scanHistorySql?: string;
+  scanHistoryUpdateSql?: string;
+  scanHistoryInsertSql?: string;
+  scanHistoryMergeSql?: string;
+  scanHistoryBinds?: Record<string, any>;
   appliedRules?: Array<{
     ruleId: string;
     ruleKey: string;
@@ -68,6 +82,17 @@ export interface WorkInCheckResult {
 export class DieAttachService {
   private readonly logger = new Logger(DieAttachService.name);
   private readonly workInStream$ = new Subject<WorkInCheckResult>();
+  private static globalPlant: string = '';
+
+  static setGlobalPlant(plant: string) {
+    if (plant && plant.trim()) {
+      DieAttachService.globalPlant = plant.trim();
+    }
+  }
+
+  static getGlobalPlant(): string {
+    return DieAttachService.globalPlant;
+  }
 
   constructor(
     private readonly oracleService: OracleService,
@@ -86,7 +111,7 @@ export class DieAttachService {
   isWorkInMessage(message: string): boolean {
     if (!message || typeof message !== 'string') return false;
     const clean = message.trim();
-    return clean.includes('S050') && (clean.includes('WORKIN') || clean.includes('PCB_ID'));
+    return (clean.includes('S050') || clean.includes('WORKIN') || clean.includes(';{"')) && (clean.includes('WORKIN') || clean.includes('PCB_ID') || clean.includes('DATA'));
   }
 
   /**
@@ -101,16 +126,27 @@ export class DieAttachService {
       }
 
       // 1. Phân tích Header: ví dụ "CLEAN001 S050WORKIN        "
-      const header = parts[0];
-      const stateIndex = header.indexOf('S050');
-      if (stateIndex === -1) {
-        return null;
-      }
+      const header = parts[0].trim();
+      let equipment = '';
+      let state = 'S050';
+      let div = 'WORKIN        ';
 
-      const equipment = header.substring(0, stateIndex).trim();
-      const state = 'S050';
-      const divRaw = header.substring(stateIndex + 4);
-      const div = divRaw.length > 0 ? divRaw : 'WORKIN        ';
+      const match = header.match(/^([^\s]+)\s+([A-Za-z0-9]{4})(.*)$/);
+      if (match) {
+        equipment = match[1].trim();
+        state = match[2].toUpperCase().trim();
+        div = match[3] && match[3].length > 0 ? match[3] : 'WORKIN        ';
+      } else {
+        const stateIndex = header.indexOf('S050');
+        if (stateIndex !== -1) {
+          equipment = header.substring(0, stateIndex).trim();
+          state = 'S050';
+          const divRaw = header.substring(stateIndex + 4);
+          div = divRaw.length > 0 ? divRaw : 'WORKIN        ';
+        } else {
+          return null;
+        }
+      }
 
       // 2. Phân tích Body: chuỗi JSON {"DATA":[...]}
       const jsonStr = parts[1].trim();
@@ -252,8 +288,22 @@ export class DieAttachService {
     isValid: boolean;
     plant: string;
     operation: string;
+    device?: string;
     deviceStype?: string;
+    equipType?: string;
     equipGroup?: string;
+    equipmentModel?: string;
+    operGroup?: string;
+    equipGroupVal?: string;
+    scanHistoryTable?: string;
+    scanHistoryInserted?: boolean;
+    scanHistoryRows?: number;
+    oldRowsUpdated?: number;
+    scanHistorySql?: string;
+    scanHistoryUpdateSql?: string;
+    scanHistoryInsertSql?: string;
+    scanHistoryMergeSql?: string;
+    scanHistoryBinds?: Record<string, any>;
     appliedRules?: Array<{
       ruleId: string;
       ruleKey: string;
@@ -272,18 +322,51 @@ export class DieAttachService {
     rtnMsg: string;
   }> {
     const item = parsed.firstItem;
-    let operation = '4000';
+    let operation = (item as any).OPERATION || '4000';
     let deviceStype = 'ALL';
+    let device = item.CONFIG || 'ALL';
     let equipGroup = 'ALL';
     let appliedRules: any[] = [];
 
-    // 1. Xác định đúng Plant theo cấu hình thiết bị
-    let targetPlant = (plant || '').trim();
-    if (!targetPlant) {
-      const equipRecord = await this.resolveEquipmentRecord(parsed.equipment, dbEquipmentName);
-      if (equipRecord && equipRecord.PLANT && equipRecord.PLANT.trim()) {
-        targetPlant = equipRecord.PLANT.trim();
+    // Lấy thông tin bản ghi thiết bị từ GATEWAY_DEVICES / ADM_EQUIPMENT
+    const equipRecord = await this.resolveEquipmentRecord(parsed.equipment, dbEquipmentName);
+    const equipModel = (equipRecord?.EQUIPMENT_MODEL || '').toUpperCase().trim();
+    const isDieAttachModel = equipModel === 'DIEATTACH' || equipModel.includes('DIEATTACH') || equipModel.includes('DIE_ATTACH') || equipModel === 'DA';
+
+    // Kiểm tra và đồng bộ thời gian giao dịch với MES
+    let transTime = (item.TRANS_TIME || '').trim();
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const systemTime = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+    if (!transTime || transTime.length !== 14) {
+      transTime = systemTime;
+    } else {
+      try {
+        const year = parseInt(transTime.substring(0, 4), 10);
+        const month = parseInt(transTime.substring(4, 6), 10) - 1;
+        const day = parseInt(transTime.substring(6, 8), 10);
+        const hour = parseInt(transTime.substring(8, 10), 10);
+        const minute = parseInt(transTime.substring(10, 12), 10);
+        const second = parseInt(transTime.substring(12, 14), 10);
+        const eqpDate = new Date(year, month, day, hour, minute, second);
+        const diffMinutes = Math.abs((now.getTime() - eqpDate.getTime()) / (1000 * 60));
+        
+        if (diffMinutes > 15) {
+          this.logger.warn(
+            `[Time Sync] Thiết bị ${dbEquipmentName} gửi TRANS_TIME (${transTime}) lệch ${Math.round(diffMinutes)} phút so với server (${systemTime}). Tự động dùng giờ hệ thống để gửi sang MES.`
+          );
+          transTime = systemTime;
+        }
+      } catch {
+        transTime = systemTime;
       }
+    }
+
+    // 1. Xác định đúng Plant: Ưu tiên tham số truyền vào > Plant đang chọn từ FE > cấu hình thiết bị
+    let targetPlant = (plant || DieAttachService.getGlobalPlant() || '').trim();
+    if (!targetPlant && equipRecord && equipRecord.PLANT && equipRecord.PLANT.trim()) {
+      targetPlant = equipRecord.PLANT.trim();
     }
 
     // 2. Nếu thiết bị chưa có Plant trong cấu hình, tự động truy vấn tìm Plant theo Lot Number từ ASFC_LOT_STATUS
@@ -306,6 +389,48 @@ export class DieAttachService {
     // 3. Fallback an toàn nếu không tìm thấy ở bất cứ đâu
     if (!targetPlant) {
       targetPlant = 'ITMVIET';
+    }
+
+    // 4. KIỂM TRA MÃ LỆNH: Nếu model là DIEATTACH, BẮT BUỘC phải gửi mã lệnh chuẩn S050
+    const commandCode = (parsed.state || '').toUpperCase().trim();
+    if (isDieAttachModel && commandCode !== 'S050') {
+      const errorMsg = `Thiết bị model DIEATTACH chỉ chấp nhận mã lệnh chuẩn S050 (mã lệnh nhận được: ${commandCode || 'Không xác định'}).`;
+      this.logger.warn(`❌ [Check Model Command Mismatch] ${errorMsg}`);
+
+      await this.recordInterlockHistory(
+        targetPlant,
+        item.LOT_NUMBER || '',
+        dbEquipmentName,
+        operation,
+        item.PCB_ID || '',
+        parsed.rawMessage,
+        errorMsg,
+        'N',
+        'EIF-CMD01',
+        'RK20260121-0001',
+        {
+          recipeId: item.RECIPE || 'ITMRecipe',
+          transTime: transTime,
+          eifDevice: item.CONFIG || '',
+          transCode: 'EPBV',
+          deviceStype: deviceStype,
+          userId: dbEquipmentName,
+        }
+      );
+
+      return {
+        isValid: false,
+        plant: targetPlant,
+        operation,
+        device,
+        deviceStype,
+        equipGroup,
+        equipmentModel: equipModel,
+        rtnYN: 'NG',
+        rtnPause: 'N',
+        rtnMsgID: 'EIF-CMD01',
+        rtnMsg: errorMsg,
+      };
     }
 
     this.logger.log(`🏭 Kiểm tra Interlock với Plant [${targetPlant}] tương ứng theo thiết bị ${dbEquipmentName}`);
@@ -333,47 +458,216 @@ export class DieAttachService {
       }>(sqlLot, { plant: targetPlant, lot: item.LOT_NUMBER }, 'ITMVMES');
 
       if (lotRows && lotRows.length > 0) {
-        operation = lotRows[0].OPERATION || '4000';
+        operation = (item as any).OPERATION || lotRows[0].OPERATION || '4000';
         deviceStype = lotRows[0].DEVICE_STYPE || 'ALL';
+        device = lotRows[0].DEVICE || item.CONFIG || 'ALL';
+      } else if ((item as any).OPERATION) {
+        operation = (item as any).OPERATION;
       }
     } catch (err: any) {
+      if ((item as any).OPERATION) {
+        operation = (item as any).OPERATION;
+      }
       this.logger.warn(`Không thể lấy thông tin lot ${item.LOT_NUMBER}: ${err.message}`);
     }
 
-    // 2. CÂU LỆNH KIỂM TRA KIỂU MÁY (ADM_GROUP_CATEGORY_DATA)
-    try {
-      const sqlEquip = `
-        SELECT 
-            MAX(CASE WHEN group_index = 11 THEN group_value END) AS main_equip,
-            MAX(CASE WHEN group_index = 12 THEN group_value END) AS equip_type,
-            MAX(CASE WHEN group_index = 13 THEN group_value END) AS equip_group,
-            NVL(MAX(CASE WHEN group_index = 14 THEN group_value END), 'X') AS equip_oper_order,
-            MAX((SELECT group_value 
-                   FROM adm_group_category_data 
-                  WHERE plant = :plant 
-                    AND group_target = 'OPERATION' 
-                    AND group_index = 22 
-                    AND group_object = :oper)) AS oper_group
-        FROM adm_group_category_data 
-        WHERE plant = :plant 
-          AND group_target = 'EQUIPMENT' 
-          AND group_index IN (11, 12, 13, 14) 
-          AND group_object = :equip
-      `;
-      const equipRows = await this.oracleService.executeQuery<{
-        MAIN_EQUIP: string;
-        EQUIP_TYPE: string;
-        EQUIP_GROUP: string;
-        EQUIP_OPER_ORDER: string;
-        OPER_GROUP: string;
-      }>(sqlEquip, { plant: targetPlant, oper: operation, equip: dbEquipmentName }, 'ITMVMES');
+    // 2. CÂU LỆNH KIỂM TRA ĐỐI CHIẾU NHÓM CÔNG ĐOẠN (EIF_OPER_GROUP) VÀ NHÓM THIẾT BỊ (EIF_EQP_GROUP)
+    let operGroup = '';
+    let equipGroupVal = '';
+    let equipTypeVal = '';
 
-      if (equipRows && equipRows.length > 0 && equipRows[0].EQUIP_GROUP) {
-        equipGroup = equipRows[0].EQUIP_GROUP;
+    if (!this.oracleService.isUsingFallback()) {
+      try {
+        // Query 1: Lấy GROUP_VALUE của OPERATION (EIF_OPER_GROUP, GROUP_INDEX = 22)
+        const sqlOper = `
+          SELECT GROUP_VALUE  
+          FROM ADM_GROUP_CATEGORY_DATA 
+          WHERE PLANT = :plant 
+            AND GROUP_TARGET = 'OPERATION' 
+            AND GROUP_OBJECT = :oper 
+            AND GROUP_INDEX = '22' 
+            AND GROUP_CATEGORY = 'EIF_OPER_GROUP'
+        `;
+        const operRows = await this.oracleService.executeQuery<{ GROUP_VALUE: string }>(
+          sqlOper,
+          { plant: targetPlant, oper: operation },
+          'ITMVMES'
+        );
+        if (operRows && operRows.length > 0 && operRows[0].GROUP_VALUE) {
+          operGroup = operRows[0].GROUP_VALUE.trim();
+        }
+
+        // Query 2: Lấy GROUP_VALUE của EQUIPMENT (EIF_EQP_GROUP, GROUP_INDEX = 13) và EIF_EQP_TYPE (GROUP_INDEX = 12)
+        const sqlEquip = `
+          SELECT GROUP_INDEX, GROUP_CATEGORY, GROUP_VALUE  
+          FROM ADM_GROUP_CATEGORY_DATA 
+          WHERE PLANT = :plant 
+            AND GROUP_TARGET = 'EQUIPMENT' 
+            AND GROUP_OBJECT = :equip 
+            AND GROUP_INDEX IN ('12', '13')
+        `;
+        let equipRows = await this.oracleService.executeQuery<{
+          GROUP_INDEX: number | string;
+          GROUP_CATEGORY: string;
+          GROUP_VALUE: string;
+        }>(
+          sqlEquip,
+          { plant: targetPlant, equip: dbEquipmentName },
+          'ITMVMES'
+        );
+
+        // Fallback sang parsed.equipment nếu dbEquipmentName không có cấu hình trong ADM_GROUP_CATEGORY_DATA
+        if ((!equipRows || equipRows.length === 0) && parsed.equipment && parsed.equipment !== dbEquipmentName) {
+          const fallbackRows = await this.oracleService.executeQuery<{
+            GROUP_INDEX: number | string;
+            GROUP_CATEGORY: string;
+            GROUP_VALUE: string;
+          }>(
+            sqlEquip,
+            { plant: targetPlant, equip: parsed.equipment },
+            'ITMVMES'
+          );
+          if (fallbackRows && fallbackRows.length > 0) {
+            equipRows = fallbackRows;
+          }
+        }
+
+        if (equipRows && equipRows.length > 0) {
+          for (const row of equipRows) {
+            const val = (row.GROUP_VALUE || '').trim();
+            if (row.GROUP_CATEGORY === 'EIF_EQP_GROUP' || String(row.GROUP_INDEX) === '13') {
+              equipGroupVal = val;
+            }
+            if (row.GROUP_CATEGORY === 'EIF_EQP_TYPE' || String(row.GROUP_INDEX) === '12') {
+              equipTypeVal = val;
+            }
+          }
+        }
+      } catch (err: any) {
+        this.logger.warn(`Lỗi kiểm tra nhóm công đoạn & thiết bị: ${err.message}`);
       }
-    } catch (err: any) {
-      this.logger.warn(`Không thể lấy thông tin equip ${dbEquipmentName}: ${err.message}`);
+    } else {
+      if (isDieAttachModel) {
+        operGroup = 'D/A';
+        equipGroupVal = 'D/A';
+        equipTypeVal = 'D/A';
+      } else {
+        operGroup = 'W/B';
+        equipGroupVal = 'W/B';
+        equipTypeVal = 'W/B';
+      }
     }
+
+    if (equipGroupVal) {
+      equipGroup = equipGroupVal;
+    }
+
+    // ĐỐI CHIẾU: NHÓM CÔNG ĐOẠN (EIF_OPER_GROUP) VÀ NHÓM THIẾT BỊ (EIF_EQP_GROUP)
+    const normOperGroup = operGroup.toUpperCase().trim();
+    const normEquipGroup = equipGroupVal.toUpperCase().trim();
+
+    // 1. Trường hợp model thiết bị là DIEATTACH:
+    // Cả công đoạn (EIF_OPER_GROUP) và thiết bị (EIF_EQP_GROUP) đều BẮT BUỘC phải là 'D/A' (hoặc 'DA')
+    if (isDieAttachModel) {
+      const isDaOper = normOperGroup === 'D/A' || normOperGroup === 'DA';
+      const isDaEquip = normEquipGroup === 'D/A' || normEquipGroup === 'DA';
+
+      if (!isDaOper || !isDaEquip) {
+        const errorMsg = `Thiết bị model DIEATTACH yêu cầu mã công đoạn (${operation}) và thiết bị (${dbEquipmentName}) phải thuộc nhóm 'D/A'. Hiện tại mã công đoạn là nhóm '${operGroup || 'Không xác định'}' và thiết bị là nhóm '${equipGroupVal || 'Không xác định'}'.`;
+        this.logger.warn(`❌ [Check DieAttach Group Error] ${errorMsg}`);
+
+        // Ghi nhận lịch sử kiểm tra lỗi Interlock vào BIZ_ILRULE_CHECK_HISTORY
+        await this.recordInterlockHistory(
+          targetPlant,
+          item.LOT_NUMBER || '',
+          dbEquipmentName,
+          operation,
+          item.PCB_ID || '',
+          parsed.rawMessage,
+          errorMsg,
+          'N',
+          'EIF-DA01',
+          'RK20260121-0001',
+          {
+            recipeId: item.RECIPE || 'ITMRecipe',
+            transTime: transTime,
+            eifDevice: item.CONFIG || '',
+            transCode: 'EPBV',
+            deviceStype: deviceStype,
+            userId: dbEquipmentName,
+          }
+        );
+
+        return {
+          isValid: false,
+          plant: targetPlant,
+          operation,
+          device,
+          deviceStype,
+          equipGroup: equipGroupVal || equipGroup,
+          equipType: equipTypeVal,
+          equipmentModel: equipModel,
+          operGroup,
+          equipGroupVal,
+          rtnYN: 'NG',
+          rtnPause: 'N',
+          rtnMsgID: 'EIF-DA01',
+          rtnMsg: errorMsg,
+        };
+      }
+    } else {
+      // 2. Trường hợp model khác: Kiểm tra 2 nhóm có trùng khớp nhau không
+      const isGroupMatch = !!(normOperGroup && normEquipGroup && normOperGroup === normEquipGroup);
+      if (!isGroupMatch) {
+        const errorMsg = `Mã công đoạn và thiết bị không giống nhau, mã công đoạn là ${operation} (${operGroup || 'Không xác định'}) và mã thiết bị là ${dbEquipmentName} (${equipGroupVal || 'Không xác định'}).`;
+        this.logger.warn(`❌ [Check Group Mismatch] ${errorMsg}`);
+
+        // Ghi nhận lịch sử kiểm tra lỗi Interlock vào BIZ_ILRULE_CHECK_HISTORY
+        await this.recordInterlockHistory(
+          targetPlant,
+          item.LOT_NUMBER || '',
+          dbEquipmentName,
+          operation,
+          item.PCB_ID || '',
+          parsed.rawMessage,
+          errorMsg,
+          'N',
+          'EIF-OPER01',
+          'RK20260121-0001',
+          {
+            recipeId: item.RECIPE || 'ITMRecipe',
+            transTime: transTime,
+            eifDevice: item.CONFIG || '',
+            transCode: 'EPBV',
+            deviceStype: deviceStype,
+            userId: dbEquipmentName,
+          }
+        );
+
+        return {
+          isValid: false,
+          plant: targetPlant,
+          operation,
+          device,
+          deviceStype,
+          equipGroup: equipGroupVal || equipGroup,
+          equipType: equipTypeVal,
+          equipmentModel: equipModel,
+          operGroup,
+          equipGroupVal,
+          rtnYN: 'NG',
+          rtnPause: 'N',
+          rtnMsgID: 'EIF-OPER01',
+          rtnMsg: errorMsg,
+        };
+      }
+    }
+
+    this.logger.log(
+      isDieAttachModel
+        ? `✅ [Check DieAttach Match] Thiết bị ${dbEquipmentName} (model ${equipModel}) và công đoạn ${operation} đều thuộc nhóm 'D/A' (EIF_OPER_GROUP = EIF_EQP_GROUP = 'D/A'). PASS qua bước tiếp theo.`
+        : `✅ [Check Group Match] Công đoạn ${operation} (nhóm: ${operGroup}) và thiết bị ${dbEquipmentName} (nhóm: ${equipGroupVal}) trùng khớp (EIF_OPER_GROUP = EIF_EQP_GROUP = '${operGroup}'). PASS qua bước tiếp theo.`
+    );
 
     // 3. TRUY VẤN ĐỐI CHIẾU RULE TRONG BIZ_ILRULE_INFO: ƯU TIÊN GIÁ TRỊ CỤ THỂ TRƯỚC, NẾU KHÔNG CÓ MỚI ÁP DỤNG 'ALL'
     try {
@@ -467,39 +761,9 @@ export class DieAttachService {
       this.logger.debug(`Lỗi truy vấn danh sách rule từ BIZ_ILRULE_INFO: ${err.message}`);
     }
 
-    // Kiểm tra và đồng bộ thời gian giao dịch với MES
     // Stored Procedure của MES (SEMI_RULE_INTERLOCK) kiểm tra:
     // Nếu (to_date(ArgTransTime) - sysdate) lệch quá +-20 phút sẽ bị chặn ngay với mã lỗi EIF-COM02:
     // 'Trans Time was sent back in time past system time. Please check the time settings.'
-    let transTime = (item.TRANS_TIME || '').trim();
-    const now = new Date();
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    const systemTime = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-
-    if (!transTime || transTime.length !== 14) {
-      transTime = systemTime;
-    } else {
-      try {
-        const year = parseInt(transTime.substring(0, 4), 10);
-        const month = parseInt(transTime.substring(4, 6), 10) - 1;
-        const day = parseInt(transTime.substring(6, 8), 10);
-        const hour = parseInt(transTime.substring(8, 10), 10);
-        const minute = parseInt(transTime.substring(10, 12), 10);
-        const second = parseInt(transTime.substring(12, 14), 10);
-        const eqpDate = new Date(year, month, day, hour, minute, second);
-        const diffMinutes = Math.abs((now.getTime() - eqpDate.getTime()) / (1000 * 60));
-        
-        // Nếu thiết bị gửi thời gian lệch quá 15 phút (do đồng hồ EQP sai hoặc test với log cũ), dùng systemTime
-        if (diffMinutes > 15) {
-          this.logger.warn(
-            `[Time Sync] Thiết bị ${dbEquipmentName} gửi TRANS_TIME (${transTime}) lệch ${Math.round(diffMinutes)} phút so với server (${systemTime}). Tự động dùng giờ hệ thống để gửi sang MES.`
-          );
-          transTime = systemTime;
-        }
-      } catch {
-        transTime = systemTime;
-      }
-    }
 
     const odb = this.oracleService.getOracledb();
     const BIND_OUT = odb?.BIND_OUT || 3003;
@@ -596,12 +860,61 @@ export class DieAttachService {
         );
       }
 
+      // Nếu kết quả kiểm tra THÀNH CÔNG (Pass / OK), tự động ghi nhận vào bảng Scan History (e.g. AFA_SEMI_WB_SCAN_HIS)
+      let scanHistoryResult: {
+        tableName?: string;
+        inserted?: boolean;
+        rowsAffected?: number;
+        oldRowsUpdated?: number;
+        equipType?: string;
+        equipGroup?: string;
+        sql?: string;
+        updateSql?: string;
+        insertSql?: string;
+        mergeSql?: string;
+        binds?: Record<string, any>;
+      } = {};
+
+      if (isValid) {
+        try {
+          scanHistoryResult = await this.recordScanHistoryOnSuccess({
+            plant: targetPlant,
+            equipmentId: dbEquipmentName,
+            parsedEquipment: parsed.equipment,
+            operation,
+            device,
+            deviceStype,
+            lotNumber: item.LOT_NUMBER || '',
+            pcbId: item.PCB_ID || '',
+            transTime: transTime,
+            recipeId: item.RECIPE || 'ITMRecipe',
+            eqpOpt05: item.ID || 'No ID',
+          });
+        } catch (scanErr: any) {
+          this.logger.error(`[Scan History Insert Error] Lỗi ghi nhận lịch sử scan: ${scanErr.message}`);
+        }
+      }
+
       return {
         isValid,
         plant: targetPlant,
         operation,
+        device,
         deviceStype,
-        equipGroup,
+        equipGroup: scanHistoryResult.equipGroup || equipGroup,
+        equipType: scanHistoryResult.equipType,
+        equipmentModel: equipModel,
+        operGroup,
+        equipGroupVal,
+        scanHistoryTable: scanHistoryResult.tableName,
+        scanHistoryInserted: scanHistoryResult.inserted,
+        scanHistoryRows: scanHistoryResult.rowsAffected,
+        oldRowsUpdated: scanHistoryResult.oldRowsUpdated,
+        scanHistorySql: scanHistoryResult.sql || scanHistoryResult.insertSql,
+        scanHistoryUpdateSql: scanHistoryResult.updateSql,
+        scanHistoryInsertSql: scanHistoryResult.insertSql,
+        scanHistoryMergeSql: scanHistoryResult.mergeSql,
+        scanHistoryBinds: scanHistoryResult.binds,
         appliedRules,
         rtnYN,
         rtnPause,
@@ -643,6 +956,10 @@ export class DieAttachService {
         isValid: false,
         plant: targetPlant,
         operation,
+        device,
+        deviceStype,
+        equipGroup,
+        equipmentModel: equipModel,
         rtnYN: 'NG',
         rtnPause: 'N',
         rtnMsgID: 'EIF-ERR',
@@ -762,6 +1079,362 @@ export class DieAttachService {
   }
 
   /**
+   * Tra cứu loại máy (EQUIPMENT_TYPE) và nhóm máy (EQUIPMENT_GROUP) từ ADM_GROUP_CATEGORY_DATA,
+   * sau đó tra cứu tên bảng cần ghi nhận lịch sử scan từ ADM_USER_CODE_DATA (TABLE_NAME = 'EIF_TYPE_TABLE')
+   */
+  async resolveScanHistoryTable(
+    plant: string,
+    equipId: string,
+    parsedEquip?: string
+  ): Promise<{
+    equipType: string;
+    equipGroup: string;
+    tableName: string;
+  } | null> {
+    try {
+      if (this.oracleService.isUsingFallback()) return null;
+
+      const candidates = [equipId, parsedEquip].filter(Boolean) as string[];
+
+      let equipType = '';
+      let equipGroup = '';
+
+      for (const eq of candidates) {
+        const sqlCategory = `
+          SELECT GROUP_OBJECT AS EQP_ID, GROUP_CATEGORY, GROUP_VALUE, GROUP_INDEX 
+            FROM ADM_GROUP_CATEGORY_DATA 
+           WHERE PLANT = :plant 
+             AND GROUP_TARGET = 'EQUIPMENT' 
+             AND GROUP_OBJECT = :eq 
+             AND GROUP_INDEX IN ('12', '13')
+        `;
+        const catRows = await this.oracleService.executeQuery<{
+          EQP_ID: string;
+          GROUP_CATEGORY: string;
+          GROUP_VALUE: string;
+          GROUP_INDEX: number;
+        }>(sqlCategory, { plant, eq }, 'ITMVMES');
+
+        if (catRows && catRows.length > 0) {
+          for (const row of catRows) {
+            const val = (row.GROUP_VALUE || '').trim();
+            if (row.GROUP_CATEGORY === 'EIF_EQP_TYPE' || String(row.GROUP_INDEX) === '12') {
+              equipType = val;
+            }
+            if (row.GROUP_CATEGORY === 'EIF_EQP_GROUP' || String(row.GROUP_INDEX) === '13') {
+              equipGroup = val;
+            }
+          }
+          if (equipGroup || equipType) break;
+        }
+      }
+
+      if (!equipGroup && equipType) equipGroup = equipType;
+      if (!equipGroup) {
+        equipGroup = 'W/B';
+        equipType = 'W/B';
+      }
+
+      // 2. Tra cứu tên bảng trong ADM_USER_CODE_DATA
+      const sqlCode = `
+        SELECT CODE_NAME, CODE_GROUP1, DESCRIPTION_EXP2 
+          FROM ADM_USER_CODE_DATA 
+         WHERE PLANT = :plant 
+           AND TABLE_NAME = 'EIF_TYPE_TABLE' 
+           AND CODE_NAME = :codeName
+      `;
+      const codeRows = await this.oracleService.executeQuery<{
+        CODE_NAME: string;
+        CODE_GROUP1: string;
+        DESCRIPTION_EXP2: string;
+      }>(sqlCode, { plant, codeName: equipGroup }, 'ITMVMES');
+
+      const tableName = (codeRows?.[0]?.CODE_GROUP1 || 'AFA_SEMI_WB_SCAN_HIS').trim();
+
+      return {
+        equipType: equipType || equipGroup,
+        equipGroup,
+        tableName,
+      };
+    } catch (err: any) {
+      this.logger.warn(`Lỗi phân giải bảng scan history: ${err.message}`);
+      return {
+        equipType: 'W/B',
+        equipGroup: 'W/B',
+        tableName: 'AFA_SEMI_WB_SCAN_HIS',
+      };
+    }
+  }
+
+  /**
+   * Chèn lịch sử scan vào bảng sản xuất (ví dụ AFA_SEMI_WB_SCAN_HIS) khi kiểm tra Interlock thành công.
+   * Đồng thời kiểm tra nếu đã có bản ghi cùng EQUIPMENT_ID, EQUIPMENT_TYPE, EQUIPMENT_GROUP, OPERATION, BARCODE_TYPE, BARCODE_ID
+   * thì cập nhật các bản ghi cũ đó về APPLY_FLAG = 'N'. Bản ghi mới nhất sẽ có APPLY_FLAG = 'Y'.
+   */
+  async recordScanHistoryOnSuccess(params: {
+    plant: string;
+    equipmentId: string;
+    parsedEquipment?: string;
+    operation: string;
+    device: string;
+    deviceStype: string;
+    lotNumber: string;
+    pcbId: string;
+    transTime: string;
+    recipeId: string;
+    eqpOpt05?: string;
+  }): Promise<{
+    tableName?: string;
+    inserted?: boolean;
+    rowsAffected?: number;
+    oldRowsUpdated?: number;
+    equipType?: string;
+    equipGroup?: string;
+    sql?: string;
+    updateSql?: string;
+    insertSql?: string;
+    mergeSql?: string;
+    binds?: Record<string, any>;
+  }> {
+    try {
+      const resolved = await this.resolveScanHistoryTable(
+        params.plant,
+        params.equipmentId,
+        params.parsedEquipment
+      );
+      const tableName = resolved?.tableName || 'AFA_SEMI_WB_SCAN_HIS';
+      const equipType = resolved?.equipType || 'W/B';
+      const equipGroup = resolved?.equipGroup || 'W/B';
+      const tTime = params.transTime || new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+      const opt05 = (params.eqpOpt05 || 'No ID').trim();
+      const plant = params.plant || 'ITMVIET';
+      const equipId = params.equipmentId;
+      const oper = params.operation || '4000';
+      const barcodeId = params.pcbId;
+      const lot = params.lotNumber;
+      const dev = params.device || 'ALL';
+      const devStype = params.deviceStype || 'ALL';
+      const recipe = params.recipeId || 'ITMRecipe';
+
+      // 1. Tạo câu lệnh UPDATE các bản ghi cũ của cùng Barcode về APPLY_FLAG = 'N'
+      const updateSql = `UPDATE MIGHTY.${tableName}
+   SET APPLY_FLAG = 'N'
+ WHERE PLANT = '${plant}'
+   AND EQUIPMENT_ID = '${equipId}'
+   AND EQUIPMENT_TYPE = '${equipType}'
+   AND EQUIPMENT_GROUP = '${equipGroup}'
+   AND OPERATION = '${oper}'
+   AND BARCODE_TYPE = 'PCB'
+   AND BARCODE_ID = '${barcodeId}'
+   AND APPLY_FLAG <> 'N';`;
+
+      // 2. Tạo câu lệnh INSERT bản ghi mới với APPLY_FLAG = 'Y'
+      const insertSql = `INSERT INTO MIGHTY.${tableName} (
+  PLANT, EQUIPMENT_ID, EQUIPMENT_TYPE, EQUIPMENT_GROUP, OPERATION,
+  BARCODE_TYPE, BARCODE_ID, LOT_NUMBER, TRANS_TIME, APPLY_FLAG,
+  PROCESS_FLAG, REWORK_FLAG, START_TIME, END_TIME, PCB_ID,
+  DEVICE, DEVICE_STYPE, RECIPE_ID, EQP_OPT_05
+) VALUES (
+  '${plant}', '${equipId}', '${equipType}', '${equipGroup}', '${oper}',
+  'PCB', '${barcodeId}', '${lot}', '${tTime}', 'Y',
+  'O', 'N', '${tTime}', '${tTime}', '${barcodeId}',
+  '${dev}', '${devStype}', '${recipe}', '${opt05}'
+);`;
+
+      const combinedSql = `-- 1. Cập nhật các bản ghi cũ của cùng thiết bị & mã vạch về APPLY_FLAG = 'N'
+${updateSql}
+
+-- 2. Thêm bản ghi quét mới nhất với APPLY_FLAG = 'Y'
+${insertSql}`;
+
+      const updateBinds = {
+        plant,
+        equipId,
+        equipType,
+        equipGroup,
+        operation: oper,
+        barcodeId,
+      };
+
+      const updateSqlParameterized = `
+        UPDATE ${tableName}
+           SET APPLY_FLAG = 'N'
+         WHERE PLANT = :plant
+           AND EQUIPMENT_ID = :equipId
+           AND EQUIPMENT_TYPE = :equipType
+           AND EQUIPMENT_GROUP = :equipGroup
+           AND OPERATION = :operation
+           AND BARCODE_TYPE = 'PCB'
+           AND BARCODE_ID = :barcodeId
+           AND APPLY_FLAG <> 'N'
+      `;
+
+      // 3. Tạo câu lệnh MERGE SQL tránh trùng lặp nếu trùng đúng TRANS_TIME
+      const mergeSql = `MERGE INTO MIGHTY.${tableName} t
+USING (
+  SELECT 
+    '${plant}' AS PLANT,
+    '${equipId}' AS EQUIPMENT_ID,
+    '${oper}' AS OPERATION,
+    '${barcodeId}' AS BARCODE_ID,
+    '${tTime}' AS TRANS_TIME
+  FROM DUAL
+) s
+ON (
+  t.PLANT = s.PLANT AND 
+  t.EQUIPMENT_ID = s.EQUIPMENT_ID AND 
+  t.OPERATION = s.OPERATION AND 
+  t.BARCODE_ID = s.BARCODE_ID AND 
+  t.TRANS_TIME = s.TRANS_TIME
+)
+WHEN MATCHED THEN
+  UPDATE SET 
+    t.APPLY_FLAG = 'Y',
+    t.LOT_NUMBER = '${lot}',
+    t.DEVICE = '${dev}',
+    t.DEVICE_STYPE = '${devStype}',
+    t.RECIPE_ID = '${recipe}',
+    t.EQP_OPT_05 = '${opt05}'
+WHEN NOT MATCHED THEN
+INSERT (
+  PLANT, EQUIPMENT_ID, EQUIPMENT_TYPE, EQUIPMENT_GROUP, 
+  OPERATION, OPERATION_GROUP, 
+  BARCODE_TYPE, BARCODE_ID, LOT_NUMBER, TRANS_TIME, 
+  APPLY_FLAG, PROCESS_FLAG, REWORK_FLAG, 
+  START_TIME, END_TIME, 
+  QR_ID, PCB_ID, JIG_ID, MAGAZINE_ID, BASKET_ID, 
+  DEVICE, DEVICE_STYPE, RECIPE_ID, 
+  EQP_OPT_01, EQP_OPT_02, EQP_OPT_03, EQP_OPT_04, EQP_OPT_05, 
+  BCR_OPT_01, BCR_OPT_02, BCR_OPT_03, BCR_OPT_04, BCR_OPT_05
+) VALUES (
+  '${plant}', '${equipId}', '${equipType}', '${equipGroup}', 
+  '${oper}', NULL, 
+  'PCB', '${barcodeId}', '${lot}', '${tTime}', 
+  'Y', 'O', 'N', 
+  '${tTime}', '${tTime}', 
+  NULL, '${barcodeId}', NULL, NULL, NULL, 
+  '${dev}', '${devStype}', '${recipe}', 
+  NULL, NULL, NULL, NULL, '${opt05}', 
+  NULL, NULL, NULL, NULL, NULL
+);`;
+
+      const binds = {
+        plant,
+        equipId,
+        equipType,
+        equipGroup,
+        operation: oper,
+        barcodeId,
+        lotNumber: lot,
+        transTime: tTime,
+        pcbId: barcodeId,
+        device: dev,
+        deviceStype: devStype,
+        recipeId: recipe,
+        eqpOpt05: opt05,
+      };
+
+      const sqlMergeParameterized = `
+        MERGE INTO ${tableName} t
+        USING (
+          SELECT 
+            :plant AS PLANT,
+            :equipId AS EQUIPMENT_ID,
+            :operation AS OPERATION,
+            :barcodeId AS BARCODE_ID,
+            :transTime AS TRANS_TIME
+          FROM DUAL
+        ) s
+        ON (
+          t.PLANT = s.PLANT AND 
+          t.EQUIPMENT_ID = s.EQUIPMENT_ID AND 
+          t.OPERATION = s.OPERATION AND 
+          t.BARCODE_ID = s.BARCODE_ID AND 
+          t.TRANS_TIME = s.TRANS_TIME
+        )
+        WHEN MATCHED THEN
+          UPDATE SET 
+            t.APPLY_FLAG = 'Y',
+            t.LOT_NUMBER = :lotNumber,
+            t.DEVICE = :device,
+            t.DEVICE_STYPE = :deviceStype,
+            t.RECIPE_ID = :recipeId,
+            t.EQP_OPT_05 = :eqpOpt05
+        WHEN NOT MATCHED THEN
+        INSERT (
+          PLANT, EQUIPMENT_ID, EQUIPMENT_TYPE, EQUIPMENT_GROUP, 
+          OPERATION, OPERATION_GROUP, 
+          BARCODE_TYPE, BARCODE_ID, LOT_NUMBER, TRANS_TIME, 
+          APPLY_FLAG, PROCESS_FLAG, REWORK_FLAG, 
+          START_TIME, END_TIME, 
+          QR_ID, PCB_ID, JIG_ID, MAGAZINE_ID, BASKET_ID, 
+          DEVICE, DEVICE_STYPE, RECIPE_ID, 
+          EQP_OPT_01, EQP_OPT_02, EQP_OPT_03, EQP_OPT_04, EQP_OPT_05, 
+          BCR_OPT_01, BCR_OPT_02, BCR_OPT_03, BCR_OPT_04, BCR_OPT_05
+        )
+        VALUES (
+          :plant, :equipId, :equipType, :equipGroup, 
+          :operation, NULL, 
+          'PCB', :barcodeId, :lotNumber, :transTime, 
+          'Y', 'O', 'N', 
+          :transTime, :transTime, 
+          NULL, :pcbId, NULL, NULL, NULL, 
+          :device, :deviceStype, :recipeId, 
+          NULL, NULL, NULL, NULL, :eqpOpt05, 
+          NULL, NULL, NULL, NULL, NULL
+        )
+      `;
+
+      let rowsAffected = 1;
+      let oldRowsUpdated = 0;
+      let inserted = true;
+
+      // Thực thi DML với autoCommit: true vào Oracle MES
+      if (!this.oracleService.isUsingFallback()) {
+        try {
+          // Bước 1: Cập nhật các bản ghi cũ của cùng thiết bị, công đoạn, barcode về APPLY_FLAG = 'N'
+          oldRowsUpdated = await this.oracleService.executeDml(updateSqlParameterized, updateBinds, 'ITMVMES');
+          if (oldRowsUpdated > 0) {
+            this.logger.log(
+              `🔄 [Scan History] Đã cập nhật ${oldRowsUpdated} bản ghi cũ của barcode ${barcodeId} trên máy ${equipId} (Oper: ${oper}) về APPLY_FLAG = 'N'`
+            );
+          }
+
+          // Bước 2: Chèn bản ghi mới nhất với APPLY_FLAG = 'Y'
+          rowsAffected = await this.oracleService.executeDml(sqlMergeParameterized, binds, 'ITMVMES');
+          this.logger.log(
+            `✅ [Scan History] Đã ghi nhận thành công vào bảng ${tableName} cho máy ${equipId} (Lot: ${lot}, PCB: ${barcodeId}, Oper: ${oper}, Rows affected: ${rowsAffected})`
+          );
+        } catch (dmlErr: any) {
+          this.logger.error(`[Scan History DML Error] Lỗi khi executeDml vào ${tableName}: ${dmlErr.message}`);
+          inserted = false;
+        }
+      } else {
+        this.logger.log(
+          `ℹ️ [Scan History Mock] Giả lập cập nhật bản ghi cũ về APPLY_FLAG = 'N' và ghi mới vào ${tableName} cho máy ${equipId}`
+        );
+      }
+
+      return {
+        tableName,
+        inserted,
+        rowsAffected,
+        oldRowsUpdated,
+        equipType,
+        equipGroup,
+        sql: combinedSql,
+        updateSql,
+        insertSql,
+        mergeSql,
+        binds,
+      };
+    } catch (err: any) {
+      this.logger.error(`Lỗi khi insert Scan History: ${err.message}`);
+      return { inserted: false };
+    }
+  }
+
+  /**
    * Tạo chuỗi JSON phản hồi chuẩn S051 gửi về thiết bị EQP
    */
   formatResponse(
@@ -823,7 +1496,7 @@ export class DieAttachService {
     const item = parsed.firstItem;
     const equipRecord = await this.resolveEquipmentRecord(parsed.equipment, socketEquipmentId);
     const dbEquipmentName = equipRecord?.EQUIPMENT_ID || await this.resolveDbEquipmentName(parsed.equipment, socketEquipmentId);
-    const devicePlant = (customPlant || '').trim() || equipRecord?.PLANT?.trim() || 'ITMVIET';
+    const devicePlant = (customPlant || DieAttachService.getGlobalPlant() || '').trim() || equipRecord?.PLANT?.trim() || 'ITMVIET';
 
     const nowStr = new Date().toISOString();
     this.logger.log(`📥 Receive From EQP : ${parsed.rawMessage.trim()}`);
@@ -890,6 +1563,19 @@ export class DieAttachService {
         rtnMsgID: checkResult.rtnMsgID,
         operation: checkResult.operation,
         plant: checkResult.plant,
+        device: checkResult.device,
+        deviceStype: checkResult.deviceStype,
+        equipType: checkResult.equipType,
+        equipGroup: checkResult.equipGroup,
+        scanHistoryTable: checkResult.scanHistoryTable || 'AFA_SEMI_WB_SCAN_HIS',
+        scanHistoryInserted: checkResult.scanHistoryInserted ?? (checkResult.isValid ? true : false),
+        scanHistoryRows: checkResult.scanHistoryRows ?? (checkResult.isValid ? 1 : 0),
+        oldRowsUpdated: checkResult.oldRowsUpdated ?? 0,
+        scanHistorySql: checkResult.scanHistorySql,
+        scanHistoryUpdateSql: checkResult.scanHistoryUpdateSql,
+        scanHistoryInsertSql: checkResult.scanHistoryInsertSql,
+        scanHistoryMergeSql: checkResult.scanHistoryMergeSql,
+        scanHistoryBinds: checkResult.scanHistoryBinds,
         responseHeader: `${parsed.equipment} S051${parsed.div.trim()}`,
         responseData: {
           DATA: [
@@ -924,8 +1610,22 @@ export class DieAttachService {
       config: item.CONFIG,
       recipe: item.RECIPE,
       operation: checkResult.operation,
+      device: checkResult.device,
       deviceStype: checkResult.deviceStype,
+      equipType: checkResult.equipType,
       equipGroup: checkResult.equipGroup,
+      equipmentModel: checkResult.equipmentModel,
+      operGroup: checkResult.operGroup,
+      equipGroupVal: checkResult.equipGroupVal,
+      scanHistoryTable: checkResult.scanHistoryTable,
+      scanHistoryInserted: checkResult.scanHistoryInserted,
+      scanHistoryRows: checkResult.scanHistoryRows,
+      oldRowsUpdated: checkResult.oldRowsUpdated,
+      scanHistorySql: checkResult.scanHistorySql,
+      scanHistoryUpdateSql: checkResult.scanHistoryUpdateSql,
+      scanHistoryInsertSql: checkResult.scanHistoryInsertSql,
+      scanHistoryMergeSql: checkResult.scanHistoryMergeSql,
+      scanHistoryBinds: checkResult.scanHistoryBinds,
       appliedRules: checkResult.appliedRules,
       rtnYN: checkResult.rtnYN,
       rtnPause: checkResult.rtnPause,
@@ -940,3 +1640,4 @@ export class DieAttachService {
     return result;
   }
 }
+

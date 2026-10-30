@@ -27,3 +27,53 @@ Khi Buffer nhận chuỗi byte liên tiếp chứa 2 frame:
 4. Trích xuất `Frame 1`, tính Checksum. Nếu hợp lệ, chuyển giao cho Dispatcher.
 5. Cập nhật con trỏ buffer (Buffer Offset) trỏ đến `STX` tiếp theo của `Frame 2`.
 6. Lặp lại quá trình mà không làm rơi rớt dữ liệu hoặc rò rỉ bộ nhớ.
+
+---
+
+## 3. Luồng Xác Thực Đối Chiếu Nhóm Công Đoạn & Thiết Bị (Group Category Validation)
+
+```
+[Thiết Bị / Client]           [Interlock Controller]          [Oracle Database (ITMVMES)]
+        │                                │                                │
+        │─── 1. Gửi Lệnh Interlock M010 ─>│                                │
+        │    (Operation, EquipmentId)    │                                │
+        │                                │─── 2. Query EIF_OPER_GROUP ───>│
+        │                                │    (ADM_GROUP_CATEGORY_DATA)   │
+        │                                │<── 3. Trả về Oper Group Value ─│
+        │                                │                                │
+        │                                │─── 4. Query EIF_EQP_GROUP ────>│
+        │                                │    (ADM_GROUP_CATEGORY_DATA)   │
+        │                                │<── 5. Trả về Eqp Group Value ──│
+        │                                │                                │
+        │                                │ [So Sánh Oper vs Eqp Group]    │
+        │                                │  - KHỚP: Tiếp tục Interlock    │
+        │                                │  - LỆCH: Từ chối & Báo lỗi     │
+        │<── 6. Trả Kết Quả PASS / NG ───│                                │
+```
+
+---
+
+## 4. Luồng Ghi Nhận Lịch Sử Quét Mã Vạch MES (`AFA_SEMI_WB_SCAN_HIS`)
+
+```
+[Giao dịch Hợp lệ]           [IlruleHistory Service]         [Oracle Table: AFA_SEMI_WB_SCAN_HIS]
+        │                                │                                │
+        │─── 1. Trigger Ghi Lịch Sử ────>│                                │
+        │    (Barcode, Lot, Equip, Oper) │                                │
+        │                                │─── 2. UPDATE APPLY_FLAG = 'N'─>│ (Đánh dấu bản ghi cũ)
+        │                                │<── 3. Rows Affected: N ────────│
+        │                                │                                │
+        │                                │─── 4. INSERT APPLY_FLAG = 'Y'─>│ (Chèn bản ghi mới nhất)
+        │                                │<── 5. Insert Thành Công ───────│
+        │<── 6. Phản hồi Hoàn Tất ───────│                                │
+```
+
+---
+
+## 5. Luồng Dữ Liệu Thời Gian Thực SSE & Đồng Bộ Throttling (30s)
+
+```
+[Equipment Sockets] ──> [TCP Gateway] ──> [SSE Stream] ──(<50ms)──> [Frontend State (React.memo)]
+                                                                           │ (Render 50 dòng/trang)
+[Oracle MIGHTY]     <── [Backend Cache] <── [Device Sync (Mỗi 30s)] <──────┘ (Giảm 87% HTTP REST)
+```

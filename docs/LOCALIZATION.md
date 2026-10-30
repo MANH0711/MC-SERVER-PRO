@@ -16,7 +16,7 @@
   - `topbar`: Trạng thái hệ thống, đồng hồ ca kíp, chọn ngôn ngữ toàn cục.
   - `dashboard`: Chỉ số KPI tổng quan, biểu đồ thời gian thực.
   - `devices`: Quản lý 18 cột Master Table, bộ lọc, thao tác nhập/xuất TSV/CSV, modal nhóm thiết bị.
-  - `communication`: Bắt gói tin, Hex dump, phân tích ASCII, bộ lọc giao thức.
+  - `communication`: Bắt gói tin, Hex dump, phân tích ASCII, bộ lọc giao thức, phân trang bảng.
   - `workbench`: Bàn thử nghiệm tạo frame, kiểm tra checksum LRC/CRC16.
   - `alarms`: Trung tâm cảnh báo, quy trình xác nhận sự cố (Acknowledge).
   - `config`: Trung tâm cấu hình tham số mạng và phân quyền RBAC.
@@ -35,3 +35,13 @@
 - Tích hợp cụm nút chọn ngôn ngữ `[🇻🇳 VI] [🇺🇸 EN] [🇰🇷 KO] [🇨🇳 ZH]` trực tiếp trên Header của Modal Thêm/Sửa thiết bị.
 - Cho phép kỹ sư chuyển đổi ngôn ngữ hiển thị ngay trong quá trình nhập liệu mà không bị đóng modal hoặc mất dữ liệu form đang điền dở.
 
+---
+
+## 5. Chuẩn Hóa Thuật Ngữ Nghiệp Vụ Mới
+| Khái Niệm Mới | Tiếng Việt (`vi-VN`) | Tiếng Anh (`en-US`) | Tiếng Hàn (`ko-KR`) | Tiếng Trung (`zh-CN`) |
+| :--- | :--- | :--- | :--- | :--- |
+| Tab Lệnh Quét | **Lệnh Quét MES** | **MES Scan Command** | **MES 스캔 명령** | **MES 扫描命令** |
+| Phân trang bảng | **Số dòng hiển thị** | **Page Size** | **표시 행 수** | **显示行数** |
+| Điều hướng trang | **Trang [X] / [Y]** | **Page [X] / [Y]** | **페이지 [X] / [Y]** | **第 [X] / [Y] 页** |
+| Cách ly lỗi UI | **Thử Lại Giao Diện** | **Retry Interface** | **인터페이스 재시도** | **重试界面** |
+| Trạng thái Pool | **Sẵn sàng / Kết nối** | **Connected / Standby** | **연결됨 / 대기 중** | **已连接 / 待机** |

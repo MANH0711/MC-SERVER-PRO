@@ -12,3 +12,4 @@ npm-debug.log*
 .env.*.local
 mc-server-backend/.env
 !.env.example
+scratch/

@@ -15,6 +15,7 @@ export const ko = {
     protocol: '프로토콜 탐색기',
     mesMonitor: 'MES 모니터',
     ilruleHistory: '인터락 이력 (BIZ)',
+    interlockRulesAudit: '인터락 규칙 감사 (BIZ)',
     alarmCenter: '알람 센터',
     logs: '시스템 로그',
     configuration: '환경 설정',

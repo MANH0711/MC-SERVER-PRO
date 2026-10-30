@@ -6,31 +6,26 @@
 import React, { Suspense } from 'react';
 import { useApp } from '@/core/context';
 
-// Import all modularized Feature components
+// Core real-time views (Loaded immediately)
 import { CommunicationMonitor } from './communication';
 import { DeviceManagement } from './devices';
 import { Dashboard } from './dashboard';
-import { ProtocolExplorer } from './protocol';
-import { ConfigurationCenter } from './configuration';
-import { UserManagement } from './users';
-import { MesMonitor } from './mes';
-import { IlruleHistoryReport } from './interlock-history';
-import { AlarmCenter } from './alarms';
-import { LogCenter } from './logs';
-import { SystemHealth } from './system-health';
 
-// Re-export all features and their public APIs
+// Dynamic lazy-loaded views (Code-split into separate on-demand bundles)
+const ProtocolExplorer = React.lazy(() => import('./protocol').then((m) => ({ default: m.ProtocolExplorer })));
+const ConfigurationCenter = React.lazy(() => import('./configuration').then((m) => ({ default: m.ConfigurationCenter })));
+const UserManagement = React.lazy(() => import('./users').then((m) => ({ default: m.UserManagement })));
+const MesMonitor = React.lazy(() => import('./mes').then((m) => ({ default: m.MesMonitor })));
+const IlruleHistoryReport = React.lazy(() => import('./interlock-history').then((m) => ({ default: m.IlruleHistoryReport })));
+const InterlockRuleAuditView = React.lazy(() => import('./interlock-rules-audit').then((m) => ({ default: m.InterlockRuleAuditView })));
+const AlarmCenter = React.lazy(() => import('./alarms').then((m) => ({ default: m.AlarmCenter })));
+const LogCenter = React.lazy(() => import('./logs').then((m) => ({ default: m.LogCenter })));
+const SystemHealth = React.lazy(() => import('./system-health').then((m) => ({ default: m.SystemHealth })));
+
+// Re-export core features for external usage
 export * from './communication';
 export * from './devices';
 export * from './dashboard';
-export * from './protocol';
-export * from './configuration';
-export * from './users';
-export * from './mes';
-export * from './interlock-history';
-export * from './alarms';
-export * from './logs';
-export * from './system-health';
 
 interface FeaturesManagerProps {
   currentView?: string;
@@ -57,6 +52,8 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ currentView })
         return <MesMonitor />;
       case 'ilruleHistory':
         return <IlruleHistoryReport />;
+      case 'interlockRulesAudit':
+        return <InterlockRuleAuditView />;
       case 'alarmCenter':
         return <AlarmCenter />;
       case 'logs':

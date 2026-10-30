@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -6,6 +6,10 @@ import {
   RotateCcw,
   Check,
   X,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { CommunicationTransaction, DeviceModel } from '@/core/types';
 
@@ -47,6 +51,102 @@ interface TransactionTableProps {
   t: (key: string) => string;
 }
 
+interface TransactionTableRowProps {
+  tx: CommunicationTransaction;
+  isSelected: boolean;
+  model: string;
+  onSelect: (tx: CommunicationTransaction) => void;
+  onOpenModal: (tx: CommunicationTransaction) => void;
+}
+
+const TransactionTableRow = React.memo<TransactionTableRowProps>(
+  ({ tx, isSelected, model, onSelect, onOpenModal }) => {
+    return (
+      <tr
+        onClick={() => onSelect(tx)}
+        onDoubleClick={() => onOpenModal(tx)}
+        className={`cursor-pointer transition-colors ${
+          isSelected
+            ? 'bg-blue-600/20 text-white border-l-2 border-blue-500'
+            : 'hover:bg-slate-800/40 text-slate-300'
+        }`}
+        title="Nhấp để xem khung bên phải · Nhấp đúp để mở Modal chi tiết toàn diện"
+      >
+        <td className="py-1.5 px-2 text-slate-400 text-[10px] tabular-nums truncate">
+          {tx.timestamp.split('T')[1]?.slice(0, 11) || tx.timestamp}
+        </td>
+        <td className="py-1.5 px-1 text-center">
+          {tx.direction === 'INBOUND' ? (
+            <span className="text-emerald-400 font-bold inline-flex items-center">
+              <ArrowDownLeft className="w-3 h-3" />
+            </span>
+          ) : (
+            <span className="text-blue-400 font-bold inline-flex items-center">
+              <ArrowUpRight className="w-3 h-3" />
+            </span>
+          )}
+        </td>
+        <td className="py-1.5 px-2 font-semibold text-slate-200 truncate" title={tx.equipmentId}>
+          {tx.equipmentId}
+        </td>
+        <td className="py-1.5 px-2 font-mono text-[10px] text-amber-300 font-medium truncate" title={model}>
+          {model !== '-' ? (
+            <span className="px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/25 text-amber-300 truncate inline-block max-w-full">
+              {model}
+            </span>
+          ) : (
+            <span className="text-slate-600">-</span>
+          )}
+        </td>
+        <td className="py-1.5 px-1.5 font-bold text-cyan-400 truncate" title={tx.messageCode}>
+          {tx.messageCode}
+        </td>
+        <td className="py-1.5 px-1 text-center">
+          {tx.status === 'SUCCESS' ? (
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/60 shadow-[0_0_6px_rgba(16,185,129,0.3)]">
+              OK
+            </span>
+          ) : tx.status === 'TIMEOUT' ? (
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/60 shadow-[0_0_6px_rgba(245,158,11,0.3)]">
+              TO
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-rose-500/25 text-rose-400 border border-rose-500/70 shadow-[0_0_6px_rgba(244,63,94,0.35)]">
+              NG
+            </span>
+          )}
+        </td>
+        <td className="py-1.5 px-2 text-slate-400 truncate text-[10px]" title={tx.correlationId}>
+          {tx.correlationId}
+        </td>
+        <td className="py-1.5 px-1.5 text-right text-slate-400 truncate">
+          {tx.payloadLength}
+        </td>
+        <td className="py-1.5 px-2 text-right truncate">
+          <span
+            className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+              tx.checksumStatus === 'VALID'
+                ? 'text-emerald-400 bg-emerald-500/10'
+                : 'text-red-400 bg-red-500/10'
+            }`}
+          >
+            {tx.checksum}
+          </span>
+        </td>
+      </tr>
+    );
+  },
+  (prev, next) => {
+    return (
+      prev.isSelected === next.isSelected &&
+      prev.tx.id === next.tx.id &&
+      prev.tx.status === next.tx.status &&
+      prev.tx.timestamp === next.tx.timestamp &&
+      prev.model === next.model
+    );
+  }
+);
+
 export const TransactionTable: React.FC<TransactionTableProps> = ({
   transactions,
   filteredTransactions,
@@ -56,6 +156,10 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   devices,
   t,
 }) => {
+  // Cấu hình phân trang (Pagination & Chunking)
+  const [pageSize, setPageSize] = useState<number>(50);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
   // Đọc cấu hình độ rộng pixel từ localStorage nếu có, mặc định lấy từ DEFAULT_COLUMN_WIDTHS
   const [colWidths, setColWidths] = useState<ColumnWidthConfig>(() => {
     try {
@@ -69,6 +173,17 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
 
   const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
   const [tempWidths, setTempWidths] = useState<ColumnWidthConfig>(colWidths);
+
+  // Tự động điều chỉnh trang khi số lượng giao dịch thay đổi
+  const totalPages = pageSize === -1 ? 1 : Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  // Cắt danh sách giao dịch hiển thị theo trang để giải phóng DOM (tối đa 50 - 200 rows)
+  const paginatedTransactions = useMemo(() => {
+    if (pageSize === -1) return filteredTransactions;
+    const start = (safeCurrentPage - 1) * pageSize;
+    return filteredTransactions.slice(start, start + pageSize);
+  }, [filteredTransactions, safeCurrentPage, pageSize]);
 
   // Tính tổng chiều rộng tối thiểu của bảng
   const totalTableWidth = useMemo(() => {
@@ -305,85 +420,118 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/40">
-            {filteredTransactions.map((tx) => {
-              const isSelected = activeTx?.id === tx.id;
-              const model = tx.equipmentModel || deviceModelMap[tx.equipmentId] || '-';
-              return (
-                <tr
-                  key={tx.id}
-                  onClick={() => onSelectTx(tx)}
-                  onDoubleClick={() => onOpenModalTx(tx)}
-                  className={`cursor-pointer transition-colors ${isSelected
-                      ? 'bg-blue-600/20 text-white border-l-2 border-blue-500'
-                      : 'hover:bg-slate-800/40 text-slate-300'
-                    }`}
-                  title="Nhấp để xem khung bên phải · Nhấp đúp để mở Modal chi tiết toàn diện"
-                >
-                  <td className="py-1.5 px-2 text-slate-400 text-[10px] tabular-nums truncate">
-                    {tx.timestamp.split('T')[1]?.slice(0, 11) || tx.timestamp}
-                  </td>
-                  <td className="py-1.5 px-1 text-center">
-                    {tx.direction === 'INBOUND' ? (
-                      <span className="text-emerald-400 font-bold inline-flex items-center">
-                        <ArrowDownLeft className="w-3 h-3" />
-                      </span>
-                    ) : (
-                      <span className="text-blue-400 font-bold inline-flex items-center">
-                        <ArrowUpRight className="w-3 h-3" />
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-1.5 px-2 font-semibold text-slate-200 truncate" title={tx.equipmentId}>
-                    {tx.equipmentId}
-                  </td>
-                  <td className="py-1.5 px-2 font-mono text-[10px] text-amber-300 font-medium truncate" title={model}>
-                    {model !== '-' ? (
-                      <span className="px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/25 text-amber-300 truncate inline-block max-w-full">
-                        {model}
-                      </span>
-                    ) : (
-                      <span className="text-slate-600">-</span>
-                    )}
-                  </td>
-                  <td className="py-1.5 px-1.5 font-bold text-cyan-400 truncate" title={tx.messageCode}>
-                    {tx.messageCode}
-                  </td>
-                  <td className="py-1.5 px-1 text-center">
-                    {tx.status === 'SUCCESS' ? (
-                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/60 shadow-[0_0_6px_rgba(16,185,129,0.3)]">
-                        OK
-                      </span>
-                    ) : tx.status === 'TIMEOUT' ? (
-                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/60 shadow-[0_0_6px_rgba(245,158,11,0.3)]">
-                        TO
-                      </span>
-                    ) : (
-                      <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-rose-500/25 text-rose-400 border border-rose-500/70 shadow-[0_0_6px_rgba(244,63,94,0.35)]">
-                        NG
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-1.5 px-2 text-slate-400 truncate text-[10px]" title={tx.correlationId}>
-                    {tx.correlationId}
-                  </td>
-                  <td className="py-1.5 px-1.5 text-right text-slate-400 truncate">
-                    {tx.payloadLength}
-                  </td>
-                  <td className="py-1.5 px-2 text-right truncate">
-                    <span
-                      className={`text-[9px] px-1 py-0.2 rounded font-mono ${tx.checksumStatus === 'VALID'
-                          ? 'text-emerald-400 bg-emerald-500/10'
-                          : 'text-red-400 bg-red-500/10'
-                        }`}
-                    >
-                      {tx.checksum}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
+            {paginatedTransactions.map((tx) => (
+              <TransactionTableRow
+                key={tx.id}
+                tx={tx}
+                isSelected={activeTx?.id === tx.id}
+                model={tx.equipmentModel || deviceModelMap[tx.equipmentId] || '-'}
+                onSelect={onSelectTx}
+                onOpenModal={onOpenModalTx}
+              />
+            ))}
+            {paginatedTransactions.length === 0 && (
+              <tr>
+                <td colSpan={9} className="py-8 text-center text-xs text-slate-500">
+                  {filteredTransactions.length === 0
+                    ? 'Chưa có giao dịch nào phù hợp với bộ lọc.'
+                    : 'Không có bản ghi nào trên trang này.'}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
+      </div>
+
+      {/* Footer Phân trang & Thống kê nhanh */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 bg-slate-900/90 border-t border-slate-800 text-[11px] text-slate-400 select-none">
+        <div className="flex items-center gap-2">
+          <span>
+            {filteredTransactions.length === 0 ? (
+              'Không có dữ liệu'
+            ) : pageSize === -1 ? (
+              `Hiển thị tất cả ${filteredTransactions.length} giao dịch`
+            ) : (
+              `Hiển thị ${(safeCurrentPage - 1) * pageSize + 1} - ${Math.min(
+                safeCurrentPage * pageSize,
+                filteredTransactions.length
+              )} trên tổng số ${filteredTransactions.length} giao dịch`
+            )}
+          </span>
+          <span className="text-slate-600">|</span>
+          <div className="flex items-center gap-1">
+            <span>Hiển thị:</span>
+            {[50, 100, 200].map((sz) => (
+              <button
+                key={sz}
+                onClick={() => {
+                  setPageSize(sz);
+                  setCurrentPage(1);
+                }}
+                className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
+                  pageSize === sz
+                    ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                }`}
+              >
+                {sz}
+              </button>
+            ))}
+            <button
+              onClick={() => {
+                setPageSize(-1);
+                setCurrentPage(1);
+              }}
+              className={`px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
+                pageSize === -1
+                  ? 'bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+            >
+              Tất cả
+            </button>
+          </div>
+        </div>
+
+        {pageSize !== -1 && totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <button
+              disabled={safeCurrentPage <= 1}
+              onClick={() => setCurrentPage(1)}
+              className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Trang đầu"
+            >
+              <ChevronsLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              disabled={safeCurrentPage <= 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Trang trước"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <span className="px-2 font-mono text-slate-300">
+              Trang <strong className="text-cyan-400">{safeCurrentPage}</strong> / {totalPages}
+            </span>
+            <button
+              disabled={safeCurrentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Trang sau"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+            <button
+              disabled={safeCurrentPage >= totalPages}
+              onClick={() => setCurrentPage(totalPages)}
+              className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Trang cuối"
+            >
+              <ChevronsRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modal Cấu hình Độ rộng từng cột bằng số Pixel */}

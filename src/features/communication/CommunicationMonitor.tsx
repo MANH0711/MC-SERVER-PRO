@@ -20,6 +20,7 @@ import { MonitorToolbar } from './components/MonitorToolbar';
 import { TransactionTable } from './components/TransactionTable';
 import { TransactionInspector } from './components/TransactionInspector';
 import { DieAttachSimulatorModal } from './components/DieAttachSimulatorModal';
+import { InterlockRuleAuditModal } from './components/InterlockRuleAuditModal';
 import { TransactionDetailModal } from './components/TransactionDetailModal';
 import { copyToClipboard } from '@/core/utils/clipboard';
 
@@ -35,6 +36,7 @@ export const CommunicationMonitorView: React.FC = () => {
   const [copiedHex, setCopiedHex] = useState<boolean>(false);
   const [copiedJson, setCopiedJson] = useState<boolean>(false);
   const [showDieAttachModal, setShowDieAttachModal] = useState<boolean>(false);
+  const [showRuleAuditModal, setShowRuleAuditModal] = useState<boolean>(false);
 
   const activeTx = selectedTx || transactions[0] || null;
 
@@ -106,6 +108,7 @@ export const CommunicationMonitorView: React.FC = () => {
         onExport={handleExportPackets}
         onClear={clearTransactions}
         onOpenDieAttachTest={() => setShowDieAttachModal(true)}
+        onOpenRuleAudit={() => setShowRuleAuditModal(true)}
         t={t}
         formatNumber={formatNumber}
       />
@@ -139,9 +142,16 @@ export const CommunicationMonitorView: React.FC = () => {
       <DieAttachSimulatorModal
         isOpen={showDieAttachModal}
         onClose={() => setShowDieAttachModal(false)}
+        onOpenRuleAudit={() => setShowRuleAuditModal(true)}
       />
 
-      {/* ─── 4. Modal Chi Tiết Toàn Diện Giao Dịch (TransactionDetailModal) ─── */}
+      {/* ─── 4. Modal Báo Cáo Tra Cứu Quy Tắc Liên Khóa (InterlockRuleAuditModal) ─── */}
+      <InterlockRuleAuditModal
+        isOpen={showRuleAuditModal}
+        onClose={() => setShowRuleAuditModal(false)}
+      />
+
+      {/* ─── 5. Modal Chi Tiết Toàn Diện Giao Dịch (TransactionDetailModal) ─── */}
       <TransactionDetailModal
         transaction={modalTx}
         onClose={() => setModalTx(null)}

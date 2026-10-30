@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OracleService } from '../database/oracle.service';
+import { DieAttachService } from '../interlock/die-attach.service';
 
 export interface IlruleHistoryRecord {
   PLANT: string;
@@ -87,7 +88,7 @@ export class InterlockHistoryService {
     const pageSize = Math.min(200, Math.max(10, Number(params.pageSize) || 25));
     const offset = (page - 1) * pageSize;
 
-    const plant = params.plant || 'ITMVIET';
+    const plant = params.plant || DieAttachService.getGlobalPlant() || 'ITMVIET';
     const today = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
     const defaultEndDate = `${today.getFullYear()}${pad(today.getMonth() + 1)}${pad(today.getDate())}`;
@@ -221,7 +222,7 @@ export class InterlockHistoryService {
    * Thống kê KPI, Top Rules, Top Equipments và Daily Trend
    */
   async getStats(params: IlruleHistoryQueryParams): Promise<IlruleHistoryStats> {
-    const plant = params.plant || 'ITMVIET';
+    const plant = params.plant || DieAttachService.getGlobalPlant() || 'ITMVIET';
     const today = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
     const defaultEndDate = `${today.getFullYear()}${pad(today.getMonth() + 1)}${pad(today.getDate())}`;

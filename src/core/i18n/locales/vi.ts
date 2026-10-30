@@ -15,6 +15,7 @@ export const vi = {
     protocol: 'Protocol Explorer',
     mesMonitor: 'Giám Sát MES',
     ilruleHistory: 'Lịch Sử Interlock (BIZ)',
+    interlockRulesAudit: 'Tra Cứu BIZ_ILRULE_INFO',
     alarmCenter: 'Trung Tâm Cảnh Báo',
     logs: 'Nhật Ký Hệ Thống',
     configuration: 'Cấu Hình Hệ Thống',

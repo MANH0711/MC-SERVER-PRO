@@ -61,6 +61,9 @@ Bộ tách khung `IndustrialFrameParser` hỗ trợ chế độ **Auto-Detect Bo
 | **S005** | Station Move-In Handshake | **S006** | Move-In Permission (PASS/FAIL) | Quét mã PCB/Lot, kiểm tra quy trình công đoạn trước đó có PASS hay không. |
 | **S030** | Station Move-Out & Inspection | **S031** | Move-Out Acknowledged | Báo cáo hoàn tất công đoạn, gửi kết quả kiểm tra (AOI/SPI/ICT) và dữ liệu đo. |
 | **S040** | Equipment Alarm / Machine Error | **S041** | Alarm Recorded Ack | Thiết bị báo lỗi dừng máy (Interlock, Jam, Temperature out-of-bounds). |
+| **S050** | Die Attach Work-In Interlock Request | **S051** | Work-In Interlock Response (OK/NG) | Chuẩn lệnh kiểm tra Work-In Interlock bán dẫn. Đối với Model thiết bị là DIEATTACH: Bắt buộc gửi mã lệnh S050, nhóm công đoạn (`EIF_OPER_GROUP`) và nhóm thiết bị (`EIF_EQP_GROUP`) đều phải là 'D/A'. |
+| **M010** | Safety & Interlock Check | **M010** (Resp) | Interlock Result (PASS/NG) | Kiểm tra Interlock công đoạn bán dẫn (Die Attach/Wire Bond), đối chiếu nhóm `EIF_OPER_GROUP` = `EIF_EQP_GROUP` và tự động cập nhật lịch sử quét `AFA_SEMI_WB_SCAN_HIS`. |
+
 
 ---
 

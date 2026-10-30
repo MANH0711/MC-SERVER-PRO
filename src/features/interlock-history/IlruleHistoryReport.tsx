@@ -30,6 +30,7 @@ import {
   IlruleHistoryFilter,
 } from './api/ilruleHistoryApi';
 import { IlruleDetailModal } from './components/IlruleDetailModal';
+import { useApp } from '@/core/context';
 
 // Khởi tạo các kích thước cột mặc định (px)
 const DEFAULT_COLUMN_WIDTHS = {
@@ -49,6 +50,7 @@ const DEFAULT_COLUMN_WIDTHS = {
 type ColumnKey = keyof typeof DEFAULT_COLUMN_WIDTHS;
 
 export const IlruleHistoryReport: React.FC = () => {
+  const { selectedPlant } = useApp();
   // Bộ lọc
   const [datePreset, setDatePreset] = useState<'today' | '3d' | '7d' | '14d' | '30d' | 'custom'>('7d');
   const [startDate, setStartDate] = useState<string>(() => {
@@ -112,6 +114,7 @@ export const IlruleHistoryReport: React.FC = () => {
   const loadHistory = useCallback(async () => {
     setLoading(true);
     const filter: IlruleHistoryFilter = {
+      plant: selectedPlant,
       startDate,
       endDate,
       equipId: equipId.trim() || undefined,
@@ -128,12 +131,13 @@ export const IlruleHistoryReport: React.FC = () => {
     setData(res.data);
     setTotal(res.total);
     setLoading(false);
-  }, [startDate, endDate, equipId, lotNumber, unitId, ruleKey, alarmStatus, search, page, pageSize]);
+  }, [selectedPlant, startDate, endDate, equipId, lotNumber, unitId, ruleKey, alarmStatus, search, page, pageSize]);
 
   // Tải dữ liệu thống kê trực quan
   const loadStats = useCallback(async () => {
     setStatsLoading(true);
     const filter: IlruleHistoryFilter = {
+      plant: selectedPlant,
       startDate,
       endDate,
       equipId: equipId.trim() || undefined,
@@ -141,7 +145,7 @@ export const IlruleHistoryReport: React.FC = () => {
     const res = await ilruleHistoryApi.getStats(filter);
     setStats(res);
     setStatsLoading(false);
-  }, [startDate, endDate, equipId]);
+  }, [selectedPlant, startDate, endDate, equipId]);
 
   useEffect(() => {
     loadHistory();
@@ -183,6 +187,7 @@ export const IlruleHistoryReport: React.FC = () => {
 
   const handleExportCsv = () => {
     const filter: IlruleHistoryFilter = {
+      plant: selectedPlant,
       startDate,
       endDate,
       equipId: equipId.trim() || undefined,

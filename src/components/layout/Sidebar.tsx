@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Radio,
+  FileSearch,
 } from 'lucide-react';
 import { useTranslation } from '@/core/i18n';
 import { useApp, NavView } from '@/core/context';
@@ -37,6 +38,7 @@ export const Sidebar: React.FC = () => {
     { id: 'protocol', labelKey: 'nav.protocol', icon: FileCode2 },
     { id: 'mesMonitor', labelKey: 'nav.mesMonitor', icon: Share2 },
     { id: 'ilruleHistory', labelKey: 'nav.ilruleHistory', icon: ShieldAlert },
+    { id: 'interlockRulesAudit', labelKey: 'nav.interlockRulesAudit', icon: FileSearch },
     {
       id: 'alarmCenter',
       labelKey: 'nav.alarmCenter',
