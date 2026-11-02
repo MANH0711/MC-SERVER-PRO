@@ -17,10 +17,13 @@ import {
   Database,
   Tag,
   HardDrive,
+  FileSearch,
 } from 'lucide-react';
 import { CommunicationTransaction } from '@/core/types';
 import { copyToClipboard } from '@/core/utils/clipboard';
 import { cleanPayloadForDisplay } from '@/core/utils/payloadUtils';
+import { DeviceFileLogsViewer } from '@/features/logs/components/DeviceFileLogsViewer';
+import { DeviceLogViewerModal } from '@/features/logs/components/DeviceLogViewerModal';
 
 interface TransactionDetailModalProps {
   transaction: CommunicationTransaction | null;
@@ -31,7 +34,8 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   transaction,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'json' | 'scanhistory' | 'hexdump' | 'raw'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'json' | 'scanhistory' | 'hexdump' | 'raw' | 'filelog'>('overview');
+  const [showFileLogModal, setShowFileLogModal] = useState<boolean>(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Handle ESC key to close
@@ -247,6 +251,18 @@ INSERT INTO MIGHTY.${scanHistoryTable} (
               </span>
             )}
 
+            {/* Nút xem trực tiếp file log D:\ */}
+            {transaction.equipmentId && (
+              <button
+                onClick={() => setShowFileLogModal(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded bg-cyan-900/40 hover:bg-cyan-800/60 border border-cyan-500/50 text-cyan-200 text-[10px] font-mono transition-colors shadow-xs"
+                title={`Mở cửa sổ xem trực tiếp file log D:\\log\\${transaction.equipmentId}\\...`}
+              >
+                <FileSearch className="w-3 h-3 text-cyan-400" />
+                <span>Xem Log D:\</span>
+              </button>
+            )}
+
             {/* Link tải file log D:\log */}
             {transaction.equipmentId && (
               <a
@@ -258,7 +274,7 @@ INSERT INTO MIGHTY.${scanHistoryTable} (
                 title={`Tải file log ngày hôm nay từ D:\\log\\${transaction.equipmentId}\\...`}
               >
                 <HardDrive className="w-3 h-3 text-cyan-400" />
-                <span className="hidden sm:inline">Log File (D:\)</span>
+                <span className="hidden sm:inline">Tải Log</span>
               </a>
             )}
 
@@ -498,6 +514,21 @@ INSERT INTO MIGHTY.${scanHistoryTable} (
             >
               <Hash className="w-3.5 h-3.5" />
               <span>Khung ASCII Thô</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('filelog')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-all ${
+                activeTab === 'filelog'
+                  ? 'border-cyan-400 text-cyan-300 bg-cyan-950/20 shadow-xs'
+                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
+              }`}
+            >
+              <HardDrive className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Tệp Log D:\</span>
+              <span className="text-[9px] px-1 py-0.2 rounded bg-cyan-950 border border-cyan-700 text-cyan-300 font-mono">
+                Live
+              </span>
             </button>
           </div>
 
@@ -836,6 +867,17 @@ INSERT INTO MIGHTY.${scanHistoryTable} (
               </div>
             </div>
           )}
+
+          {/* TAB 6: TỆP LOG VẬT LÝ D:\log (LIVE FILE VIEWER WITH AUTO-SEARCH) */}
+          {activeTab === 'filelog' && (
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <DeviceFileLogsViewer
+                currentEquipId={transaction.equipmentId}
+                currentDate={transaction.timestamp ? transaction.timestamp.slice(0, 10) : undefined}
+                compact={true}
+              />
+            </div>
+          )}
         </div>
 
         {/* ─── 5. MODAL FOOTER (COMPACT) ─── */}
@@ -863,6 +905,14 @@ INSERT INTO MIGHTY.${scanHistoryTable} (
           </div>
         </div>
       </div>
+
+      {/* Cửa Sổ Popup Xem File Log Trực Tiếp Độc Lập */}
+      <DeviceLogViewerModal
+        isOpen={showFileLogModal}
+        onClose={() => setShowFileLogModal(false)}
+        initialEquipmentId={transaction.equipmentId}
+        initialDate={transaction.timestamp ? transaction.timestamp.slice(0, 10) : undefined}
+      />
     </div>
   );
 };
