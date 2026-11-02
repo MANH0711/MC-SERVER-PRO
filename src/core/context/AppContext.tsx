@@ -39,6 +39,7 @@ export type NavView =
   | 'ilruleHistory'
   | 'interlockRulesAudit'
   | 'alarmCenter'
+  | 'deviceLogs'
   | 'logs'
   | 'configuration'
   | 'users'

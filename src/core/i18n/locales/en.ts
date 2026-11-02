@@ -17,6 +17,7 @@ export const en = {
     ilruleHistory: 'Interlock History (BIZ)',
     interlockRulesAudit: 'Interlock Rules Audit',
     alarmCenter: 'Alarm Center',
+    deviceLogs: 'Device File Logs (D:\\log)',
     logs: 'System Logs',
     configuration: 'Configuration',
     users: 'Security & RBAC',

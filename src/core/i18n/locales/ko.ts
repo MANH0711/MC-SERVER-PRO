@@ -17,6 +17,7 @@ export const ko = {
     ilruleHistory: '인터락 이력 (BIZ)',
     interlockRulesAudit: '인터락 규칙 감사 (BIZ)',
     alarmCenter: '알람 센터',
+    deviceLogs: '장비 파일 로그 (D:\\log)',
     logs: '시스템 로그',
     configuration: '환경 설정',
     users: '보안 및 RBAC',

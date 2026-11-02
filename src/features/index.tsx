@@ -20,6 +20,7 @@ const IlruleHistoryReport = React.lazy(() => import('./interlock-history').then(
 const InterlockRuleAuditView = React.lazy(() => import('./interlock-rules-audit').then((m) => ({ default: m.InterlockRuleAuditView })));
 const AlarmCenter = React.lazy(() => import('./alarms').then((m) => ({ default: m.AlarmCenter })));
 const LogCenter = React.lazy(() => import('./logs').then((m) => ({ default: m.LogCenter })));
+const DeviceFileLogsViewer = React.lazy(() => import('./logs/components/DeviceFileLogsViewer').then((m) => ({ default: m.DeviceFileLogsViewer })));
 const SystemHealth = React.lazy(() => import('./system-health').then((m) => ({ default: m.SystemHealth })));
 
 // Re-export core features for external usage
@@ -58,6 +59,12 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ currentView })
         return <AlarmCenter />;
       case 'logs':
         return <LogCenter />;
+      case 'deviceLogs':
+        return (
+          <div className="flex-1 flex flex-col min-h-0 h-full p-2.5 bg-slate-950 overflow-hidden">
+            <DeviceFileLogsViewer />
+          </div>
+        );
       case 'configuration':
         return <ConfigurationCenter />;
       case 'users':

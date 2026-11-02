@@ -17,6 +17,7 @@ export const vi = {
     ilruleHistory: 'Lịch Sử Interlock (BIZ)',
     interlockRulesAudit: 'Tra Cứu BIZ_ILRULE_INFO',
     alarmCenter: 'Trung Tâm Cảnh Báo',
+    deviceLogs: 'Tệp Log Thiết Bị (D:\\log)',
     logs: 'Nhật Ký Hệ Thống',
     configuration: 'Cấu Hình Hệ Thống',
     users: 'Phân Quyền & Bảo Mật',

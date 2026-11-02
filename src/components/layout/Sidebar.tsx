@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Radio,
   FileSearch,
+  HardDrive,
 } from 'lucide-react';
 import { useTranslation } from '@/core/i18n';
 import { useApp, NavView } from '@/core/context';
@@ -46,6 +47,7 @@ export const Sidebar: React.FC = () => {
       badge: unacknowledgedAlarms > 0 ? unacknowledgedAlarms : undefined,
     },
     { id: 'logs', labelKey: 'nav.logs', icon: ScrollText },
+    { id: 'deviceLogs', labelKey: 'nav.deviceLogs', icon: HardDrive },
     { id: 'configuration', labelKey: 'nav.configuration', icon: Settings },
     { id: 'users', labelKey: 'nav.users', icon: ShieldCheck },
     { id: 'systemHealth', labelKey: 'nav.systemHealth', icon: HeartPulse },

@@ -17,6 +17,7 @@ export const zh = {
     ilruleHistory: 'Interlock 历史 (BIZ)',
     interlockRulesAudit: 'Interlock 规则审计 (BIZ)',
     alarmCenter: '告警中心',
+    deviceLogs: '设备日志文件 (D:\\log)',
     logs: '系统日志',
     configuration: '系统配置',
     users: '安全与权限',
