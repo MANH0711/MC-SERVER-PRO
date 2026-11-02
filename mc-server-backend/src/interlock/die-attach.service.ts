@@ -78,6 +78,8 @@ export interface WorkInCheckResult {
   records?: [TransactionRecord, TransactionRecord];
 }
 
+import { DeviceFileLoggerService } from '../device-logs/device-file-logger.service';
+
 @Injectable()
 export class DieAttachService {
   private readonly logger = new Logger(DieAttachService.name);
@@ -97,7 +99,8 @@ export class DieAttachService {
   constructor(
     private readonly oracleService: OracleService,
     private readonly transactionRepo: TransactionRepository,
-    private readonly equipmentRepo: EquipmentRepository
+    private readonly equipmentRepo: EquipmentRepository,
+    private readonly deviceFileLogger: DeviceFileLoggerService
   ) {}
 
   getWorkInStream(): Observable<WorkInCheckResult> {
@@ -1635,6 +1638,16 @@ INSERT (
       parsed,
       records: [rxRecord, txRecord],
     };
+
+    // Ghi file log D:\log\<equipmentId>\<yyyy-mm-dd>.log
+    await this.deviceFileLogger.logEquipmentCycle({
+      equipmentId: parsed.equipment,
+      receiveRaw: rawStr.trim(),
+      parsingInfo: `Equipment=${parsed.equipment}, State=S050, Div=${parsed.div}, Lot=${item.LOT_NUMBER}, PCB=${item.PCB_ID}`,
+      sendToEqpSummary: `${parsed.equipment}, S051`,
+      sendMessageRaw: responseMessage.trim(),
+      errorMsg: checkResult.isValid ? undefined : (checkResult.rtnMsg || 'Work-In Interlock Failed'),
+    });
 
     this.workInStream$.next(result);
     return result;

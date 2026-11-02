@@ -38,6 +38,8 @@ export interface DeviceChangeProcessResult {
   records: [TransactionRecord, TransactionRecord]; // [RX, TX]
 }
 
+import { DeviceFileLoggerService } from '../device-logs/device-file-logger.service';
+
 @Injectable()
 export class DeviceChangeService {
   private readonly logger = new Logger(DeviceChangeService.name);
@@ -46,7 +48,8 @@ export class DeviceChangeService {
   constructor(
     private readonly oracleService: OracleService,
     private readonly transactionRepo: TransactionRepository,
-    private readonly equipmentRepo: EquipmentRepository
+    private readonly equipmentRepo: EquipmentRepository,
+    private readonly deviceFileLogger: DeviceFileLoggerService
   ) {}
 
   getDeviceChangeStream(): Observable<DeviceChangeProcessResult> {
@@ -421,6 +424,16 @@ export class DeviceChangeService {
       errorMessage: checkResult.isValid ? undefined : checkResult.errorMessage,
     };
     await this.transactionRepo.logTransaction(txRecord);
+
+    // 3. Ghi file log thực tế tại D:\log\<equipmentId>\<yyyy-mm-dd>.log
+    await this.deviceFileLogger.logEquipmentCycle({
+      equipmentId: parsed.equipment,
+      receiveRaw: rawStr.trim(),
+      parsingInfo: `Equipment=${parsed.equipment}  , State=S000, Div=${parsed.div}, Checksum=${parsed.checksum}`,
+      sendToEqpSummary: `${parsed.equipment}, S001`,
+      sendMessageRaw: responseMessage.trim(),
+      errorMsg: checkResult.isValid ? undefined : checkResult.errorMessage,
+    });
 
     const result: DeviceChangeProcessResult = {
       parsed,

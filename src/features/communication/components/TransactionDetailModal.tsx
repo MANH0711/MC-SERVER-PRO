@@ -16,6 +16,7 @@ import {
   Hash,
   Database,
   Tag,
+  HardDrive,
 } from 'lucide-react';
 import { CommunicationTransaction } from '@/core/types';
 import { copyToClipboard } from '@/core/utils/clipboard';
@@ -244,6 +245,21 @@ INSERT INTO MIGHTY.${scanHistoryTable} (
                 <AlertTriangle className="w-3 h-3" />
                 <span>NG</span>
               </span>
+            )}
+
+            {/* Link tải file log D:\log */}
+            {transaction.equipmentId && (
+              <a
+                href={`${import.meta.env.VITE_API_URL || 'http://localhost:3005'}/api/v1/device-logs/${encodeURIComponent(transaction.equipmentId)}/${transaction.timestamp ? transaction.timestamp.slice(0, 10) : new Date().toISOString().slice(0, 10)}/download`}
+                target="_blank"
+                rel="noreferrer"
+                download
+                className="flex items-center gap-1 px-2 py-1 rounded bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 hover:text-white hover:bg-cyan-900/60 text-[10px] font-mono transition-colors"
+                title={`Tải file log ngày hôm nay từ D:\\log\\${transaction.equipmentId}\\...`}
+              >
+                <HardDrive className="w-3 h-3 text-cyan-400" />
+                <span className="hidden sm:inline">Log File (D:\)</span>
+              </a>
             )}
 
             <button

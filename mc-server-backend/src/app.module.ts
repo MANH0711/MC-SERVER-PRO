@@ -15,6 +15,7 @@ import { AuthorityModule } from './authority/authority.module';
 import { InterlockModule } from './interlock/interlock.module';
 import { InterlockHistoryModule } from './interlock-history/interlock-history.module';
 import { InterlockRulesModule } from './interlock-rules/interlock-rules.module';
+import { DeviceLogsModule } from './device-logs/device-logs.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { InterlockRulesModule } from './interlock-rules/interlock-rules.module';
     InterlockModule,
     InterlockHistoryModule,
     InterlockRulesModule,
+    DeviceLogsModule,
   ],
   providers: [
     {

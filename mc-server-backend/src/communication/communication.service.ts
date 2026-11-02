@@ -16,6 +16,8 @@ export interface ManualCommandDto {
   payloadHex?: string;
 }
 
+import { DeviceFileLoggerService } from '../device-logs/device-file-logger.service';
+
 @Injectable()
 export class CommunicationService {
   private readonly logger = new Logger(CommunicationService.name);
@@ -34,7 +36,8 @@ export class CommunicationService {
     private readonly commandDispatcher: CommandDispatcher,
     private readonly authorityService: AuthorityService,
     private readonly dieAttachService: DieAttachService,
-    private readonly deviceChangeService: DeviceChangeService
+    private readonly deviceChangeService: DeviceChangeService,
+    private readonly deviceFileLogger: DeviceFileLoggerService
   ) {}
 
   getTransactionStream(): Observable<TransactionRecord> {
@@ -154,6 +157,15 @@ export class CommunicationService {
       this.transactionStream$.next(rxRecord);
     }
 
+    // Ghi nhận chu kỳ giao tiếp vào file D:\log\<equipmentId>\<yyyy-mm-dd>.log
+    await this.deviceFileLogger.logEquipmentCycle({
+      equipmentId: equipment.EQUIPMENT_ID,
+      sendToEqpSummary: `${equipment.EQUIPMENT_ID}, ${cmd.commandCode}`,
+      sendMessageRaw: cmd.payloadHex ? `PAYLOAD_HEX=${cmd.payloadHex}` : `CMD=${cmd.commandCode}`,
+      receiveRaw: rxRecord?.rawHex ? `RX_HEX=${rxRecord.rawHex}` : undefined,
+      errorMsg: dispatchResult.errorMessage,
+    });
+
     return {
       success: dispatchResult.success,
       txRecord,
@@ -266,6 +278,16 @@ export class CommunicationService {
       await this.transactionRepo.logTransaction(txRecord);
       this.transactionStream$.next(txRecord);
 
+      // Ghi file log D:\log\<equipmentId>\<yyyy-mm-dd>.log
+      await this.deviceFileLogger.logEquipmentCycle({
+        equipmentId: finalEquipmentId,
+        receiveRaw: rawStr.trim(),
+        parsingInfo: `Equipment=${finalEquipmentId}, State=${cmdCode}, Div=${divRaw.trim()}`,
+        sendToEqpSummary: `${finalEquipmentId}, S051`,
+        sendMessageRaw: responseStr.trim(),
+        errorMsg: errorMessage,
+      });
+
       return Buffer.from(responseStr, 'utf-8');
     }
 
@@ -317,6 +339,16 @@ export class CommunicationService {
       await this.transactionRepo.logTransaction(txRecord);
       this.transactionStream$.next(txRecord);
 
+      // Ghi file log D:\log\<equipmentId>\<yyyy-mm-dd>.log
+      await this.deviceFileLogger.logEquipmentCycle({
+        equipmentId: equipment.EQUIPMENT_ID,
+        receiveRaw: frame.rawHex,
+        parsingInfo: `Equipment=${equipment.EQUIPMENT_ID}, Command=${frame.commandCode}, DeviceID=${equipment.DEVICE_ID}`,
+        sendToEqpSummary: `${equipment.EQUIPMENT_ID}, ${frame.commandCode}`,
+        sendMessageRaw: ChecksumUtils.bufferToHexString(respBuffer),
+        errorMsg: result.errorMessage,
+      });
+
       return respBuffer;
     } else if (!result.success) {
       // Đóng gói frame phản hồi NAK (0x15) và thông báo lỗi cho thiết bị
@@ -343,6 +375,16 @@ export class CommunicationService {
       };
       await this.transactionRepo.logTransaction(txRecord);
       this.transactionStream$.next(txRecord);
+
+      // Ghi file log D:\log\<equipmentId>\<yyyy-mm-dd>.log
+      await this.deviceFileLogger.logEquipmentCycle({
+        equipmentId: equipment.EQUIPMENT_ID,
+        receiveRaw: frame.rawHex,
+        parsingInfo: `Equipment=${equipment.EQUIPMENT_ID}, Command=${frame.commandCode}, DeviceID=${equipment.DEVICE_ID}`,
+        sendToEqpSummary: `${equipment.EQUIPMENT_ID}, NAK`,
+        sendMessageRaw: ChecksumUtils.bufferToHexString(respBuffer),
+        errorMsg: result.errorMessage,
+      });
 
       return respBuffer;
     }

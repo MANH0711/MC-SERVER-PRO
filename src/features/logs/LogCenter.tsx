@@ -28,16 +28,21 @@ import {
   FileSpreadsheet,
   ArrowUpDown,
   RotateCcw,
+  HardDrive,
+  FileText,
 } from 'lucide-react';
 import { useTranslation } from '@/core/i18n';
 import { useApp } from '@/core/context';
 import { LogCategory, LogLevel, LogEntry } from '@/core/types';
 import { copyToClipboard } from '@/core/utils/clipboard';
 
+import { DeviceFileLogsViewer } from './components/DeviceFileLogsViewer';
+
 export const LogCenterView: React.FC = () => {
   const { t } = useTranslation();
   const { logs, clearLogs, devices } = useApp();
 
+  const [activeTab, setActiveTab] = useState<'device-files' | 'system-audit'>('device-files');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [levelFilter, setLevelFilter] = useState<string>('ALL');
   const [equipmentFilter, setEquipmentFilter] = useState<string>('ALL');
@@ -289,10 +294,47 @@ export const LogCenterView: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. COMPACT FILTER & SEARCH RIBBON (OPTIMIZED FOR VIEWPORT SPACE) */}
-      <div className="p-1.5 sm:px-2.5 sm:py-1.5 rounded bg-slate-900/90 border border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0 text-xs">
-        {/* Category Pills */}
-        <div className="flex items-center gap-1 overflow-x-auto py-0.5 max-w-full">
+      {/* NAVIGATION TABS: PHYSICAL DEVICE LOGS (D:\log) vs SYSTEM AUDIT TRAIL */}
+      <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded border border-slate-800 shrink-0">
+        <button
+          onClick={() => setActiveTab('device-files')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-semibold transition-all ${
+            activeTab === 'device-files'
+              ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+          }`}
+        >
+          <HardDrive className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Tệp Log Thiết Bị (D:\log\EQP\yyyy-mm-dd.log)</span>
+          <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-mono font-medium">
+            Vật lý
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('system-audit')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-semibold transition-all ${
+            activeTab === 'system-audit'
+              ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+          }`}
+        >
+          <FileText className="w-3.5 h-3.5 text-purple-400" />
+          <span>Nhật Ký Hệ Thống (System Audit Trail)</span>
+          <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-mono">
+            {stats.total} sự kiện
+          </span>
+        </button>
+      </div>
+
+      {activeTab === 'device-files' ? (
+        <DeviceFileLogsViewer />
+      ) : (
+        <>
+          {/* 2. COMPACT FILTER & SEARCH RIBBON (OPTIMIZED FOR VIEWPORT SPACE) */}
+          <div className="p-1.5 sm:px-2.5 sm:py-1.5 rounded bg-slate-900/90 border border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0 text-xs">
+            {/* Category Pills */}
+            <div className="flex items-center gap-1 overflow-x-auto py-0.5 max-w-full">
           {(
             [
               { id: 'ALL', label: t('logs.tabs.all'), count: logs.length },
@@ -535,6 +577,8 @@ export const LogCenterView: React.FC = () => {
         </table>
         <div ref={tableBottomRef} />
       </div>
+    </>
+  )}
 
       {/* 4. DETAIL INSPECTOR MODAL (FOR AUDIT TRACE & JSON PAYLOADS) */}
       {selectedLog && (
