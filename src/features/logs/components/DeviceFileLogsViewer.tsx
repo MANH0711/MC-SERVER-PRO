@@ -16,10 +16,20 @@ import { useApp } from '@/core/context';
 import { deviceLogApi, DeviceLogFileResponse } from '../api/deviceLogApi';
 import { copyToClipboard } from '@/core/utils/clipboard';
 
-export const DeviceFileLogsViewer: React.FC = () => {
+interface DeviceFileLogsViewerProps {
+  currentEquipId?: string;
+  onDeviceChange?: (equipId: string) => void;
+}
+
+export const DeviceFileLogsViewer: React.FC<DeviceFileLogsViewerProps> = ({
+  currentEquipId,
+  onDeviceChange,
+}) => {
   const { devices } = useApp();
   const [loggedEquipments, setLoggedEquipments] = useState<string[]>([]);
-  const [selectedEquip, setSelectedEquip] = useState<string>('XNGM003');
+  const [selectedEquip, setSelectedEquip] = useState<string>(() => {
+    return currentEquipId || (devices.length > 0 ? devices[0].id : 'WB161VN');
+  });
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
@@ -30,12 +40,25 @@ export const DeviceFileLogsViewer: React.FC = () => {
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
   const terminalRef = useRef<HTMLDivElement>(null);
 
-  // 1. Tải danh sách thiết bị có log thực tế trong D:\log
+  // Đồng bộ khi prop currentEquipId thay đổi từ ngoài
+  useEffect(() => {
+    if (currentEquipId && currentEquipId !== selectedEquip) {
+      setSelectedEquip(currentEquipId);
+    }
+  }, [currentEquipId]);
+
+  // 1. Tải danh sách thiết bị chuẩn từ Database và thư mục D:\log
   const loadEquipments = async () => {
     const list = await deviceLogApi.getLoggedEquipments();
     setLoggedEquipments(list);
-    if (list.length > 0 && !list.includes(selectedEquip)) {
-      setSelectedEquip(list[0]);
+
+    if (list.length > 0) {
+      if (!selectedEquip || !list.includes(selectedEquip)) {
+        // Ưu tiên thiết bị từ prop, nếu không lấy thiết bị đầu tiên của DB
+        const initial = currentEquipId && list.includes(currentEquipId) ? currentEquipId : list[0];
+        setSelectedEquip(initial);
+        onDeviceChange?.(initial);
+      }
     }
   };
 
@@ -49,14 +72,14 @@ export const DeviceFileLogsViewer: React.FC = () => {
     deviceLogApi.getLogDates(selectedEquip).then((dates) => {
       setAvailableDates(dates);
       if (dates.length > 0) {
-        setSelectedDate(dates[0]); // Chọn ngày mới nhất
+        setSelectedDate(dates[0]); // Chọn ngày mới nhất có log
       } else {
         setSelectedDate(new Date().toISOString().slice(0, 10));
       }
     });
   }, [selectedEquip]);
 
-  // 3. Tải nội dung file log
+  // 3. Tải nội dung file log D:\log\<selectedEquip>\<selectedDate>.log
   const loadContent = async () => {
     if (!selectedEquip || !selectedDate) return;
     setLoading(true);
@@ -86,6 +109,12 @@ export const DeviceFileLogsViewer: React.FC = () => {
       terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
   }, [logData, autoScroll]);
+
+  // Đổi thiết bị
+  const handleSelectEquip = (equipId: string) => {
+    setSelectedEquip(equipId);
+    onDeviceChange?.(equipId);
+  };
 
   // Sao chép nội dung log
   const handleCopy = async () => {
@@ -147,36 +176,40 @@ export const DeviceFileLogsViewer: React.FC = () => {
     });
   };
 
-  // Gom toàn bộ danh sách thiết bị hiển thị (từ D:\log và từ GATEWAY_DEVICES)
+  // Gom toàn bộ danh sách thiết bị hiển thị (từ Database MIGHTY.GATEWAY_DEVICES và D:\log)
   const allEquipmentOptions = Array.from(
     new Set([...loggedEquipments, ...devices.map((d) => d.id)])
-  ).sort();
+  ).filter(Boolean).sort();
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#0A0F1D] text-slate-100 font-sans overflow-hidden">
       {/* ─── 1. TOOLBAR: CHỌN THIẾT BỊ, NGÀY & HÀNH ĐỘNG ─── */}
       <div className="px-4 py-2.5 bg-slate-950/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Badge Ổ đĩa D:\log */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 font-mono text-xs shadow-[0_0_10px_rgba(6,182,212,0.15)]">
+          {/* Badge Hiển thị đường dẫn file log thật theo ID thiết bị DB */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-cyan-950/90 border border-cyan-500/60 text-cyan-300 font-mono text-xs shadow-[0_0_10px_rgba(6,182,212,0.2)]">
             <HardDrive className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="font-bold">Ổ D:\log</span>
+            <span className="text-slate-400">File Log:</span>
+            <span className="font-bold text-cyan-200">D:\log\{selectedEquip}\{selectedDate}.log</span>
           </div>
 
-          {/* Chọn Thiết Bị */}
+          {/* Chọn Thiết Bị Theo ID Chuẩn Trong Database */}
           <div className="flex items-center gap-1.5 text-xs">
             <Cpu className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-400 font-medium">Thiết Bị:</span>
+            <span className="text-slate-400 font-medium">Thiết Bị (DB ID):</span>
             <select
               value={selectedEquip}
-              onChange={(e) => setSelectedEquip(e.target.value)}
+              onChange={(e) => handleSelectEquip(e.target.value)}
               className="px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-cyan-300 font-mono text-xs focus:outline-none focus:border-cyan-500 font-bold"
             >
               {allEquipmentOptions.map((eqp) => {
                 const hasLog = loggedEquipments.includes(eqp);
+                const matchedDev = devices.find((d) => d.id === eqp);
+                const modelStr = matchedDev?.model || matchedDev?.name;
+                const label = modelStr ? `${eqp} (${modelStr})` : eqp;
                 return (
                   <option key={eqp} value={eqp}>
-                    {eqp} {hasLog ? '📁 (Có file)' : ''}
+                    {label} {hasLog ? '📁 (Có file)' : ''}
                   </option>
                 );
               })}
@@ -247,7 +280,7 @@ export const DeviceFileLogsViewer: React.FC = () => {
               href={deviceLogApi.getDownloadUrl(selectedEquip, selectedDate)}
               download={`${selectedEquip}_${selectedDate}.log`}
               className="flex items-center gap-1 px-3 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-[0_0_12px_rgba(6,182,212,0.35)] transition-all"
-              title="Tải file .log về máy"
+              title={`Tải file D:\\log\\${selectedEquip}\\${selectedDate}.log về máy`}
             >
               <Download className="w-3.5 h-3.5" />
               <span>Tải File .LOG</span>
@@ -256,7 +289,7 @@ export const DeviceFileLogsViewer: React.FC = () => {
         </div>
       </div>
 
-      {/* ─── 2. THÔNG TIN FILE VẬT LÝ TRÊN Ổ D:\ ─── */}
+      {/* ─── 2. THÔNG TIN FILE VẬT LÝ TRÊN Ổ D:\ THEO ID THIẾT BỊ DB ─── */}
       <div className="px-4 py-1.5 bg-[#0B1324] border-b border-slate-800/80 flex items-center justify-between text-[11px] font-mono shrink-0">
         <div className="flex items-center gap-2 text-slate-300 truncate">
           <FolderOpen className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -281,48 +314,41 @@ export const DeviceFileLogsViewer: React.FC = () => {
           </span>
           <span>·</span>
           <span>
-            Tổng Dòng: <b className="text-cyan-300">{logData?.linesCount || 0}</b>
+            Tổng Dòng: <b className="text-slate-200">{logData?.linesCount || 0}</b>
           </span>
         </div>
       </div>
 
-      {/* ─── 3. TERMINAL/CONSOLE LOG VIEWER ─── */}
+      {/* ─── 3. LOG CONTENT TERMINAL VIEWER ─── */}
       <div
         ref={terminalRef}
-        className="flex-1 overflow-y-auto p-3 bg-black/90 font-mono text-xs select-text selection:bg-cyan-500/30 selection:text-white"
+        className="flex-1 overflow-y-auto p-3 font-mono text-xs bg-[#060913] select-text space-y-0.5 leading-relaxed"
       >
         {loading ? (
-          <div className="h-full flex items-center justify-center text-slate-500 gap-2">
-            <RefreshCw className="w-5 h-5 animate-spin text-cyan-400" />
-            <span>Đang đọc dữ liệu file log từ ổ đĩa D:\...</span>
+          <div className="flex flex-col items-center justify-center h-48 gap-3 text-slate-400">
+            <RefreshCw className="w-6 h-6 animate-spin text-cyan-400" />
+            <p className="text-xs font-mono">Đang tải file log D:\log\{selectedEquip}\{selectedDate}.log...</p>
           </div>
-        ) : logData?.exists && logData.content ? (
-          <div className="space-y-0.5">{renderLogLines(logData.content)}</div>
+        ) : !logData?.exists ? (
+          <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-500">
+            <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400">
+              <FileCode className="w-6 h-6" />
+            </div>
+            <div className="text-center space-y-1">
+              <p className="text-xs font-bold text-slate-300 font-mono">
+                Chưa có file log ngày [{selectedDate}] cho thiết bị [{selectedEquip}]
+              </p>
+              <p className="text-[11px] text-slate-500 font-mono">
+                Đường dẫn dự kiến: D:\log\{selectedEquip}\{selectedDate}.log
+              </p>
+              <p className="text-[10px] text-slate-500">
+                File log sẽ tự động được tạo và ghi nhận khi thiết bị [{selectedEquip}] gửi bản tin (S000, S050, Socket...)
+              </p>
+            </div>
+          </div>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center text-slate-500 italic space-y-2 select-none">
-            <AlertCircle className="w-8 h-8 text-slate-600" />
-            <div>
-              Chưa có dữ liệu file log tại{' '}
-              <code className="text-cyan-400 not-italic font-bold">
-                D:\log\{selectedEquip}\{selectedDate}.log
-              </code>
-            </div>
-            <div className="text-[11px] text-slate-600">
-              Hệ thống sẽ tự động tạo file và ghi nhật ký ngay khi thiết bị thực hiện kết nối hoặc gửi/nhận lệnh.
-            </div>
-          </div>
+          renderLogLines(logData.content)
         )}
-      </div>
-
-      {/* ─── 4. FOOTER STATUS BAR ─── */}
-      <div className="px-4 py-1.5 bg-slate-950/90 border-t border-slate-800 flex items-center justify-between text-[10.5px] font-mono text-slate-400 shrink-0">
-        <div className="flex items-center gap-2">
-          <FileCode className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Định dạng ghi chuẩn: <code className="text-slate-300">YYYY-MM-DD-hh:mm:ss.fff AM/PM : Action : Payload</code></span>
-        </div>
-        <div className="text-emerald-400 font-bold">
-          ● Hệ thống tự động ghi nhật ký thời gian thực vào ổ D:\log
-        </div>
       </div>
     </div>
   );

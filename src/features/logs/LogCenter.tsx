@@ -43,6 +43,7 @@ export const LogCenterView: React.FC = () => {
   const { logs, clearLogs, devices } = useApp();
 
   const [activeTab, setActiveTab] = useState<'device-files' | 'system-audit'>('device-files');
+  const [selectedDeviceLogId, setSelectedDeviceLogId] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [levelFilter, setLevelFilter] = useState<string>('ALL');
   const [equipmentFilter, setEquipmentFilter] = useState<string>('ALL');
@@ -305,9 +306,11 @@ export const LogCenterView: React.FC = () => {
           }`}
         >
           <HardDrive className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Tệp Log Thiết Bị (D:\log\EQP\yyyy-mm-dd.log)</span>
-          <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-mono font-medium">
-            Vật lý
+          <span>
+            Tệp Log Thiết Bị (D:\log\{selectedDeviceLogId || (devices.length > 0 ? devices[0].id : 'WB161VN')}\yyyy-mm-dd.log)
+          </span>
+          <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-mono font-bold">
+            {selectedDeviceLogId || (devices.length > 0 ? devices[0].id : 'WB161VN')}
           </span>
         </button>
 
@@ -328,7 +331,10 @@ export const LogCenterView: React.FC = () => {
       </div>
 
       {activeTab === 'device-files' ? (
-        <DeviceFileLogsViewer />
+        <DeviceFileLogsViewer
+          currentEquipId={selectedDeviceLogId}
+          onDeviceChange={setSelectedDeviceLogId}
+        />
       ) : (
         <>
           {/* 2. COMPACT FILTER & SEARCH RIBBON (OPTIMIZED FOR VIEWPORT SPACE) */}

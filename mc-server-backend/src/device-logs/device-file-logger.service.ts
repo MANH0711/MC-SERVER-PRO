@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional, Inject, forwardRef, OnModuleInit } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import { EquipmentRepository } from '../database/equipment.repository';
 
 export interface DeviceLogFileEntry {
   filePath: string;
@@ -11,14 +12,34 @@ export interface DeviceLogFileEntry {
 }
 
 @Injectable()
-export class DeviceFileLoggerService {
+export class DeviceFileLoggerService implements OnModuleInit {
   private readonly logger = new Logger(DeviceFileLoggerService.name);
   private readonly baseDir: string;
 
-  constructor() {
+  constructor(
+    @Optional()
+    @Inject(forwardRef(() => EquipmentRepository))
+    private readonly equipmentRepo?: EquipmentRepository,
+  ) {
     // Mặc định lưu tại ổ D:\log, hoặc cấu hình qua biến môi trường LOG_STORAGE_DIR
     this.baseDir = process.env.LOG_STORAGE_DIR || 'D:\\log';
     this.ensureBaseDirectory();
+  }
+
+  /**
+   * Khởi động: Đồng bộ và tạo sẵn thư mục D:\log\<EQUIPMENT_ID> cho tất cả thiết bị trong Database
+   */
+  async onModuleInit() {
+    await this.syncDbEquipmentDirectories();
+  }
+
+  /**
+   * Chuẩn hóa ID thiết bị theo đúng định dạng viết hoa chuẩn mực của Database:
+   * Ví dụ: 'xngm003' -> 'XNGM003', 'wb161vn' -> 'WB161VN'
+   */
+  public normalizeEquipmentId(equipmentId: string): string {
+    if (!equipmentId) return 'UNKNOWN';
+    return equipmentId.trim().toUpperCase().replace(/[^a-zA-Z0-9_\-\.]/g, '_');
   }
 
   /**
@@ -33,6 +54,34 @@ export class DeviceFileLoggerService {
     } catch (err: any) {
       this.logger.error(`Không thể tạo thư mục gốc log [${this.baseDir}]: ${err.message}`);
     }
+  }
+
+  /**
+   * Quét toàn bộ thiết bị trong DB và tự động tạo thư mục D:\log\<EQUIPMENT_ID>
+   */
+  public async syncDbEquipmentDirectories(): Promise<string[]> {
+    const createdList: string[] = [];
+    if (!this.equipmentRepo) return createdList;
+
+    try {
+      const records = await this.equipmentRepo.findAll();
+      for (const rec of records) {
+        if (!rec.EQUIPMENT_ID) continue;
+        const safeId = this.normalizeEquipmentId(rec.EQUIPMENT_ID);
+        const equipDir = path.join(this.baseDir, safeId);
+        if (!fs.existsSync(equipDir)) {
+          fs.mkdirSync(equipDir, { recursive: true });
+          createdList.push(safeId);
+        }
+      }
+      if (createdList.length > 0) {
+        this.logger.log(`📁 Đã khởi tạo thư mục D:\\log\\ cho ${createdList.length} thiết bị từ DB: ${createdList.join(', ')}`);
+      }
+    } catch (err: any) {
+      this.logger.warn(`Không thể đồng bộ thư mục thiết bị DB: ${err.message}`);
+    }
+
+    return createdList;
   }
 
   /**
@@ -69,7 +118,7 @@ export class DeviceFileLoggerService {
    * Lấy đường dẫn file log tuyệt đối: D:\log\<equipmentId>\<yyyy-mm-dd>.log
    */
   public getEquipmentLogPath(equipmentId: string, dateStr?: string): string {
-    const safeEquipId = (equipmentId || 'UNKNOWN').trim().replace(/[^a-zA-Z0-9_\-\.]/g, '_');
+    const safeEquipId = this.normalizeEquipmentId(equipmentId);
     const fileName = dateStr ? (dateStr.endsWith('.log') ? dateStr : `${dateStr}.log`) : this.getLogDateFileName();
     return path.join(this.baseDir, safeEquipId, fileName);
   }
@@ -79,7 +128,7 @@ export class DeviceFileLoggerService {
    */
   public async writeLogLine(equipmentId: string, action: string, content: string, customDate?: Date): Promise<void> {
     const date = customDate || new Date();
-    const safeEquipId = (equipmentId || 'UNKNOWN').trim().replace(/[^a-zA-Z0-9_\-\.]/g, '_');
+    const safeEquipId = this.normalizeEquipmentId(equipmentId);
     const equipDir = path.join(this.baseDir, safeEquipId);
 
     try {
@@ -116,7 +165,7 @@ export class DeviceFileLoggerService {
     const { equipmentId, receiveRaw, parsingInfo, sendToEqpSummary, sendMessageRaw, errorMsg } = params;
     const date = params.timestamp || new Date();
 
-    const safeEquipId = (equipmentId || 'UNKNOWN').trim().replace(/[^a-zA-Z0-9_\-\.]/g, '_');
+    const safeEquipId = this.normalizeEquipmentId(equipmentId);
     const equipDir = path.join(this.baseDir, safeEquipId);
 
     try {
@@ -152,16 +201,34 @@ export class DeviceFileLoggerService {
   }
 
   /**
-   * Lấy danh sách các thiết bị có thư mục log trong D:\log
+   * Lấy danh sách toàn bộ ID thiết bị:
+   * Hợp nhất thiết bị từ Database Oracle (MIGHTY.GATEWAY_DEVICES) và các thư mục đang có tại D:\log
    */
   public async getLoggedEquipments(): Promise<string[]> {
     try {
-      if (!fs.existsSync(this.baseDir)) return [];
-      const entries = await fs.promises.readdir(this.baseDir, { withFileTypes: true });
-      return entries
-        .filter((e) => e.isDirectory())
-        .map((e) => e.name)
-        .sort();
+      // 1. Quét thư mục vật lý trong D:\log
+      let fsEquipments: string[] = [];
+      if (fs.existsSync(this.baseDir)) {
+        const entries = await fs.promises.readdir(this.baseDir, { withFileTypes: true });
+        fsEquipments = entries
+          .filter((e) => e.isDirectory())
+          .map((e) => e.name.toUpperCase());
+      }
+
+      // 2. Lấy danh sách thiết bị thật từ Database
+      let dbEquipments: string[] = [];
+      if (this.equipmentRepo) {
+        try {
+          const records = await this.equipmentRepo.findAll();
+          dbEquipments = records.map((r) => r.EQUIPMENT_ID.trim().toUpperCase());
+        } catch (dbErr: any) {
+          this.logger.warn(`Không thể lấy danh sách thiết bị từ DB: ${dbErr.message}`);
+        }
+      }
+
+      // 3. Hợp nhất và loại bỏ trùng lặp
+      const merged = Array.from(new Set([...dbEquipments, ...fsEquipments])).filter(Boolean).sort();
+      return merged;
     } catch (err: any) {
       this.logger.error(`Lỗi đọc danh mục thiết bị từ D:\\log: ${err.message}`);
       return [];
@@ -172,7 +239,7 @@ export class DeviceFileLoggerService {
    * Lấy danh sách các ngày có file log của một thiết bị (định dạng YYYY-MM-DD)
    */
   public async getLogDatesForEquipment(equipmentId: string): Promise<string[]> {
-    const safeEquipId = (equipmentId || 'UNKNOWN').trim().replace(/[^a-zA-Z0-9_\-\.]/g, '_');
+    const safeEquipId = this.normalizeEquipmentId(equipmentId);
     const equipDir = path.join(this.baseDir, safeEquipId);
 
     try {
@@ -195,9 +262,10 @@ export class DeviceFileLoggerService {
   public async readLogContent(
     equipmentId: string,
     dateStr: string,
-    tailLines = 500
+    tailLines = 1000
   ): Promise<DeviceLogFileEntry> {
-    const filePath = this.getEquipmentLogPath(equipmentId, dateStr);
+    const safeEquipId = this.normalizeEquipmentId(equipmentId);
+    const filePath = this.getEquipmentLogPath(safeEquipId, dateStr);
 
     try {
       if (!fs.existsSync(filePath)) {
