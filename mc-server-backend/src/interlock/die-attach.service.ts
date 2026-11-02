@@ -187,7 +187,7 @@ export class DieAttachService {
     parsedEquipment?: string,
     socketEquipmentId?: string
   ): Promise<EquipmentRecord | null> {
-    const candidateIds = [socketEquipmentId, parsedEquipment]
+    const candidateIds = [parsedEquipment, socketEquipmentId]
       .map((id) => (id || '').trim())
       .filter((id, index, self) => id.length > 0 && id.toUpperCase() !== 'UNKNOWN' && self.indexOf(id) === index);
 
@@ -1639,12 +1639,12 @@ INSERT (
       records: [rxRecord, txRecord],
     };
 
-    // Ghi file log D:\log\<equipmentId>\<yyyy-mm-dd>.log
+    // Ghi file log D:\log\<finalEquipName>\<yyyy-mm-dd>.log
     await this.deviceFileLogger.logEquipmentCycle({
-      equipmentId: parsed.equipment,
+      equipmentId: finalEquipName,
       receiveRaw: rawStr.trim(),
-      parsingInfo: `Equipment=${parsed.equipment}, State=S050, Div=${parsed.div}, Lot=${item.LOT_NUMBER}, PCB=${item.PCB_ID}`,
-      sendToEqpSummary: `${parsed.equipment}, S051`,
+      parsingInfo: `Equipment=${finalEquipName}, State=S050, Div=${parsed.div}, Lot=${item.LOT_NUMBER}, PCB=${item.PCB_ID}`,
+      sendToEqpSummary: `${finalEquipName}, S051`,
       sendMessageRaw: responseMessage.trim(),
       errorMsg: checkResult.isValid ? undefined : (checkResult.rtnMsg || 'Work-In Interlock Failed'),
     });
