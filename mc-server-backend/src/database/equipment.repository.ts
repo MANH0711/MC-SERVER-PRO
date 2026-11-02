@@ -23,6 +23,15 @@ export interface EquipmentRecord {
   CREATED_AT?: string;
 }
 
+export interface EquipmentMetadata {
+  equipmentId: string;
+  plant: string;
+  model: string;
+  equipGroup: string;
+  operation: string;
+  cachedAt: number;
+}
+
 @Injectable()
 export class EquipmentRepository {
   private readonly logger = new Logger(EquipmentRepository.name);
@@ -30,8 +39,72 @@ export class EquipmentRepository {
   // In-memory cache synced exclusively with real Oracle table MIGHTY.GATEWAY_DEVICES
   private inMemoryCache: Map<string, EquipmentRecord> = new Map();
 
+  // In-memory cache cho Metadata (Model, EQP Group, Operation) giảm tải truy vấn lặp
+  private metadataCache: Map<string, EquipmentMetadata> = new Map();
+  private readonly METADATA_TTL_MS = 5 * 60 * 1000; // 5 phút
+
   constructor(private readonly oracleService: OracleService) {
     // Đã xóa toàn bộ dữ liệu mock mặc định. Hệ thống chỉ lấy và lưu dữ liệu thật!
+  }
+
+  /**
+   * Lấy Metadata phân cấp (Model, EQP Group, Operation) với In-Memory Caching 5 phút
+   */
+  async getEquipmentMetadata(
+    plant: string,
+    equipmentId: string
+  ): Promise<{ model: string; equipGroup: string; operation: string }> {
+    const key = `${plant}:${equipmentId}`;
+    const cached = this.metadataCache.get(key);
+    if (cached && Date.now() - cached.cachedAt < this.METADATA_TTL_MS) {
+      return { model: cached.model, equipGroup: cached.equipGroup, operation: cached.operation };
+    }
+
+    let model = 'ALL';
+    let equipGroup = 'ALL';
+    let operation = 'ALL';
+
+    if (!this.oracleService.isUsingFallback()) {
+      try {
+        const equipRows = await this.oracleService.executeQuery<any>(
+          `SELECT MODEL FROM ADM_EQUIPMENT WHERE PLANT = :plant AND EQUIPMENT_ID = :equipId`,
+          { plant, equipId: equipmentId },
+          'ITMVMES'
+        );
+        if (equipRows && equipRows.length > 0 && equipRows[0].MODEL) {
+          model = equipRows[0].MODEL.trim();
+        }
+
+        const grpRows = await this.oracleService.executeQuery<any>(
+          `SELECT GROUP_INDEX, GROUP_VALUE FROM ADM_GROUP_CATEGORY_DATA 
+           WHERE PLANT = :plant AND GROUP_TARGET = 'EQUIPMENT' AND GROUP_INDEX IN (4, 13) AND GROUP_OBJECT = :equipId`,
+          { plant, equipId: equipmentId },
+          'ITMVMES'
+        );
+        if (grpRows) {
+          for (const row of grpRows) {
+            if (Number(row.GROUP_INDEX) === 13 && row.GROUP_VALUE) {
+              equipGroup = row.GROUP_VALUE.trim();
+            } else if (Number(row.GROUP_INDEX) === 4 && row.GROUP_VALUE) {
+              operation = row.GROUP_VALUE.trim();
+            }
+          }
+        }
+
+        this.metadataCache.set(key, {
+          equipmentId,
+          plant,
+          model,
+          equipGroup,
+          operation,
+          cachedAt: Date.now(),
+        });
+      } catch (err: any) {
+        this.logger.warn(`Truy vấn metadata thiết bị ${equipmentId} thất bại: ${err.message}`);
+      }
+    }
+
+    return { model, equipGroup, operation };
   }
 
   /**

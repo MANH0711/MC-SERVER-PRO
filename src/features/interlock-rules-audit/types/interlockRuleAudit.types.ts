@@ -8,6 +8,7 @@ export interface InterlockRuleAuditFilter {
   model: string;
   operation: string;
   eifEqpGroup: string;
+  transCode?: string;
 }
 
 export interface BizIlruleItem {

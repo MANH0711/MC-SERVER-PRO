@@ -36,6 +36,7 @@ export const interlockRuleApi = {
         model: filter.model?.trim() || '',
         operation: filter.operation?.trim() || '',
         eifEqpGroup: filter.eifEqpGroup?.trim() || '',
+        transCode: filter.transCode?.trim() || undefined,
       }),
     });
 

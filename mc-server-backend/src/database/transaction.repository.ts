@@ -67,7 +67,18 @@ export class TransactionRepository {
       // Thực thi tuần tự hoặc theo nhóm nhỏ trong batch
       for (const record of batch) {
         try {
-          await this.oracleService.executeDml(sql, record);
+          const bindData = {
+            transactionId: record.transactionId,
+            equipmentId: record.equipmentId,
+            commandCode: record.commandCode,
+            direction: record.direction,
+            rawHex: record.rawHex,
+            status: record.status,
+            durationMs: record.durationMs,
+            payloadJson: record.payloadJson || null,
+            errorMessage: record.errorMessage || null,
+          };
+          await this.oracleService.executeDml(sql, bindData);
         } catch (singleErr: any) {
           this.logger.debug(`Bỏ qua lỗi ghi transaction [${record.transactionId}]: ${singleErr.message}`);
         }

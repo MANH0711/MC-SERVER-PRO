@@ -1,22 +1,44 @@
 import { Controller, Post, Body, Sse, MessageEvent } from '@nestjs/common';
 import { DieAttachService, WorkInCheckResult } from './die-attach.service';
+import { DeviceChangeService, DeviceChangeProcessResult } from './device-change.service';
 import { Observable, map } from 'rxjs';
 
-export interface SimulateWorkInDto {
-  equipmentId?: string;
-  plant?: string;
-  lotNumber?: string;
-  operation?: string;
-  config?: string;
-  recipe?: string;
-  pcbId?: string;
-  transTime?: string;
-  rawMessage?: string;
-}
+import { SimulateDeviceChangeDto, SimulateWorkInDto } from './dto';
 
 @Controller('api/v1/interlock')
 export class InterlockController {
-  constructor(private readonly dieAttachService: DieAttachService) {}
+  constructor(
+    private readonly dieAttachService: DieAttachService,
+    private readonly deviceChangeService: DeviceChangeService
+  ) {}
+
+  /**
+   * Endpoint nhận và xử lý bản tin Device Change (S000 - Rule EIF-IR010)
+   */
+  @Post('device-change')
+  async processDeviceChange(
+    @Body() body: SimulateDeviceChangeDto
+  ): Promise<DeviceChangeProcessResult | { error: string }> {
+    let rawStr = body.rawMessage;
+
+    if (!rawStr) {
+      const eqp = (body.equipmentId || 'XNGM003').padEnd(10, ' ');
+      const device = body.deviceName || 'SP4743D-N-A-BW';
+      const type = body.deviceType || 'SEMI';
+      const div = 'CONFIG        ';
+      rawStr = `${eqp}S000${div};${device}^${type};${div}`;
+    }
+
+    const result = await this.deviceChangeService.processDeviceChangeMessage(
+      rawStr,
+      body.equipmentId,
+      body.plant
+    );
+    if (!result) {
+      return { error: 'Không thể phân tích hoặc xử lý bản tin Device Change (S000)' };
+    }
+    return result;
+  }
 
   /**
    * Endpoint nhận và xử lý bản tin Work-In từ thiết bị Die Attach

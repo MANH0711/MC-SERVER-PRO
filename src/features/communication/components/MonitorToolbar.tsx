@@ -86,7 +86,16 @@ export const MonitorToolbar: React.FC<MonitorToolbarProps> = ({
           {['M001', 'M002', 'S000', 'S001', 'S002', 'S003', 'S005', 'S006', 'S030', 'S031', 'S040', 'S041', 'S050', 'S051', 'E001'].map(
             (c) => (
               <option key={c} value={c}>
-                {c} {c === 'S050' ? '(Die Attach Req)' : c === 'S051' ? '(Die Attach Resp)' : ''}
+                {c}{' '}
+                {c === 'S000'
+                  ? '(Device Change Req)'
+                  : c === 'S001'
+                  ? '(Device Change Resp)'
+                  : c === 'S050'
+                  ? '(Die Attach Req)'
+                  : c === 'S051'
+                  ? '(Die Attach Resp)'
+                  : ''}
               </option>
             )
           )}
@@ -133,10 +142,10 @@ export const MonitorToolbar: React.FC<MonitorToolbarProps> = ({
         <button
           onClick={onOpenDieAttachTest}
           className="flex items-center gap-1 px-2.5 py-1 rounded bg-cyan-600/30 border border-cyan-500/80 text-cyan-200 hover:bg-cyan-600/50 hover:text-white transition-all text-[11px] font-semibold shadow-[0_0_8px_rgba(6,182,212,0.25)]"
-          title="Kiểm Tra Nghiệp Vụ Interlock Die Attach (S050/S051)"
+          title="Thử Nghiệm Lệnh SECS & Interlock Thiết Bị (S000/S050)"
         >
           <Cpu className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-          <span>Die Attach (S050)</span>
+          <span>Thử Nghiệm Lệnh (S000 / S050)</span>
         </button>
 
         <button

@@ -2,6 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OracleService } from '../database/oracle.service';
 import { DieAttachService } from '../interlock/die-attach.service';
 
+export interface DaValidationResult {
+  isValid: boolean;
+  message: string;
+  isDaOper: boolean;
+  isDaEquip: boolean;
+}
+
 export interface AuditRulesParams {
   plant?: string;
   equipmentModel?: string;
@@ -43,15 +50,20 @@ export interface BizIlruleItem {
   isSpecific: boolean;
 }
 
-export interface DaValidationResult {
-  isValid: boolean;
-  message: string;
-  isDaOper: boolean;
-  isDaEquip: boolean;
+export interface AuditRulesParams {
+  equipmentId?: string;
+  equipmentModel?: string;
+  model?: string;
+  operation?: string;
+  equipGroup?: string;
+  eifEqpGroup?: string;
+  plant?: string;
+  transCode?: string;
 }
 
 export interface AuditRulesResult {
   plant: string;
+  transCode?: string;
   equipmentModel: string;
   operation: string;
   equipmentId: string;
@@ -232,6 +244,7 @@ export class InterlockRulesService {
     let oper = (params.operation || '').trim();
     let equipModel = (params.equipmentModel || params.model || '').trim();
     let equipGroup = (params.equipGroup || params.eifEqpGroup || '').trim();
+    let transCode = (params.transCode || 'EPBV').trim().toUpperCase();
     let operGroup = '';
 
     // 1. Tự động truy vấn nếu người dùng chỉ nhập Equipment ID
@@ -354,7 +367,7 @@ export class InterlockRulesService {
                    CASE WHEN a.RULE_KEY_GROUP4 <> 'ALL' AND a.RULE_KEY_GROUP4 = :equip THEN 0 ELSE 1 END AS P_GRP4
               FROM BIZ_ILRULE_INFO a
              WHERE a.PLANT = :plant
-               AND a.TRANS_CODE = 'EPBV'
+               AND a.TRANS_CODE = :transCode
                AND a.RULE_TYPE = 'EIF'
                AND a.RULE_KEY_GROUP1 IN (:model, 'ALL')
                AND a.RULE_KEY_GROUP2 IN (:oper, 'ALL')
@@ -390,6 +403,7 @@ export class InterlockRulesService {
           sql,
           {
             plant: targetPlant,
+            transCode,
             model: resolvedModel,
             oper: resolvedOper,
             grp: resolvedGroup,
@@ -448,7 +462,7 @@ export class InterlockRulesService {
          CASE WHEN a.RULE_KEY_GROUP4 <> 'ALL' AND a.RULE_KEY_GROUP4 = '${resolvedEquip}' THEN 0 ELSE 1 END AS P_GRP4
     FROM BIZ_ILRULE_INFO a
    WHERE a.PLANT = '${targetPlant}'
-     AND a.TRANS_CODE = 'EPBV'
+     AND a.TRANS_CODE = '${transCode}'
      AND a.RULE_TYPE = 'EIF'
      AND a.RULE_KEY_GROUP1 IN ('${resolvedModel}', 'ALL')
      AND a.RULE_KEY_GROUP2 IN ('${resolvedOper}', 'ALL')
@@ -481,6 +495,7 @@ SELECT RULE_ID,
 
     return {
       plant: targetPlant,
+      transCode,
       equipmentModel: equipModel || 'ALL',
       operation: oper || 'ALL',
       equipmentId: equipId || 'ALL',

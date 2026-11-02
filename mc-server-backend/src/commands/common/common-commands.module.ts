@@ -9,6 +9,7 @@ import { M007LotTrackInHandler } from './M007.lot-track-in.handler';
 import { M008LotTrackOutHandler } from './M008.lot-track-out.handler';
 import { M009TimeSyncHandler } from './M009.time-sync.handler';
 import { M010InterlockCheckHandler } from './M010.interlock-check.handler';
+import { S000DeviceChangeHandler } from './S000.device-change.handler';
 
 export const COMMON_COMMAND_HANDLERS = [
   M001HeartbeatHandler,
@@ -21,6 +22,7 @@ export const COMMON_COMMAND_HANDLERS = [
   M008LotTrackOutHandler,
   M009TimeSyncHandler,
   M010InterlockCheckHandler,
+  S000DeviceChangeHandler,
 ];
 
 @Module({
