@@ -6,6 +6,9 @@ import {
   AlertTriangle,
   ArrowUpRight,
   FileSearch,
+  Copy,
+  Check,
+  Cpu,
 } from 'lucide-react';
 
 interface DeviceChangeTabProps {
@@ -22,6 +25,13 @@ export const DeviceChangeTab: React.FC<DeviceChangeTabProps> = ({
   const [dvcDeviceType, setDvcDeviceType] = useState<string>('SEMI');
   const [dvcLoading, setDvcLoading] = useState<boolean>(false);
   const [dvcResult, setDvcResult] = useState<any>(null);
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleTestDeviceChange = async () => {
     setDvcLoading(true);
@@ -132,15 +142,33 @@ export const DeviceChangeTab: React.FC<DeviceChangeTabProps> = ({
           </div>
 
           {/* Chuỗi Giao Thức Mẫu */}
-          <div className="p-2 rounded bg-slate-900/90 border border-slate-800 text-[10px] text-slate-400 space-y-1">
-            <div className="text-slate-300 font-semibold flex items-center justify-between">
-              <span className="whitespace-nowrap">Chuỗi SECS Gửi Đến Server:</span>
-              <span className="text-cyan-400 font-mono text-[9px]">S000CONFIG</span>
-            </div>
-            <div className="break-all text-slate-300 font-mono text-[9.5px] bg-slate-950 p-2 rounded border border-slate-800/80">
-              {dvcEquip.padEnd(10, ' ')}S000CONFIG        ;{dvcDeviceName}^{dvcDeviceType};CONFIG        
-            </div>
-          </div>
+          {(() => {
+            const rawSecsMsg = `${dvcEquip.padEnd(10, ' ')}S000CONFIG        ;${dvcDeviceName}^${dvcDeviceType};CONFIG        `;
+            return (
+              <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[10px] space-y-1.5">
+                <div className="text-slate-300 font-semibold flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-cyan-300 whitespace-nowrap">
+                    <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Chuỗi Giao Thức Mẫu (Receive From EQP - S000):</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(rawSecsMsg)}
+                    className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition-colors cursor-pointer shrink-0"
+                    title="Sao chép toàn bộ chuỗi giao thức"
+                  >
+                    {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>{copied ? 'Đã chép' : 'Sao chép'}</span>
+                  </button>
+                </div>
+                <div className="p-2 bg-slate-950 rounded border border-slate-800/90">
+                  <pre className="text-[9.5px] text-cyan-200/90 font-mono whitespace-pre-wrap break-all select-all leading-relaxed max-h-24 overflow-y-auto">
+                    {rawSecsMsg}
+                  </pre>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Pinned Bottom Action Buttons */}

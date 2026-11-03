@@ -6,6 +6,8 @@ import {
   AlertTriangle,
   ArrowUpRight,
   FileSearch,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 interface ReflowWorkInTabProps {
@@ -27,6 +29,13 @@ export const ReflowWorkInTab: React.FC<ReflowWorkInTabProps> = ({
   const [rfN2Ppm, setRfN2Ppm] = useState<string>('1000');
   const [rfLoading, setRfLoading] = useState<boolean>(false);
   const [rfResult, setRfResult] = useState<any>(null);
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleTestReflow = async () => {
     setRfLoading(true);
@@ -182,15 +191,82 @@ export const ReflowWorkInTab: React.FC<ReflowWorkInTabProps> = ({
             </div>
           </div>
 
-          <div className="p-2 rounded bg-slate-900/90 border border-slate-800 text-[10px] text-slate-400 space-y-1">
-            <div className="text-slate-300 font-semibold flex items-center justify-between">
-              <span className="whitespace-nowrap">Chuỗi Giao Thức Mẫu:</span>
-              <span className="text-orange-400 font-mono text-[9px]">S090WORKIN</span>
-            </div>
-            <div className="break-all text-slate-400 font-mono text-[9px] bg-slate-950 p-1.5 rounded border border-slate-800/80">
-              {rfEquipment} S090WORKIN ;&#123;&quot;DATA&quot;:[&#123;&quot;PCB_ID&quot;:&quot;{rfPcbId}&quot;,&quot;P_CONVEYOR_SP&quot;:&quot;{rfConveyorSpeed}&quot;,...&#125;]&#125;;WORKIN
-            </div>
-          </div>
+          {/* Chuỗi Giao Thức Mẫu Đầy Đủ */}
+          {(() => {
+            const now = new Date();
+            const pad = (n: number) => n.toString().padStart(2, '0');
+            const currentTime = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+            const payload = {
+              DATA: [
+                {
+                  REFLOW_START: currentTime,
+                  P_CONVEYOR_SP: rfConveyorSpeed || '120.00',
+                  P_N2_PPM: rfN2Ppm || '1000',
+                  P_TEMP_TOP_Z1: '150',
+                  P_TEMP_BOTTOM_Z1: '150',
+                  P_TEMP_TOP_Z2: '160',
+                  P_TEMP_BOTTOM_Z2: '160',
+                  P_TEMP_TOP_Z3: '170',
+                  P_TEMP_BOTTOM_Z3: '170',
+                  P_TEMP_TOP_Z4: '180',
+                  P_TEMP_BOTTOM_Z4: '180',
+                  P_TEMP_TOP_Z5: '190',
+                  P_TEMP_BOTTOM_Z5: '190',
+                  P_TEMP_TOP_Z6: '200',
+                  P_TEMP_BOTTOM_Z6: '200',
+                  P_TEMP_TOP_Z7: '210',
+                  P_TEMP_BOTTOM_Z7: '210',
+                  P_TEMP_TOP_Z8: '210',
+                  P_TEMP_BOTTOM_Z8: '210',
+                  P_TEMP_TOP_Z9: '220',
+                  P_TEMP_BOTTOM_Z9: '220',
+                  P_TEMP_TOP_Z10: '245',
+                  P_TEMP_BOTTOM_Z10: '245',
+                  P_TEMP_TOP_Z11: '295',
+                  P_TEMP_BOTTOM_Z11: '295',
+                  P_TEMP_TOP_Z12: '295',
+                  P_TEMP_BOTTOM_Z12: '295',
+                  P_TEMP_TOP_Z13: '240',
+                  P_TEMP_BOTTOM_Z13: '240',
+                  P_TEMP_TOP_C1: '130',
+                  P_TEMP_BOTTOM_C1: '0',
+                  AUTHORITY: 'OP',
+                  ID: 'VM3193023',
+                  LOT_NUMBER: rfLot,
+                  EQUIPMENT: rfEquipment,
+                  CONFIG: rfConfig,
+                  TRANS_TIME: currentTime,
+                  PCB_ID: rfPcbId,
+                  RECIPE: rfRecipe,
+                },
+              ],
+            };
+            const rawS090Msg = `${rfEquipment.padEnd(10, ' ')}S090WORKIN        ;${JSON.stringify(payload)};WORKIN        `;
+            return (
+              <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[10px] space-y-1.5">
+                <div className="text-slate-300 font-semibold flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-orange-300 whitespace-nowrap">
+                    <Flame className="w-3.5 h-3.5 text-orange-400" />
+                    <span>Chuỗi Giao Thức Mẫu (Receive From EQP - S090):</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(rawS090Msg)}
+                    className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-orange-300 border border-slate-700 transition-colors cursor-pointer shrink-0"
+                    title="Sao chép toàn bộ chuỗi giao thức"
+                  >
+                    {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>{copied ? 'Đã chép' : 'Sao chép'}</span>
+                  </button>
+                </div>
+                <div className="p-2 bg-slate-950 rounded border border-slate-800/90">
+                  <pre className="text-[9.5px] text-orange-200/90 font-mono whitespace-pre-wrap break-all select-all leading-relaxed max-h-24 overflow-y-auto">
+                    {rawS090Msg}
+                  </pre>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Pinned Bottom Actions */}

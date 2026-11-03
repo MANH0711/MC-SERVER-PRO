@@ -6,6 +6,9 @@ import {
   AlertTriangle,
   ArrowUpRight,
   FileSearch,
+  Copy,
+  Check,
+  Layers,
 } from 'lucide-react';
 
 interface DieAttachWorkInTabProps {
@@ -25,6 +28,13 @@ export const DieAttachWorkInTab: React.FC<DieAttachWorkInTabProps> = ({
   const [daRecipe, setDaRecipe] = useState<string>('ITMRecipe');
   const [daLoading, setDaLoading] = useState<boolean>(false);
   const [daResult, setDaResult] = useState<any>(null);
+  const [copied, setCopied] = useState<boolean>(false);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleTestDieAttach = async () => {
     setDaLoading(true);
@@ -152,15 +162,51 @@ export const DieAttachWorkInTab: React.FC<DieAttachWorkInTabProps> = ({
             </div>
           </div>
 
-          <div className="p-2 rounded bg-slate-900/90 border border-slate-800 text-[10px] text-slate-400 space-y-1">
-            <div className="text-slate-300 font-semibold flex items-center justify-between">
-              <span className="whitespace-nowrap">Chuỗi Giao Thức Mẫu:</span>
-              <span className="text-cyan-400 font-mono text-[9px]">S050WORKIN</span>
-            </div>
-            <div className="break-all text-slate-400 font-mono text-[9px] bg-slate-950 p-1.5 rounded border border-slate-800/80">
-              {daEquipment} S050WORKIN ;&#123;&quot;DATA&quot;:[&#123;&quot;PCB_ID&quot;:&quot;{daPcbId}&quot;,...&#125;]&#125;;WORKIN
-            </div>
-          </div>
+          {/* Chuỗi Giao Thức Mẫu Đầy Đủ */}
+          {(() => {
+            const now = new Date();
+            const pad = (n: number) => n.toString().padStart(2, '0');
+            const currentTime = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+            const payload = {
+              DATA: [
+                {
+                  PCB_ID: daPcbId,
+                  AUTHORITY: 'No AUTHORITY',
+                  ID: 'No ID',
+                  LOT_NUMBER: daLot,
+                  EQUIPMENT: daEquipment,
+                  CONFIG: daConfig,
+                  RECIPE: daRecipe,
+                  TRANS_TIME: currentTime,
+                },
+              ],
+            };
+            const rawS050Msg = `${daEquipment.padEnd(10, ' ')}S050WORKIN        ;${JSON.stringify(payload)};WORKIN        `;
+            return (
+              <div className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 text-[10px] space-y-1.5">
+                <div className="text-slate-300 font-semibold flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-cyan-300 whitespace-nowrap">
+                    <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Chuỗi Giao Thức Mẫu (Receive From EQP - S050):</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(rawS050Msg)}
+                    className="flex items-center gap-1 text-[9px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition-colors cursor-pointer shrink-0"
+                    title="Sao chép toàn bộ chuỗi giao thức"
+                  >
+                    {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>{copied ? 'Đã chép' : 'Sao chép'}</span>
+                  </button>
+                </div>
+                <div className="p-2 bg-slate-950 rounded border border-slate-800/90">
+                  <pre className="text-[9.5px] text-cyan-200/90 font-mono whitespace-pre-wrap break-all select-all leading-relaxed max-h-24 overflow-y-auto">
+                    {rawS050Msg}
+                  </pre>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Pinned Bottom Actions */}
