@@ -747,18 +747,26 @@ export class DieAttachService {
       );
 
       if (ruleRows && ruleRows.length > 0) {
-        appliedRules = ruleRows.map((r) => ({
-          ruleId: r.RULE_ID,
-          ruleKey: r.RULE_KEY,
-          ruleKeyGroup1: r.RULE_KEY_GROUP1,
-          ruleKeyGroup2: r.RULE_KEY_GROUP2,
-          ruleKeyGroup3: r.RULE_KEY_GROUP3,
-          ruleKeyGroup4: r.RULE_KEY_GROUP4,
-          checkType: r.CHECK_TYPE,
-          bindItem: r.BIND_ITEM,
-          errorMsg: r.ERROR_MSG_E,
-          sql: r.CHECK_SQL_1,
-        }));
+        appliedRules = ruleRows.map((r) => {
+          const isSpecific =
+            r.RULE_KEY_GROUP1 !== 'ALL' ||
+            r.RULE_KEY_GROUP2 !== 'ALL' ||
+            r.RULE_KEY_GROUP3 !== 'ALL' ||
+            r.RULE_KEY_GROUP4 !== 'ALL';
+          return {
+            ruleId: r.RULE_ID,
+            ruleKey: r.RULE_KEY,
+            ruleKeyGroup1: r.RULE_KEY_GROUP1,
+            ruleKeyGroup2: r.RULE_KEY_GROUP2,
+            ruleKeyGroup3: r.RULE_KEY_GROUP3,
+            ruleKeyGroup4: r.RULE_KEY_GROUP4,
+            checkType: r.CHECK_TYPE,
+            bindItem: r.BIND_ITEM,
+            errorMsg: r.ERROR_MSG_E,
+            sql: r.CHECK_SQL_1,
+            isSpecific,
+          };
+        });
       }
     } catch (err: any) {
       this.logger.debug(`Lỗi truy vấn danh sách rule từ BIZ_ILRULE_INFO: ${err.message}`);

@@ -281,10 +281,14 @@ export const DieAttachWorkInTab: React.FC<DieAttachWorkInTabProps> = ({
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {daResult.appliedRules.map((r: any, idx: number) => {
                     const isSpecific =
-                      r.ruleKeyGroup1 !== 'ALL' ||
-                      r.ruleKeyGroup2 !== 'ALL' ||
-                      r.ruleKeyGroup3 !== 'ALL' ||
-                      r.ruleKeyGroup4 !== 'ALL';
+                      r.isSpecific !== undefined
+                        ? r.isSpecific
+                        : (
+                            (r.ruleKeyGroup1 ?? r.RULE_KEY_GROUP1 ?? 'ALL') !== 'ALL' ||
+                            (r.ruleKeyGroup2 ?? r.RULE_KEY_GROUP2 ?? 'ALL') !== 'ALL' ||
+                            (r.ruleKeyGroup3 ?? r.RULE_KEY_GROUP3 ?? 'ALL') !== 'ALL' ||
+                            (r.ruleKeyGroup4 ?? r.RULE_KEY_GROUP4 ?? 'ALL') !== 'ALL'
+                          );
                     return (
                       <div
                         key={idx}

@@ -650,25 +650,88 @@ export class ReflowService {
     equipGroup = equipGroupVal || 'REFLOW';
     equipType = equipTypeVal || 'SMT';
 
-    // 4. TRUY VẤN DANH SÁCH RULE LIÊN KHÓA TRONG BIZ_ILRULE_INFO
+    // 4. TRUY VẤN ĐỐI CHIẾU RULE TRONG BIZ_ILRULE_INFO: ƯU TIÊN GIÁ TRỊ CỤ THỂ TRƯỚC, NẾU KHÔNG CÓ MỚI ÁP DỤNG 'ALL'
     try {
       const matchSql = `
-        SELECT RULE_ID, RULE_KEY, RULE_KEY_GROUP1, RULE_KEY_GROUP2, RULE_KEY_GROUP3, RULE_KEY_GROUP4, ERROR_MSG_E
-          FROM MIGHTY.BIZ_ILRULE_INFO
-         WHERE PLANT = :plant
-           AND TRANS_CODE = 'EPBV'
-           AND ACTIVE_FLAG = 'Y'
-           AND RULE_KEY_GROUP3 IN (:equipGroup, 'ALL')
-           AND RULE_KEY_GROUP4 IN (:equipId, 'ALL')
-         ORDER BY RULE_ID
+        WITH MATCHED_CANDIDATES AS (
+          SELECT a.RULE_ID,
+                 a.RULE_KEY,
+                 a.RULE_KEY_GROUP1,
+                 a.RULE_KEY_GROUP2,
+                 a.RULE_KEY_GROUP3,
+                 a.RULE_KEY_GROUP4,
+                 a.CHECK_TYPE,
+                 NVL(a.BIND_ITEM, 'NONE') AS BIND_ITEM,
+                 a.CHECK_SQL_1,
+                 a.ERROR_MSG_E,
+                 CASE WHEN a.RULE_KEY_GROUP1 <> 'ALL' AND a.RULE_KEY_GROUP1 = :deviceStype THEN 0 ELSE 1 END AS P_GRP1,
+                 CASE WHEN a.RULE_KEY_GROUP2 <> 'ALL' AND a.RULE_KEY_GROUP2 = :operation   THEN 0 ELSE 1 END AS P_GRP2,
+                 CASE WHEN a.RULE_KEY_GROUP3 <> 'ALL' AND a.RULE_KEY_GROUP3 = :equipGroup   THEN 0 ELSE 1 END AS P_GRP3,
+                 CASE WHEN a.RULE_KEY_GROUP4 <> 'ALL' AND a.RULE_KEY_GROUP4 = :equipId      THEN 0 ELSE 1 END AS P_GRP4
+            FROM MIGHTY.BIZ_ILRULE_INFO a
+           WHERE a.PLANT = :plant
+             AND a.TRANS_CODE = 'EPBV'
+             AND a.RULE_TYPE = 'EIF'
+             AND a.ACTIVE_FLAG = 'Y'
+             AND a.RULE_KEY_GROUP1 IN (:deviceStype, 'ALL')
+             AND a.RULE_KEY_GROUP2 IN (:operation, 'ALL')
+             AND a.RULE_KEY_GROUP3 IN (:equipGroup, 'ALL')
+             AND a.RULE_KEY_GROUP4 IN (:equipId, 'ALL')
+        ),
+        RANKED_RULES AS (
+          SELECT m.*,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY m.RULE_ID 
+                   ORDER BY m.P_GRP1 ASC, m.P_GRP2 ASC, m.P_GRP3 ASC, m.P_GRP4 ASC, m.RULE_KEY DESC
+                 ) AS RN
+            FROM MATCHED_CANDIDATES m
+        )
+        SELECT RULE_ID,
+               RULE_KEY,
+               RULE_KEY_GROUP1,
+               RULE_KEY_GROUP2,
+               RULE_KEY_GROUP3,
+               RULE_KEY_GROUP4,
+               CHECK_TYPE,
+               BIND_ITEM,
+               ERROR_MSG_E,
+               CHECK_SQL_1,
+               (P_GRP1 + P_GRP2 + P_GRP3 + P_GRP4) AS SPECIFICITY_SCORE
+          FROM RANKED_RULES
+         WHERE RN = 1
+         ORDER BY SPECIFICITY_SCORE ASC, RULE_ID ASC
       `;
       const ruleRows = await this.oracleService.executeQuery<any>(
         matchSql,
-        { plant: targetPlant, equipGroup, equipId: dbEquipmentName },
+        {
+          plant: targetPlant,
+          deviceStype,
+          operation,
+          equipGroup,
+          equipId: dbEquipmentName,
+        },
         'ITMVMES'
       );
       if (ruleRows && ruleRows.length > 0) {
-        appliedRules = ruleRows;
+        appliedRules = ruleRows.map((r: any) => {
+          const isSpecific =
+            r.RULE_KEY_GROUP1 !== 'ALL' ||
+            r.RULE_KEY_GROUP2 !== 'ALL' ||
+            r.RULE_KEY_GROUP3 !== 'ALL' ||
+            r.RULE_KEY_GROUP4 !== 'ALL';
+          return {
+            ruleId: r.RULE_ID,
+            ruleKey: r.RULE_KEY,
+            ruleKeyGroup1: r.RULE_KEY_GROUP1,
+            ruleKeyGroup2: r.RULE_KEY_GROUP2,
+            ruleKeyGroup3: r.RULE_KEY_GROUP3,
+            ruleKeyGroup4: r.RULE_KEY_GROUP4,
+            checkType: r.CHECK_TYPE,
+            bindItem: r.BIND_ITEM,
+            errorMsg: r.ERROR_MSG_E,
+            isSpecific,
+          };
+        });
       }
     } catch (e: any) {
       this.logger.debug(`Lỗi đọc BIZ_ILRULE_INFO: ${e.message}`);
