@@ -29,7 +29,7 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-150 font-sans">
-      <div className="bg-[#0B111E] border border-cyan-500/50 rounded-xl shadow-[0_0_30px_rgba(6,182,212,0.25)] w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden text-slate-100">
+      <div className="bg-[#0B111E] border border-cyan-500/50 rounded-xl shadow-[0_0_30px_rgba(6,182,212,0.25)] w-full max-w-5xl h-[88vh] min-h-[620px] max-h-[860px] flex flex-col overflow-hidden text-slate-100">
         {/* Modal Header */}
         <div className="px-4 py-2.5 bg-slate-950/90 border-b border-cyan-500/30 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -108,24 +108,26 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
         </div>
 
         {/* Modal Body: Render Tab Component */}
-        {activeTab === 'device-change' && (
-          <DeviceChangeTab
-            selectedPlant={selectedPlant}
-            onOpenRuleAudit={onOpenRuleAudit}
-          />
-        )}
-        {activeTab === 'work-in' && (
-          <DieAttachWorkInTab
-            selectedPlant={selectedPlant}
-            onOpenRuleAudit={onOpenRuleAudit}
-          />
-        )}
-        {activeTab === 'reflow' && (
-          <ReflowWorkInTab
-            selectedPlant={selectedPlant}
-            onOpenRuleAudit={onOpenRuleAudit}
-          />
-        )}
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-[#0B111E]">
+          {activeTab === 'device-change' && (
+            <DeviceChangeTab
+              selectedPlant={selectedPlant}
+              onOpenRuleAudit={onOpenRuleAudit}
+            />
+          )}
+          {activeTab === 'work-in' && (
+            <DieAttachWorkInTab
+              selectedPlant={selectedPlant}
+              onOpenRuleAudit={onOpenRuleAudit}
+            />
+          )}
+          {activeTab === 'reflow' && (
+            <ReflowWorkInTab
+              selectedPlant={selectedPlant}
+              onOpenRuleAudit={onOpenRuleAudit}
+            />
+          )}
+        </div>
 
         {/* Modal Footer */}
         <div className="px-4 py-2 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">

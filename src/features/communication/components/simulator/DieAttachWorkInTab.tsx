@@ -58,127 +58,147 @@ export const DieAttachWorkInTab: React.FC<DieAttachWorkInTabProps> = ({
   };
 
   return (
-    <div className="p-4 grid grid-cols-1 md:grid-cols-11 gap-4 overflow-y-auto flex-1 font-mono text-xs">
-      {/* Left Column: Input Payload */}
-      <div className="md:col-span-5 space-y-3 bg-slate-950/60 p-3 rounded-lg border border-slate-800/80">
-        <div className="font-bold text-slate-200 pb-1 border-b border-slate-800 uppercase text-[11px] flex items-center justify-between">
-          <span>Bản Tin Gửi Đi Từ Máy (S050)</span>
+    <div className="p-4 grid grid-cols-1 md:grid-cols-12 gap-4 h-full min-h-0 overflow-hidden font-mono text-xs">
+      {/* Left Column: Input Payload (5/12) */}
+      <div className="md:col-span-5 h-full min-h-0 flex flex-col bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 overflow-hidden">
+        <div className="font-bold text-slate-200 pb-1.5 border-b border-slate-800 uppercase text-[11px] flex items-center justify-between shrink-0">
+          <span className="whitespace-nowrap">Bản Tin Gửi Đi Từ Máy (S050)</span>
           <span className="text-cyan-400 font-mono text-[10px]">EQP ➔ Server</span>
         </div>
 
-        <div className="p-2 rounded bg-cyan-950/40 border border-cyan-500/30 text-[10px] text-cyan-300">
-          <span className="font-bold text-cyan-200">Quy Tắc Model DIEATTACH:</span> Bắt buộc mã lệnh{' '}
-          <code className="text-white bg-slate-900 px-1 rounded">S050</code>, nhóm công đoạn (
-          <code className="text-emerald-300">EIF_OPER_GROUP</code>) và nhóm thiết bị (
-          <code className="text-emerald-300">EIF_EQP_GROUP</code>) đều phải là{' '}
-          <span className="font-bold text-emerald-400">D/A</span>.
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 py-2 pr-1">
+          <div className="p-2 rounded bg-cyan-950/40 border border-cyan-500/30 text-[10px] text-cyan-300">
+            <span className="font-bold text-cyan-200">Quy Tắc Model DIEATTACH:</span> Bắt buộc mã lệnh{' '}
+            <code className="text-white bg-slate-900 px-1 rounded">S050</code>, nhóm công đoạn (
+            <code className="text-emerald-300">EIF_OPER_GROUP</code>) và nhóm thiết bị (
+            <code className="text-emerald-300">EIF_EQP_GROUP</code>) đều phải là{' '}
+            <span className="font-bold text-emerald-400">D/A</span>.
+          </div>
+
+          <div className="space-y-2">
+            <div>
+              <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Mã Thiết Bị (EQUIPMENT)">
+                Mã Thiết Bị (EQUIPMENT):
+              </label>
+              <input
+                type="text"
+                value={daEquipment}
+                onChange={(e) => setDaEquipment(e.target.value)}
+                className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono font-bold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Mã LOT (LOT_NUMBER)">
+                  Mã LOT (LOT):
+                </label>
+                <input
+                  type="text"
+                  value={daLot}
+                  onChange={(e) => setDaLot(e.target.value)}
+                  className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Công Đoạn (OPERATION)">
+                  Công Đoạn (OPER):
+                </label>
+                <input
+                  type="text"
+                  value={daOperation}
+                  placeholder="310, 320..."
+                  onChange={(e) => setDaOperation(e.target.value)}
+                  className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Mã Vạch Bản Mạch (PCB_ID)">
+                Mã Vạch Bản Mạch (PCB_ID):
+              </label>
+              <input
+                type="text"
+                value={daPcbId}
+                onChange={(e) => setDaPcbId(e.target.value)}
+                className="w-full px-2 py-1 bg-slate-900 border border-cyan-500/60 rounded text-cyan-300 font-bold text-xs focus:border-cyan-400 font-mono"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Cấu Hình Thiết Bị (CONFIG)">
+                  Cấu Hình (CONFIG):
+                </label>
+                <input
+                  type="text"
+                  value={daConfig}
+                  onChange={(e) => setDaConfig(e.target.value)}
+                  className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Chương Trình Gia Công (RECIPE)">
+                  Chương Trình (RECIPE):
+                </label>
+                <input
+                  type="text"
+                  value={daRecipe}
+                  onChange={(e) => setDaRecipe(e.target.value)}
+                  className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded bg-slate-900/90 border border-slate-800 text-[10px] text-slate-400 space-y-1">
+            <div className="text-slate-300 font-semibold flex items-center justify-between">
+              <span className="whitespace-nowrap">Chuỗi Giao Thức Mẫu:</span>
+              <span className="text-cyan-400 font-mono text-[9px]">S050WORKIN</span>
+            </div>
+            <div className="break-all text-slate-400 font-mono text-[9px] bg-slate-950 p-1.5 rounded border border-slate-800/80">
+              {daEquipment} S050WORKIN ;&#123;&quot;DATA&quot;:[&#123;&quot;PCB_ID&quot;:&quot;{daPcbId}&quot;,...&#125;]&#125;;WORKIN
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <div>
-            <label className="text-[10px] text-slate-400 block mb-0.5">Mã Thiết Bị (EQUIPMENT):</label>
-            <input
-              type="text"
-              value={daEquipment}
-              onChange={(e) => setDaEquipment(e.target.value)}
-              className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-0.5">Mã LOT (LOT_NUMBER):</label>
-              <input
-                type="text"
-                value={daLot}
-                onChange={(e) => setDaLot(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-0.5">Công Đoạn (OPERATION):</label>
-              <input
-                type="text"
-                value={daOperation}
-                placeholder="310, 320 (D/A)..."
-                onChange={(e) => setDaOperation(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[10px] text-slate-400 block mb-0.5">Mã Vạch Bản Mạch (PCB_ID):</label>
-            <input
-              type="text"
-              value={daPcbId}
-              onChange={(e) => setDaPcbId(e.target.value)}
-              className="w-full px-2 py-1 bg-slate-900 border border-cyan-500/60 rounded text-cyan-300 font-bold text-xs focus:border-cyan-400 font-mono"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-0.5">Thiết Bị (CONFIG):</label>
-              <input
-                type="text"
-                value={daConfig}
-                onChange={(e) => setDaConfig(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-0.5">Chương Trình (RECIPE):</label>
-              <input
-                type="text"
-                value={daRecipe}
-                onChange={(e) => setDaRecipe(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-cyan-500 font-mono"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="p-2 rounded bg-slate-900/90 border border-slate-800 text-[10px] text-slate-400 space-y-1">
-          <div className="text-slate-300 font-semibold">Chuỗi Giao Thức Mẫu:</div>
-          <div className="break-all text-slate-400 font-mono text-[9px] bg-slate-950 p-1.5 rounded">
-            {daEquipment} S050WORKIN ;&#123;&quot;DATA&quot;:[&#123;&quot;PCB_ID&quot;:&quot;{daPcbId}&quot;,...&#125;]&#125;;WORKIN
-          </div>
-        </div>
-
-        <button
-          disabled={daLoading}
-          onClick={handleTestDieAttach}
-          className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50"
-        >
-          {daLoading ? (
-            <>
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              <span>Đang Thực Thi Interlock Oracle...</span>
-            </>
-          ) : (
-            <>
-              <ShieldCheck className="w-4 h-4 text-cyan-200" />
-              <span>GỬI KIỂM TRA INTERLOCK (S050)</span>
-            </>
-          )}
-        </button>
-
-        {onOpenRuleAudit && (
+        {/* Pinned Bottom Actions */}
+        <div className="pt-2 border-t border-slate-800/80 space-y-2 shrink-0">
           <button
-            type="button"
-            onClick={() => onOpenRuleAudit({ equip: daEquipment, oper: daOperation })}
-            className="w-full py-1.5 px-3 rounded-lg bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-500/50 text-indigo-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-xs"
+            disabled={daLoading}
+            onClick={handleTestDieAttach}
+            className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 cursor-pointer"
           >
-            <FileSearch className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Tra Cứu BIZ_ILRULE_INFO Cho Máy Này</span>
+            {daLoading ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Đang Thực Thi Interlock Oracle...</span>
+              </>
+            ) : (
+              <>
+                <ShieldCheck className="w-4 h-4 text-cyan-200" />
+                <span>GỬI KIỂM TRA INTERLOCK (S050)</span>
+              </>
+            )}
           </button>
-        )}
+
+          {onOpenRuleAudit && (
+            <button
+              type="button"
+              onClick={() => onOpenRuleAudit({ equip: daEquipment, oper: daOperation })}
+              className="w-full py-1.5 px-3 rounded-lg bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-500/50 text-indigo-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+            >
+              <FileSearch className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Tra Cứu BIZ_ILRULE_INFO Cho Máy Này</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Right Column: MES Check Result */}
-      <div className="md:col-span-6 space-y-3 bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 flex flex-col">
-        <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+      {/* Right Column: MES Check Result (7/12) */}
+      <div className="md:col-span-7 h-full min-h-0 flex flex-col bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 overflow-hidden">
+        <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 shrink-0">
           <span className="font-bold text-slate-200 uppercase text-[11px] flex items-center gap-1.5">
             <ArrowUpRight className="w-3.5 h-3.5 text-cyan-400" />
             Kết Quả Phản Hồi MES (S051)
@@ -197,7 +217,7 @@ export const DieAttachWorkInTab: React.FC<DieAttachWorkInTabProps> = ({
         </div>
 
         {daResult ? (
-          <div className="space-y-2.5 flex-1 flex flex-col">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 py-2 pr-1">
             {/* Status Box */}
             <div
               className={`p-3 rounded-lg border ${
@@ -229,22 +249,22 @@ export const DieAttachWorkInTab: React.FC<DieAttachWorkInTabProps> = ({
             {/* Stored Procedure Audit & Group Verification */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
               <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                <span className="text-slate-500 block text-[9px]">RtnYN (Kết Quả):</span>
+                <span className="text-slate-500 block text-[9px] whitespace-nowrap">RtnYN:</span>
                 <span className={`font-bold ${daResult.rtnYN === 'OK' ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {daResult.rtnYN || (daResult.isValid ? 'OK' : 'NG')}
                 </span>
               </div>
               <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                <span className="text-slate-500 block text-[9px]">Mã Lệnh SECS:</span>
+                <span className="text-slate-500 block text-[9px] whitespace-nowrap">Mã Lệnh:</span>
                 <span className="text-cyan-300 font-bold">S050 / S051</span>
               </div>
               <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                <span className="text-slate-500 block text-[9px]">Model Thiết Bị:</span>
-                <span className="text-cyan-300 font-bold">{daResult.equipmentModel || 'DIEATTACH'}</span>
+                <span className="text-slate-500 block text-[9px] whitespace-nowrap">Model Thiết Bị:</span>
+                <span className="text-cyan-300 font-bold truncate block">{daResult.equipmentModel || 'DIEATTACH'}</span>
               </div>
               <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                <span className="text-slate-500 block text-[9px]">Nhóm (Oper/Equip):</span>
-                <span className={`font-bold ${daResult.operGroup === 'D/A' ? 'text-emerald-300' : 'text-slate-300'}`}>
+                <span className="text-slate-500 block text-[9px] whitespace-nowrap">Nhóm (Oper/Equip):</span>
+                <span className={`font-bold truncate block ${daResult.operGroup === 'D/A' ? 'text-emerald-300' : 'text-slate-300'}`}>
                   {daResult.operGroup || 'D/A'} / {daResult.equipGroupVal || daResult.equipGroup || 'D/A'}
                 </span>
               </div>
@@ -254,7 +274,7 @@ export const DieAttachWorkInTab: React.FC<DieAttachWorkInTabProps> = ({
             {daResult.isValid && daResult.scanHistoryTable && (
               <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-[10px] space-y-1">
                 <div className="font-bold flex items-center justify-between text-emerald-400">
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1.5 whitespace-nowrap">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Đã Ghi Lịch Sử Quét Sản Xuất (Scan History)
                   </span>
@@ -278,7 +298,7 @@ export const DieAttachWorkInTab: React.FC<DieAttachWorkInTabProps> = ({
                   <span>Quy Tắc Interlock Khớp (Ưu Tiên Cụ Thể &gt; ALL):</span>
                   <span className="text-slate-400 text-[9px]">{daResult.appliedRules.length} Rules</span>
                 </div>
-                <div className="space-y-1 max-h-32 overflow-y-auto">
+                <div className="space-y-1 max-h-36 overflow-y-auto">
                   {daResult.appliedRules.map((r: any, idx: number) => {
                     const isSpecific =
                       r.isSpecific !== undefined

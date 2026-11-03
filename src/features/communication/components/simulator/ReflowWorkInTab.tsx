@@ -62,149 +62,173 @@ export const ReflowWorkInTab: React.FC<ReflowWorkInTabProps> = ({
   };
 
   return (
-    <div className="p-4 grid grid-cols-1 md:grid-cols-11 gap-4 overflow-y-auto flex-1 font-mono text-xs">
-      {/* Left Column: Input Payload (5/11) */}
-      <div className="md:col-span-5 space-y-3 bg-slate-950/60 p-3 rounded-lg border border-slate-800/80">
-        <div className="font-bold text-slate-200 pb-1 border-b border-slate-800 uppercase text-[11px] flex items-center justify-between">
-          <span>Bản Tin Gửi Đi Từ Máy (S090)</span>
+    <div className="p-4 grid grid-cols-1 md:grid-cols-12 gap-4 h-full min-h-0 overflow-hidden font-mono text-xs">
+      {/* Left Column: Input Payload (5/12) */}
+      <div className="md:col-span-5 h-full min-h-0 flex flex-col bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 overflow-hidden">
+        <div className="font-bold text-slate-200 pb-1.5 border-b border-slate-800 uppercase text-[11px] flex items-center justify-between shrink-0">
+          <span className="whitespace-nowrap">Bản Tin Gửi Đi Từ Máy (S090)</span>
           <span className="text-orange-400 font-mono text-[10px]">EQP ➔ Server</span>
         </div>
 
-        <div className="p-2 rounded bg-orange-950/40 border border-orange-500/30 text-[10px] text-orange-300">
-          <span className="font-bold text-orange-200">Quy Tắc Model REFLOW:</span> Bắt buộc mã lệnh{' '}
-          <code className="text-white bg-slate-900 px-1 rounded">S090</code>, nhóm thiết bị (
-          <code className="text-orange-300">EIF_EQP_GROUP</code>) là{' '}
-          <span className="font-bold text-orange-400">REFLOW</span>, loại thiết bị (
-          <code className="text-emerald-300">EIF_EQP_TYPE</code>) là{' '}
-          <span className="font-bold text-emerald-400">SMT</span>.
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 py-2 pr-1">
+          <div className="p-2 rounded bg-orange-950/40 border border-orange-500/30 text-[10px] text-orange-300">
+            <span className="font-bold text-orange-200">Quy Tắc Model REFLOW:</span> Bắt buộc mã lệnh{' '}
+            <code className="text-white bg-slate-900 px-1 rounded">S090</code>, nhóm thiết bị (
+            <code className="text-orange-300">EIF_EQP_GROUP</code>) là{' '}
+            <span className="font-bold text-orange-400">REFLOW</span>, loại thiết bị (
+            <code className="text-emerald-300">EIF_EQP_TYPE</code>) là{' '}
+            <span className="font-bold text-emerald-400">SMT</span>.
+          </div>
+
+          <div className="space-y-2">
+            <div>
+              <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Mã Thiết Bị (EQUIPMENT)">
+                Mã Thiết Bị (EQUIPMENT):
+              </label>
+              <input
+                type="text"
+                value={rfEquipment}
+                onChange={(e) => setRfEquipment(e.target.value)}
+                className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono font-bold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Mã LOT (LOT_NUMBER)">
+                  Mã LOT (LOT):
+                </label>
+                <input
+                  type="text"
+                  value={rfLot}
+                  onChange={(e) => setRfLot(e.target.value)}
+                  className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Công Đoạn (OPERATION)">
+                  Công Đoạn (OPER):
+                </label>
+                <input
+                  type="text"
+                  value={rfOperation}
+                  placeholder="200 (SMT)..."
+                  onChange={(e) => setRfOperation(e.target.value)}
+                  className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Mã Vạch Bản Mạch (PCB_ID)">
+                Mã Vạch Bản Mạch (PCB_ID):
+              </label>
+              <input
+                type="text"
+                value={rfPcbId}
+                onChange={(e) => setRfPcbId(e.target.value)}
+                className="w-full px-2 py-1 bg-slate-900 border border-orange-500/60 rounded text-orange-300 font-bold text-xs focus:border-orange-400 font-mono"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Cấu Hình Thiết Bị (CONFIG)">
+                  Cấu Hình (CONFIG):
+                </label>
+                <input
+                  type="text"
+                  value={rfConfig}
+                  onChange={(e) => setRfConfig(e.target.value)}
+                  className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Chương Trình Gia Nhiệt (RECIPE)">
+                  Chương Trình (RECIPE):
+                </label>
+                <input
+                  type="text"
+                  value={rfRecipe}
+                  onChange={(e) => setRfRecipe(e.target.value)}
+                  className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Tốc Độ Băng Tải (P_CONVEYOR_SP)">
+                  Băng Tải (CONVEYOR_SP):
+                </label>
+                <input
+                  type="text"
+                  value={rfConveyorSpeed}
+                  onChange={(e) => setRfConveyorSpeed(e.target.value)}
+                  className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-semibold block mb-1 whitespace-nowrap truncate" title="Nồng Độ Khí N2 (P_N2_PPM)">
+                  Nồng Độ Khí (N2_PPM):
+                </label>
+                <input
+                  type="text"
+                  value={rfN2Ppm}
+                  onChange={(e) => setRfN2Ppm(e.target.value)}
+                  className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-2 rounded bg-slate-900/90 border border-slate-800 text-[10px] text-slate-400 space-y-1">
+            <div className="text-slate-300 font-semibold flex items-center justify-between">
+              <span className="whitespace-nowrap">Chuỗi Giao Thức Mẫu:</span>
+              <span className="text-orange-400 font-mono text-[9px]">S090WORKIN</span>
+            </div>
+            <div className="break-all text-slate-400 font-mono text-[9px] bg-slate-950 p-1.5 rounded border border-slate-800/80">
+              {rfEquipment} S090WORKIN ;&#123;&quot;DATA&quot;:[&#123;&quot;PCB_ID&quot;:&quot;{rfPcbId}&quot;,&quot;P_CONVEYOR_SP&quot;:&quot;{rfConveyorSpeed}&quot;,...&#125;]&#125;;WORKIN
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <div>
-            <label className="text-[10px] text-slate-400 block mb-0.5">Mã Thiết Bị (EQUIPMENT):</label>
-            <input
-              type="text"
-              value={rfEquipment}
-              onChange={(e) => setRfEquipment(e.target.value)}
-              className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-0.5">Mã LOT (LOT_NUMBER):</label>
-              <input
-                type="text"
-                value={rfLot}
-                onChange={(e) => setRfLot(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-0.5">Công Đoạn (OPERATION):</label>
-              <input
-                type="text"
-                value={rfOperation}
-                placeholder="200 (SMT)..."
-                onChange={(e) => setRfOperation(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[10px] text-slate-400 block mb-0.5">Mã Vạch Bản Mạch (PCB_ID):</label>
-            <input
-              type="text"
-              value={rfPcbId}
-              onChange={(e) => setRfPcbId(e.target.value)}
-              className="w-full px-2 py-1 bg-slate-900 border border-orange-500/60 rounded text-orange-300 font-bold text-xs focus:border-orange-400 font-mono"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-0.5">Thiết Bị (CONFIG):</label>
-              <input
-                type="text"
-                value={rfConfig}
-                onChange={(e) => setRfConfig(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-0.5">Chương Trình (RECIPE):</label>
-              <input
-                type="text"
-                value={rfRecipe}
-                onChange={(e) => setRfRecipe(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-0.5">Tốc Độ Băng Tải (P_CONVEYOR_SP):</label>
-              <input
-                type="text"
-                value={rfConveyorSpeed}
-                onChange={(e) => setRfConveyorSpeed(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] text-slate-400 block mb-0.5">Nồng Độ Khí N2 (P_N2_PPM):</label>
-              <input
-                type="text"
-                value={rfN2Ppm}
-                onChange={(e) => setRfN2Ppm(e.target.value)}
-                className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-slate-200 text-xs focus:border-orange-500 font-mono"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="p-2 rounded bg-slate-900/90 border border-slate-800 text-[10px] text-slate-400 space-y-1">
-          <div className="text-slate-300 font-semibold">Chuỗi Giao Thức Mẫu:</div>
-          <div className="break-all text-slate-400 font-mono text-[9px] bg-slate-950 p-1.5 rounded">
-            {rfEquipment} S090WORKIN ;&#123;&quot;DATA&quot;:[&#123;&quot;PCB_ID&quot;:&quot;{rfPcbId}&quot;,&quot;P_CONVEYOR_SP&quot;:&quot;{rfConveyorSpeed}&quot;,...&#125;]&#125;;WORKIN
-          </div>
-        </div>
-
-        <button
-          disabled={rfLoading}
-          onClick={handleTestReflow}
-          className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(249,115,22,0.4)] transition-all disabled:opacity-50 cursor-pointer"
-        >
-          {rfLoading ? (
-            <>
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              <span>Đang Thực Thi Interlock Oracle...</span>
-            </>
-          ) : (
-            <>
-              <Flame className="w-4 h-4 text-orange-200" />
-              <span>GỬI KIỂM TRA INTERLOCK (S090)</span>
-            </>
-          )}
-        </button>
-
-        {onOpenRuleAudit && (
+        {/* Pinned Bottom Actions */}
+        <div className="pt-2 border-t border-slate-800/80 space-y-2 shrink-0">
           <button
-            type="button"
-            onClick={() => onOpenRuleAudit({ equip: rfEquipment, oper: rfOperation })}
-            className="w-full py-1.5 px-3 rounded-lg bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-500/50 text-indigo-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+            disabled={rfLoading}
+            onClick={handleTestReflow}
+            className="w-full py-2 px-3 rounded-lg bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(249,115,22,0.4)] transition-all disabled:opacity-50 cursor-pointer"
           >
-            <FileSearch className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Tra Cứu BIZ_ILRULE_INFO Cho Máy Này</span>
+            {rfLoading ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Đang Thực Thi Interlock Oracle...</span>
+              </>
+            ) : (
+              <>
+                <Flame className="w-4 h-4 text-orange-200" />
+                <span>GỬI KIỂM TRA INTERLOCK (S090)</span>
+              </>
+            )}
           </button>
-        )}
+
+          {onOpenRuleAudit && (
+            <button
+              type="button"
+              onClick={() => onOpenRuleAudit({ equip: rfEquipment, oper: rfOperation })}
+              className="w-full py-1.5 px-3 rounded-lg bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-500/50 text-indigo-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+            >
+              <FileSearch className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Tra Cứu BIZ_ILRULE_INFO Cho Máy Này</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Right Column: MES Check Result (6/11) */}
-      <div className="md:col-span-6 space-y-3 bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 flex flex-col">
-        <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+      {/* Right Column: MES Check Result (7/12) */}
+      <div className="md:col-span-7 h-full min-h-0 flex flex-col bg-slate-950/60 p-3 rounded-lg border border-slate-800/80 overflow-hidden">
+        <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 shrink-0">
           <span className="font-bold text-slate-200 uppercase text-[11px] flex items-center gap-1.5">
             <ArrowUpRight className="w-3.5 h-3.5 text-orange-400" />
             Kết Quả Phản Hồi MES (S091)
@@ -225,7 +249,7 @@ export const ReflowWorkInTab: React.FC<ReflowWorkInTabProps> = ({
         </div>
 
         {rfResult ? (
-          <div className="space-y-2.5 flex-1 flex flex-col">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 py-2 pr-1">
             {/* Status Box */}
             <div
               className={`p-3 rounded-lg border ${
@@ -260,22 +284,22 @@ export const ReflowWorkInTab: React.FC<ReflowWorkInTabProps> = ({
             {/* Stored Procedure Audit & Group Verification */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
               <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                <span className="text-slate-500 block text-[9px]">RtnYN (Kết Quả):</span>
+                <span className="text-slate-500 block text-[9px] whitespace-nowrap">RtnYN:</span>
                 <span className={`font-bold ${rfResult.rtnYN === 'OK' ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {rfResult.rtnYN || (rfResult.isValid ? 'OK' : 'NG')}
                 </span>
               </div>
               <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                <span className="text-slate-500 block text-[9px]">Mã Lệnh SECS:</span>
+                <span className="text-slate-500 block text-[9px] whitespace-nowrap">Mã Lệnh:</span>
                 <span className="text-orange-300 font-bold">S090 / S091</span>
               </div>
               <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                <span className="text-slate-500 block text-[9px]">Model Thiết Bị:</span>
-                <span className="text-orange-300 font-bold">{rfResult.equipmentModel || 'REFLOW'}</span>
+                <span className="text-slate-500 block text-[9px] whitespace-nowrap">Model Thiết Bị:</span>
+                <span className="text-orange-300 font-bold truncate block">{rfResult.equipmentModel || 'REFLOW'}</span>
               </div>
               <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                <span className="text-slate-500 block text-[9px]">Nhóm (Oper/Equip):</span>
-                <span className={`font-bold ${rfResult.equipGroup === 'REFLOW' ? 'text-orange-300' : 'text-slate-300'}`}>
+                <span className="text-slate-500 block text-[9px] whitespace-nowrap">Nhóm (Oper/Equip):</span>
+                <span className={`font-bold truncate block ${rfResult.equipGroup === 'REFLOW' ? 'text-orange-300' : 'text-slate-300'}`}>
                   {rfResult.operGroup || 'SMT'} / {rfResult.equipGroup || 'REFLOW'}
                 </span>
               </div>
@@ -285,7 +309,7 @@ export const ReflowWorkInTab: React.FC<ReflowWorkInTabProps> = ({
             {rfResult.isValid && rfResult.scanHistoryTable && (
               <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-[10px] space-y-1">
                 <div className="font-bold flex items-center justify-between text-emerald-400">
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1.5 whitespace-nowrap">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Đã Ghi Lịch Sử Quét Sản Xuất (Scan History)
                   </span>
@@ -309,7 +333,7 @@ export const ReflowWorkInTab: React.FC<ReflowWorkInTabProps> = ({
                   <span>Quy Tắc Interlock Khớp (Ưu Tiên Cụ Thể &gt; ALL):</span>
                   <span className="text-slate-400 text-[9px]">{rfResult.appliedRules.length} Rules</span>
                 </div>
-                <div className="space-y-1 max-h-32 overflow-y-auto">
+                <div className="space-y-1 max-h-36 overflow-y-auto">
                   {rfResult.appliedRules.map((r: any, idx: number) => {
                     const isSpecific =
                       r.isSpecific !== undefined
