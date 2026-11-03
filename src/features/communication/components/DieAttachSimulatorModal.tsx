@@ -108,26 +108,24 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
         </div>
 
         {/* Modal Body: Render Tab Component */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {activeTab === 'device-change' && (
-            <DeviceChangeTab
-              selectedPlant={selectedPlant}
-              onOpenRuleAudit={onOpenRuleAudit}
-            />
-          )}
-          {activeTab === 'work-in' && (
-            <DieAttachWorkInTab
-              selectedPlant={selectedPlant}
-              onOpenRuleAudit={onOpenRuleAudit}
-            />
-          )}
-          {activeTab === 'reflow' && (
-            <ReflowWorkInTab
-              selectedPlant={selectedPlant}
-              onOpenRuleAudit={onOpenRuleAudit}
-            />
-          )}
-        </div>
+        {activeTab === 'device-change' && (
+          <DeviceChangeTab
+            selectedPlant={selectedPlant}
+            onOpenRuleAudit={onOpenRuleAudit}
+          />
+        )}
+        {activeTab === 'work-in' && (
+          <DieAttachWorkInTab
+            selectedPlant={selectedPlant}
+            onOpenRuleAudit={onOpenRuleAudit}
+          />
+        )}
+        {activeTab === 'reflow' && (
+          <ReflowWorkInTab
+            selectedPlant={selectedPlant}
+            onOpenRuleAudit={onOpenRuleAudit}
+          />
+        )}
 
         {/* Modal Footer */}
         <div className="px-4 py-2 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
