@@ -14,6 +14,7 @@ import {
   CompactAuditHeader,
   CompactFilterForm,
   DieAttachRibbon,
+  ReflowRibbon,
   RulesTable,
   RuleSqlModal,
 } from '../components';
@@ -79,6 +80,7 @@ export const InterlockRuleAuditView: React.FC = () => {
   };
 
   const isDA = filter.model === 'DIEATTACH' || data?.isDieAttachModel;
+  const isReflow = filter.model === 'REFLOW' || filter.equipmentId?.toUpperCase().includes('REFL') || filter.eifEqpGroup === 'REFLOW';
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0B101D] text-slate-200 p-2.5 sm:p-3 overflow-y-auto space-y-2 font-sans">
@@ -114,6 +116,14 @@ export const InterlockRuleAuditView: React.FC = () => {
         operGroup={data?.operGroup}
         equipGroup={data?.equipGroup}
       />
+
+      {/* 3b. Banner Nghiệp vụ REFLOW Dạng Ribbon (chỉ hiện khi người dùng chọn REFLOW) */}
+      {isReflow && (
+        <ReflowRibbon
+          equipId={filter.equipmentId || 'XREFL012A'}
+          equipGroup={filter.eifEqpGroup || 'REFLOW'}
+        />
+      )}
 
       {/* 4. Bảng Quy Tắc BIZ_ILRULE_INFO */}
       <RulesTable

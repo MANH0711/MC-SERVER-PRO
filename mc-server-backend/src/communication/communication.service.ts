@@ -8,6 +8,7 @@ import { ChecksumUtils } from '../protocol/checksum.utils';
 import { AuthorityService } from '../authority/authority.service';
 import { DieAttachService } from '../interlock/die-attach.service';
 import { DeviceChangeService } from '../interlock/device-change.service';
+import { ReflowService } from '../interlock/reflow.service';
 
 export interface ManualCommandDto {
   equipmentId: string;
@@ -37,6 +38,7 @@ export class CommunicationService {
     private readonly authorityService: AuthorityService,
     private readonly dieAttachService: DieAttachService,
     private readonly deviceChangeService: DeviceChangeService,
+    private readonly reflowService: ReflowService,
     private readonly deviceFileLogger: DeviceFileLoggerService
   ) {}
 
@@ -217,7 +219,28 @@ export class CommunicationService {
       return null;
     }
 
-    // 2b. Bắt các bản tin ASCII định dạng Interlock / Work-In nhưng dùng mã lệnh không hợp lệ (ví dụ S052 thay vì S050)
+    // 4. Kiểm tra nếu là bản tin Heartbeat / Monitor M001 (Thiết bị REFLOW hoặc tương đương)
+    if (this.reflowService.isHeartbeatMessage(rawStr)) {
+      const hbResult = await this.reflowService.processHeartbeatMessage(rawStr, equipmentId);
+      if (hbResult?.records) {
+        hbResult.records.forEach((r) => this.transactionStream$.next(r));
+      }
+      return null;
+    }
+
+    // 5. Kiểm tra nếu là bản tin kiểm tra Work-In Interlock thiết bị REFLOW (State S090)
+    if (this.reflowService.isReflowMessage(rawStr)) {
+      const reflowResult = await this.reflowService.processReflowMessage(rawStr, equipmentId);
+      if (reflowResult?.records) {
+        reflowResult.records.forEach((r) => this.transactionStream$.next(r));
+      }
+      if (reflowResult?.responseMessage) {
+        return Buffer.from(reflowResult.responseMessage, 'ascii');
+      }
+      return null;
+    }
+
+    // 2b. Bắt các bản tin ASCII định dạng Interlock / Work-In nhưng dùng mã lệnh không hợp lệ (ví dụ S052 thay vì S050/S090)
     if (rawStr.includes(';{"') || (rawStr.includes('WORKIN') && rawStr.includes('{')) || (rawStr.includes('PCB_ID') && rawStr.includes(';'))) {
       const headerPart = rawStr.split(';')[0]?.trim() || '';
       const match = headerPart.match(/^([^\s]+)\s+([A-Za-z0-9]{4})(.*)$/);

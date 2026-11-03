@@ -32,12 +32,13 @@ export const CompactFilterForm: React.FC<CompactFilterFormProps> = ({
 }) => {
   const [options, setOptions] = useState<AuditOptionsResponse>({
     plant: 'ITMVIET',
-    models: ['DIEATTACH', 'WIREBOND', 'SMT', 'DISPENSER', 'ALL'],
+    models: ['DIEATTACH', 'REFLOW', 'WIREBOND', 'SMT', 'DISPENSER', 'ALL'],
     operations: ['EPBV', 'EPBC', 'WBE', 'ALL'],
-    eqpGroups: ['D/A', 'W/B', 'SMT-BAKE', 'ALL'],
+    eqpGroups: ['D/A', 'REFLOW', 'W/B', 'SMT-BAKE', 'ALL'],
     equipments: [
       { equipmentId: 'DA013VN', description: 'DIE ATTACH #13', displayName: 'DA013VN : DIE ATTACH #13' },
       { equipmentId: 'DA014VN', description: 'DIE ATTACH #14', displayName: 'DA014VN : DIE ATTACH #14' },
+      { equipmentId: 'XREFL012A', description: 'REFLOW #12 (REFLOW12A)', displayName: 'XREFL012A : REFLOW #12' },
       { equipmentId: 'WB161VN', description: 'WIRE BOND #161', displayName: 'WB161VN : WIRE BOND #161' },
     ],
   });

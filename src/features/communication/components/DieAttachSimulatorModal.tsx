@@ -6,9 +6,10 @@ import {
   CheckCircle2,
   Building2,
   Layers,
+  Flame,
 } from 'lucide-react';
 import { useApp } from '@/core/context';
-import { DeviceChangeTab, DieAttachWorkInTab } from './simulator';
+import { DeviceChangeTab, DieAttachWorkInTab, ReflowWorkInTab } from './simulator';
 
 interface DieAttachSimulatorModalProps {
   isOpen: boolean;
@@ -22,7 +23,7 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
   onOpenRuleAudit,
 }) => {
   const { selectedPlant } = useApp();
-  const [activeTab, setActiveTab] = useState<'device-change' | 'work-in'>('device-change');
+  const [activeTab, setActiveTab] = useState<'device-change' | 'work-in' | 'reflow'>('device-change');
 
   if (!isOpen) return null;
 
@@ -40,7 +41,7 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
                 Thử Nghiệm Lệnh & Liên Khóa Interlock Thiết Bị
               </div>
               <div className="text-[10px] text-slate-400 font-mono">
-                Kiểm thử trực tiếp giao dịch S000 (EIF-IR010 mọi Model) & S050 (Die Attach)
+                Kiểm thử giao dịch S000 (EIF-IR010 mọi Model), S050 (Die Attach) & S090 (Reflow)
               </div>
             </div>
           </div>
@@ -59,7 +60,7 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center border-b border-slate-800 bg-slate-950/80 px-4 pt-1 gap-2">
+        <div className="flex items-center border-b border-slate-800 bg-slate-950/80 px-4 pt-1 gap-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('device-change')}
             className={`px-3 py-1.5 text-xs font-bold font-mono rounded-t-lg transition-all flex items-center gap-2 border-t border-x ${
@@ -69,9 +70,9 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Device Change (S000/S001) - Rule EIF-IR010</span>
+            <span>Device Change (S000/S001)</span>
             <span className="px-1.5 py-0.2 rounded text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono">
-              All Models
+              Rule IR010
             </span>
           </button>
 
@@ -89,25 +90,49 @@ export const DieAttachSimulatorModal: React.FC<DieAttachSimulatorModalProps> = (
               Model D/A
             </span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('reflow')}
+            className={`px-3 py-1.5 text-xs font-bold font-mono rounded-t-lg transition-all flex items-center gap-2 border-t border-x ${
+              activeTab === 'reflow'
+                ? 'bg-[#0B111E] border-orange-500/60 text-orange-300 shadow-[0_-2px_10px_rgba(249,115,22,0.2)]'
+                : 'bg-transparent border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5 text-orange-400" />
+            <span>Reflow Work-In (S090/S091)</span>
+            <span className="px-1.5 py-0.2 rounded text-[9px] bg-orange-500/20 text-orange-300 border border-orange-500/40 font-mono">
+              Model REFLOW
+            </span>
+          </button>
         </div>
 
         {/* Modal Body: Render Tab Component */}
-        {activeTab === 'device-change' ? (
-          <DeviceChangeTab
-            selectedPlant={selectedPlant}
-            onOpenRuleAudit={onOpenRuleAudit}
-          />
-        ) : (
-          <DieAttachWorkInTab
-            selectedPlant={selectedPlant}
-            onOpenRuleAudit={onOpenRuleAudit}
-          />
-        )}
+        <div className="flex-1 overflow-y-auto p-4">
+          {activeTab === 'device-change' && (
+            <DeviceChangeTab
+              selectedPlant={selectedPlant}
+              onOpenRuleAudit={onOpenRuleAudit}
+            />
+          )}
+          {activeTab === 'work-in' && (
+            <DieAttachWorkInTab
+              selectedPlant={selectedPlant}
+              onOpenRuleAudit={onOpenRuleAudit}
+            />
+          )}
+          {activeTab === 'reflow' && (
+            <ReflowWorkInTab
+              selectedPlant={selectedPlant}
+              onOpenRuleAudit={onOpenRuleAudit}
+            />
+          )}
+        </div>
 
         {/* Modal Footer */}
         <div className="px-4 py-2 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono">
           <span className="flex items-center gap-1.5 text-cyan-400">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Chuẩn hóa giao tiếp Thiết Bị S000 (EIF-IR010 All Models) & S050 (Die Attach)
+            <CheckCircle2 className="w-3.5 h-3.5" /> Chuẩn hóa giao tiếp Thiết Bị S000 (EIF-IR010), S050 (Die Attach) & S090 (Reflow)
           </span>
           <button
             onClick={onClose}
